@@ -172,6 +172,7 @@
               <option value="bell">Campana brillante</option>
               <option value="laser">Láser arcade</option>
               <option value="fanfare">Fanfarria épica</option>
+              <optgroup id="optGroupLibrary" label="🎵 Mi Biblioteca (public/sounds)"></optgroup>
             </select>
           </div>
           <div>
@@ -399,6 +400,22 @@
             <div id="actionsCardsList" class="space-y-2.5"></div>
           </div>
         </div>
+      
+        <div class="tp-card rounded-2xl p-4 sm:p-5 space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h3 class="font-display text-sm font-extrabold text-cyanNeon">🎵 Biblioteca de Música y Sonidos para Alertas</h3>
+              <p class="text-[11px] text-slate-400">Sube aquí tus MP3/WAV (o guárdalos permanentemente en GitHub → <code class="text-cyanNeon">public/sounds/</code>) y luego elígelos al editar cualquier alerta.</p>
+            </div>
+            <label class="px-3 py-1.5 rounded-xl bg-cyanNeon/20 hover:bg-cyanNeon/30 border border-cyanNeon/40 text-xs font-extrabold text-cyanNeon cursor-pointer">
+              + Subir MP3 / WAV
+              <input id="inpUploadLibSound" type="file" accept=".mp3,.wav,.ogg,.m4a,audio/*" class="hidden" />
+            </label>
+          </div>
+          <div id="soundLibraryList" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 text-xs">
+            <div class="text-slate-500 italic">Cargando biblioteca...</div>
+          </div>
+        </div>
       </section>
 
       <!-- TAB 3: 🔊 TTS CHAT & VOZ (OPTIMIZADO + VOCES GRATIS NEURALES + FISH AUDIO) -->
@@ -410,6 +427,7 @@
               <p class="text-xs text-slate-400">Voces neuronales gratis (Microsoft Edge + Google TTS), voz clonada con Fish Audio y cola sin errores.</p>
             </div>
             <div class="flex items-center gap-2">
+              <button id="btnUnlockTtsAudio" type="button" class="px-3 py-1.5 rounded-xl bg-emerald-500/20 border border-emerald-400/40 text-emerald-200 text-xs font-extrabold">🔊 Activar Audio</button>
               <button id="btnTtsSkip" type="button" class="px-3 py-1.5 rounded-xl bg-amber-500/20 text-amber-200 text-xs font-bold">Saltar</button>
               <button id="btnTtsClear" type="button" class="px-3 py-1.5 rounded-xl bg-pinkNeon/20 text-pink-200 text-xs font-bold">Vaciar cola</button>
               <button id="toggleMasterTts" type="button" class="toggle-switch active" aria-label="Activar TTS"></button>
@@ -927,6 +945,9 @@
         if (customUrl) {
           try { const a = new Audio(customUrl); a.volume = state.ttsVolume; a.play().catch(() => {}); return; } catch (_) {}
         }
+        if (typeof preset === 'string' && preset.startsWith('/sounds/')) {
+          try { const a = new Audio(preset); a.volume = state.ttsVolume; a.play().catch(() => {}); return; } catch (_) {}
+        }
         if (preset === 'bell') { playTone(880, 0.24, 'sine', 1320); setTimeout(() => playTone(1320, 0.2, 'sine'), 100); }
         else if (preset === 'laser') { playTone(980, 0.18, 'sawtooth', 240); }
         else if (preset === 'fanfare') { playTone(523, 0.14); setTimeout(() => playTone(659, 0.14), 110); setTimeout(() => playTone(784, 0.14), 220); setTimeout(() => playTone(1046, 0.3), 330); }
@@ -1076,7 +1097,76 @@
       }
 
       async function pumpTts() {
-        if (!state.ttsEnabled || state.ttsSpeaking || !state.ttsQueue.length) { renderTtsQueue(); return; }
+        if (!state.ttsEnabled || state.ttsSpeaking || !state.ttsQueue.length) { renderTtsQueue();
+      
+      async function refreshSoundLibrary() {
+        const listEl = document.getElementById('soundLibraryList');
+        const optGrp = document.getElementById('optGroupLibrary');
+        try {
+          const res = await fetch('/api/sounds');
+          const data = await res.json();
+          const sounds = Array.isArray(data?.sounds) ? data.sounds : [];
+          if (optGrp) {
+            optGrp.innerHTML = '';
+            sounds.forEach((s) => {
+              const opt = document.createElement('option');
+              opt.value = s.url;
+              opt.textContent = '🎵 ' + s.name;
+              optGrp.appendChild(opt);
+            });
+          }
+          if (listEl) {
+            if (!sounds.length) {
+              listEl.innerHTML = '<div class="col-span-full text-xs text-slate-400 py-2">Aún no hay audios. Sube tus MP3/WAV con el botón de arriba o colócalos en <code class="text-cyanNeon">public/sounds/</code> en tu repo de GitHub.</div>';
+            } else {
+              listEl.innerHTML = '';
+              sounds.forEach((s) => {
+                const card = document.createElement('div');
+                card.className = 'flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-bg border border-white/10';
+                const nm = document.createElement('span');
+                nm.className = 'font-bold text-white truncate';
+                nm.textContent = '🎵 ' + s.name;
+                const playBtn = document.createElement('button');
+                playBtn.type = 'button';
+                playBtn.className = 'px-2.5 py-1 rounded-lg bg-pinkNeon/20 hover:bg-pinkNeon/30 text-pink-200 font-bold shrink-0';
+                playBtn.textContent = '▶ Probar';
+                playBtn.addEventListener('click', () => {
+                  const a = new Audio(s.url);
+                  a.volume = state.ttsVolume;
+                  a.play().catch(() => toast('Toca la pantalla para activar el audio', 'pink'));
+                });
+                card.append(nm, playBtn);
+                listEl.appendChild(card);
+              });
+            }
+          }
+        } catch (_) {}
+      }
+      document.getElementById('inpUploadLibSound')?.addEventListener('change', (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        if (file.size > 5 * 1024 * 1024) { toast('Máximo 5 MB por audio', 'pink'); return; }
+        const reader = new FileReader();
+        reader.onload = async () => {
+          try {
+            const res = await fetch('/api/sounds/upload', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ filename: file.name, dataBase64: reader.result })
+            });
+            const d = await res.json();
+            if (!res.ok) throw new Error(d.error || 'Error subiendo audio');
+            toast(`🎵 "${file.name}" agregado a tu biblioteca`);
+            refreshSoundLibrary();
+          } catch (err) {
+            toast(err?.message || 'No se pudo subir el audio', 'pink');
+          }
+        };
+        reader.readAsDataURL(file);
+        e.target.value = '';
+      });
+      refreshSoundLibrary();
+ return; }
         const item = state.ttsQueue[0];
         state.ttsSpeaking = true;
         renderTtsQueue();
@@ -1097,7 +1187,7 @@
         }
         if ('speechSynthesis' in window) {
           const u = new SpeechSynthesisUtterance(item.text);
-          const v = pickVoiceForUser(item.user);
+          const v = pickVoiceForUser(item.userKey || item.user);
           if (v) u.voice = v;
           u.lang = v?.lang || 'es-ES';
           u.volume = state.ttsVolume;
@@ -1562,7 +1652,7 @@
         state.actions.filter((a) => a.enabled && a.type === 'keyword' && a.keyword && text.toLowerCase().includes(a.keyword.toLowerCase()))
           .forEach((a) => runAction(a, user, 1));
         if (state.ttsReadChat) {
-          const pref = (state.ttsCommandPrefix || '').trim().toLowerCase();
+          const pref = '';
           if (!pref || text.trim().toLowerCase().startsWith(pref)) {
             const cleanTxt = pref ? text.trim().slice(pref.length).trim() : text;
             if (cleanTxt) enqueueTts('{nickname} dice {message}'.replace('{nickname}', user.replace('@', '')).replace('{message}', cleanTxt), user);
@@ -1676,27 +1766,37 @@
           const customNames = (() => {
             try { return JSON.parse(localStorage.getItem('tikpulse_host_aliases') || '{}'); } catch (_) { return {}; }
           })();
+          const stripHandle = (raw) => String(raw || '').replace(/\s*\(@[^)]+\)\s*$/g, '').trim() || String(raw || '');
 
           // Keep FIXED order from server (Index 0 = Connected Streamer, Index 1+ = Rivals) — NEVER swap positions!
           const hosts = players.map((p, idx) => {
-            const rawName = String(p.name || '');
+            const rawName = stripHandle(p.name || '');
             const isPlaceholder = rawName.startsWith('Rival') || rawName.startsWith('Anfitrión');
             const displayName = (isPlaceholder && customNames[p.id]) ? customNames[p.id] : rawName;
             return { ...p, displayName, isPlaceholder, slot: idx + 1 };
           });
 
           const maxScore = Math.max(1, ...hosts.map((h) => Number(h.score || 0)));
-          const sortedByScore = [...hosts].sort((a, b) => Number(b.score || 0) - Number(a.score || 0));
-          const leader = sortedByScore[0];
-          const runnerUp = sortedByScore[1];
-          const gap = runnerUp ? (Number(leader.score || 0) - Number(runnerUp.score || 0)) : 0;
+          const myHost = hosts[0];
+          const myScore = Number(myHost?.score || 0);
+          const rivals = hosts.slice(1);
+          const topRival = rivals.length ? [...rivals].sort((a, b) => Number(b.score || 0) - Number(a.score || 0))[0] : null;
+          const topRivalScore = Number(topRival?.score || 0);
+          const diffVsRival = myScore - topRivalScore;
+          const absDiff = Math.abs(diffVsRival);
           const modeLabel = battleData.mode || (hosts.length === 2 ? '1 vs 1' : `${hosts.length} anfitriones`);
+
+          const statusPillHtml = diffVsRival < 0
+            ? `<div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-pinkNeon/15 border border-pinkNeon/40 text-xs sm:text-sm font-extrabold text-pink-300">📉 Perdiendo por <span class="font-display text-white text-sm sm:text-base">${absDiff.toLocaleString('es-ES')} pts</span></div>`
+            : (diffVsRival > 0
+              ? `<div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/15 border border-emerald-400/40 text-xs sm:text-sm font-extrabold text-emerald-300">🏆 Ganando por <span class="font-display text-white text-sm sm:text-base">+${absDiff.toLocaleString('es-ES')} pts</span></div>`
+              : `<div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/15 border border-amber-400/40 text-xs sm:text-sm font-extrabold text-amber-300">🤝 Empate · <span class="font-display text-white">0 pts</span></div>`);
 
           board.innerHTML = `
             <div class="space-y-3.5">
-              <div class="flex items-center justify-between gap-2">
-                <span class="text-xs font-extrabold text-cyanNeon uppercase tracking-wider">👥 Puntos en Batalla (${hosts.length}) · ${esc(modeLabel)}</span>
-                <span class="text-[11px] text-slate-400 font-semibold">Orden fijo · En vivo</span>
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                ${statusPillHtml}
+                <span class="text-[11px] text-slate-400 font-semibold">${esc(modeLabel)} · En tiempo real</span>
               </div>
 
               <div class="space-y-2.5">
@@ -1704,10 +1804,7 @@
                   const sc = Number(h.score || 0);
                   const pct = Math.max(3, Math.round((sc / maxScore) * 100));
                   const pal = palette[i % palette.length];
-                  const isWinning = leader && h.id === leader.id && sc > 0 && gap > 0;
-                  const slotTag = i === 0
-                    ? '<span class="text-[10px] px-1.5 py-0.5 rounded bg-cyanNeon/15 text-cyanNeon font-extrabold shrink-0">TU LIVE</span>'
-                    : `<span class="text-[10px] px-1.5 py-0.5 rounded bg-pinkNeon/15 text-pink-300 font-bold shrink-0">#${i + 1}</span>`;
+                  const medal = i === 0 ? '🥇' : (i === 1 ? '🥈' : (i === 2 ? '🥉' : `#${i + 1}`));
                   const editBtn = h.isPlaceholder
                     ? `<button type="button" data-rename-host="${esc(h.id)}" title="Escribir nombre del rival" class="text-[11px] px-1.5 py-0.5 rounded bg-white/10 hover:bg-white/20 text-slate-300 shrink-0">✏️</button>`
                     : '';
@@ -1715,11 +1812,11 @@
                     <div class="p-3.5 rounded-2xl bg-card/95 space-y-2 shadow" style="border:1px solid ${pal.border}">
                       <div class="flex items-center justify-between gap-2">
                         <div class="flex items-center gap-2 min-w-0">
-                          ${slotTag}
-                          <span class="text-sm font-extrabold text-white truncate">${isWinning ? '👑 ' : ''}${esc(h.displayName)}</span>
+                          <span class="text-sm shrink-0">${medal}</span>
+                          <span class="text-sm font-extrabold text-white truncate">${esc(h.displayName)}</span>
                           ${editBtn}
                         </div>
-                        <span class="font-display text-xl sm:text-2xl font-extrabold shrink-0" style="color:${pal.text}">${sc.toLocaleString('es-ES')} <span class="text-xs font-bold opacity-80">pts</span></span>
+                        <span class="font-display text-xl sm:text-2xl font-extrabold shrink-0" style="color:${pal.text}">${sc.toLocaleString('es-ES')} <span class="text-xs font-bold opacity-85">pts</span></span>
                       </div>
                       <div class="w-full h-2.5 rounded-full bg-slate-900 overflow-hidden">
                         <div class="h-full rounded-full transition-all duration-300" style="width:${pct}%; background:${pal.bg}"></div>
@@ -1729,13 +1826,11 @@
                 }).join('')}
               </div>
 
-              <div class="rounded-2xl bg-bg/95 border border-white/15 p-3.5 text-center space-y-1">
-                <div class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Diferencia de puntos</div>
-                ${gap === 0
-                  ? '<div class="font-display text-2xl font-extrabold text-amber-300">🤝 Empate · 0 pts</div>'
-                  : `<div class="font-display text-2xl sm:text-3xl font-extrabold ${leader.isOwner ? 'text-cyanNeon' : 'text-pink-400'}">${leader.isOwner ? '+' : '-'}${gap.toLocaleString('es-ES')} pts</div>
-                     <div class="text-xs font-semibold text-slate-300">${leader.isOwner ? `🔥 Vas ganando a ${esc(runnerUp.displayName)}` : `⚡ ${esc(leader.displayName)} va arriba por ${gap.toLocaleString('es-ES')} pts`}</div>`
-                }
+              <div class="rounded-2xl bg-bg/95 border border-white/15 p-3.5 text-center space-y-0.5">
+                <div class="text-[11px] font-bold uppercase tracking-wider text-slate-400">${diffVsRival < 0 ? 'Perdiendo por' : (diffVsRival > 0 ? 'Ganando por' : 'Diferencia de puntos')}</div>
+                <div class="font-display text-2xl sm:text-3xl font-extrabold ${diffVsRival < 0 ? 'text-pink-400' : (diffVsRival > 0 ? 'text-cyanNeon' : 'text-amber-300')}">
+                  ${diffVsRival === 0 ? '0 pts' : `${diffVsRival > 0 ? '+' : ''}${absDiff.toLocaleString('es-ES')} pts`}
+                </div>
               </div>
             </div>
           `;
@@ -2245,6 +2340,29 @@
       document.getElementById('ttsBlockedWords').addEventListener('input', (e) => { state.blockedWords = e.target.value; });
       document.getElementById('rngVol').addEventListener('input', (e) => { state.ttsVolume = Number(e.target.value) / 100; document.getElementById('lblVol').textContent = `${e.target.value}%`; });
       document.getElementById('rngRate').addEventListener('input', (e) => { state.ttsRate = Number(e.target.value); document.getElementById('lblRate').textContent = `${state.ttsRate.toFixed(2)}x`; });
+      
+      function unlockMobileAudio() {
+        try {
+          const AC = window.AudioContext || window.webkitAudioContext;
+          if (AC) {
+            if (!audioCtx) audioCtx = new AC();
+            if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
+          }
+          if ('speechSynthesis' in window) {
+            const silent = new SpeechSynthesisUtterance('');
+            silent.volume = 0;
+            window.speechSynthesis.speak(silent);
+          }
+        } catch (_) {}
+      }
+      document.addEventListener('pointerdown', unlockMobileAudio, { once: true });
+      document.getElementById('btnUnlockTtsAudio')?.addEventListener('click', () => {
+        unlockMobileAudio();
+        const b = document.getElementById('btnUnlockTtsAudio');
+        if (b) b.textContent = '✅ Audio Activo';
+        enqueueTts('Audio activado correctamente', 'Sistema');
+      });
+
       document.getElementById('btnRunTtsTest').addEventListener('click', () => enqueueTts(document.getElementById('ttsTestText').value));
       document.getElementById('toggleMasterTts').addEventListener('click', (e) => {
         state.ttsEnabled = !state.ttsEnabled;
