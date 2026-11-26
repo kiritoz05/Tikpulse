@@ -1451,6 +1451,90 @@
         renderVisualGiftGrid();
         toast(`Catálogo en vivo cargado: ${state.gifts.length} regalos de TikTok`);
       };
+      window.__tikpulseLive = {
+        setStatus(connected, username, infoMsg) {
+          state.connected = Boolean(connected);
+          if (username) state.username = String(username).replace(/^@/, '');
+          document.getElementById('connectBtnText').textContent = state.connected ? 'Conectado' : 'Conectar';
+          document.getElementById('sidebarConnText').textContent = state.connected ? 'Conectado EN VIVO' : 'Sin conexión';
+          document.getElementById('sidebarConnDot').className = state.connected ? 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse' : 'w-2 h-2 rounded-full bg-slate-500';
+          document.getElementById('topLivePill').classList.toggle('opacity-40', !state.connected);
+          renderCountersAndFeeds();
+          if (infoMsg) toast(infoMsg, state.connected ? 'cyan' : 'pink');
+        },
+        onError(msg) {
+          state.connected = false;
+          document.getElementById('connectBtnText').textContent = 'Conectar';
+          document.getElementById('sidebarConnText').textContent = 'Error de conexión';
+          document.getElementById('sidebarConnDot').className = 'w-2 h-2 rounded-full bg-rose-500';
+          document.getElementById('topLivePill').classList.add('opacity-40');
+          toast(msg || 'No se pudo conectar al LIVE', 'pink');
+        },
+        onChat(d) { if (d && d.text) fireChat(d.user || '@user', d.text); },
+        onGift(d) {
+          if (!d) return;
+          if (d.giftType === 1 && !d.repeatEnd) return;
+          const user = d.user || '@user';
+          const giftName = d.giftName || 'Rose';
+          const repeatCount = Math.max(1, Number(d.repeatCount || 1));
+          const gObj = state.gifts.find((g) => g.name.toLowerCase() === giftName.toLowerCase()) || { name: giftName, coins: Number(d.coins || 1), emoji: '🎁', img: '' };
+          const total = Math.max(1, Number(d.coins || gObj.coins || 1)) * repeatCount;
+          state.diamonds += total;
+          state.pkPlayers[0].score += total * state.pkBoost;
+          const dRow = state.topDiamonds.find((x) => x.user === user);
+          if (dRow) dRow.val += total; else state.topDiamonds.push({ user, val: total });
+          state.activity.unshift({ kind: 'gift', user, text: `envió ${gObj.name} ×${repeatCount} ${gObj.emoji || '🎁'} (+${total.toLocaleString('es-ES')} 💎)` });
+          const matched = state.actions.find((a) => a.enabled && a.type === 'gift' && (a.giftName.toLowerCase() === gObj.name.toLowerCase() || a.giftName === 'Cualquier regalo') && repeatCount >= a.minCount);
+          if (matched) runAction(matched, user, repeatCount);
+          else {
+            playSound(total >= 500 ? 'fanfare' : 'coin', null);
+            queueAlert({ screen: total >= 1000 ? 'screen2' : 'screen1', badgeLabel: 'GIFT ALERT', emoji: gObj.emoji || '🎁', img: gObj.img || '', title: `¡${user} envió ${repeatCount}x ${gObj.name}! (+${total.toLocaleString('es-ES')} 🪙)`, duration: total >= 1000 ? 6 : 4 });
+            if (total >= state.ttsMinCoins) enqueueTts((document.getElementById('tplTtsGift').value || '{nickname} envió {repeatCount} {giftName}').replace('{nickname}', user.replace('@', '')).replace('{repeatCount}', String(repeatCount)).replace('{giftName}', gObj.name), user);
+          }
+          renderCountersAndFeeds(); renderBattleBoard();
+        },
+        onLike(d) {
+          if (!d) return;
+          const add = Number(d.likeCount || 1);
+          state.likes = d.totalLikeCount ? Math.max(state.likes + add, Number(d.totalLikeCount)) : state.likes + add;
+          const u = d.user || '@user';
+          const row = state.topLikes.find((x) => x.user === u);
+          if (row) row.val += add; else state.topLikes.push({ user: u, val: add });
+          renderCountersAndFeeds();
+        },
+        onFollow(d) {
+          const user = (d && d.user) || '@user';
+          state.follows += 1;
+          state.activity.unshift({ kind: 'follow', user, text: 'empezó a seguirte ⭐' });
+          const matched = state.actions.find((a) => a.enabled && a.type === 'follow');
+          if (matched) runAction(matched, user, 1);
+          renderCountersAndFeeds();
+        },
+        onShare(d) {
+          const user = (d && d.user) || '@user';
+          state.shares += 1;
+          state.activity.unshift({ kind: 'follow', user, text: 'compartió el LIVE 🔁' });
+          renderCountersAndFeeds();
+        },
+        onJoin(d) {
+          const user = (d && d.user) || '@user';
+          state.memberJoins.unshift({ user, time: 'Ahora' });
+          state.activity.unshift({ kind: 'join', user, text: 'entró al LIVE 👋' });
+          renderCountersAndFeeds();
+        },
+        onSub(d) {
+          const user = (d && d.user) || '@user';
+          state.subs += 1;
+          state.activity.unshift({ kind: 'sub', user, text: 'se acaba de SUSCRIBIR 👑' });
+          const matched = state.actions.find((a) => a.enabled && a.type === 'sub');
+          if (matched) runAction(matched, user, 1);
+          renderCountersAndFeeds();
+        },
+        onViewers(d) {
+          if (d && typeof d.viewerCount === 'number') { state.viewers = d.viewerCount; renderCountersAndFeeds(); }
+        }
+      };
+
       window.__tikpulseApplyBattleUpdate = function (playersArr) {
         if (!Array.isArray(playersArr) || !playersArr.length) return;
         if (playersArr.length === 2) state.pkMode = '1v1';
@@ -1491,6 +1575,7 @@
         renderCountersAndFeeds(); renderBattleBoard();
       });
       document.getElementById('btnConnectLive').addEventListener('click', () => {
+        if (window.__tikpulseSocketActive) return;
         state.connected = !state.connected;
         document.getElementById('connectBtnText').textContent = state.connected ? 'Conectado' : 'Conectar';
         document.getElementById('sidebarConnText').textContent = state.connected ? 'Conectado' : 'Sin conexión';
@@ -1704,24 +1789,91 @@
   <script>
     (function () {
       if (typeof io !== 'function') return;
+      window.__tikpulseSocketActive = true;
       const socket = io();
       const inp = document.getElementById('connectUserInput');
       const btn = document.getElementById('btnConnectLive');
+      const btnText = document.getElementById('connectBtnText');
       const ovField = document.getElementById('urlOverlayMaster');
-      function getToken() {
-        try { return new URL(ovField.value).searchParams.get('token') || 'main'; } catch (_) { return 'main'; }
+
+      // Show optional PANEL_SECRET input automatically if the server requires it
+      let secretInput = null;
+      let statusBanner = document.createElement('div');
+      statusBanner.id = 'liveConnBanner';
+      statusBanner.className = 'hidden mt-2 text-xs px-3 py-2 rounded-lg border border-rose-500/40 bg-rose-500/10 text-rose-200';
+      if (btn && btn.parentElement && btn.parentElement.parentElement) {
+        btn.parentElement.parentElement.appendChild(statusBanner);
       }
+
+      function showBanner(msg, ok) {
+        if (!msg) { statusBanner.classList.add('hidden'); return; }
+        statusBanner.textContent = msg;
+        statusBanner.className = ok
+          ? 'mt-2 text-xs px-3 py-2 rounded-lg border border-emerald-500/40 bg-emerald-500/10 text-emerald-200'
+          : 'mt-2 text-xs px-3 py-2 rounded-lg border border-rose-500/40 bg-rose-500/10 text-rose-200';
+      }
+
+      fetch('/api/config').then((r) => r.json()).then((cfg) => {
+        if (cfg && cfg.requiresSecret && btn && btn.parentElement) {
+          secretInput = document.createElement('input');
+          secretInput.type = 'password';
+          secretInput.placeholder = 'Clave PANEL_SECRET';
+          secretInput.value = sessionStorage.getItem('tikpulse_secret') || '';
+          secretInput.className = 'bg-slate-900/90 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white w-44 focus:outline-none focus:border-pink-500';
+          secretInput.addEventListener('input', () => sessionStorage.setItem('tikpulse_secret', secretInput.value));
+          btn.parentElement.insertBefore(secretInput, btn);
+        }
+        if (window.__tikpulseLive) window.__tikpulseLive.setStatus(false, null, '');
+      }).catch(() => {});
+
+      function getToken() {
+        try { return new URL(ovField.value).searchParams.get('token') || 'tp_default'; } catch (_) { return 'tp_default'; }
+      }
+
+      let liveConnected = false;
       if (btn) {
         btn.addEventListener('click', () => {
-          socket.emit('tiktok:connect', { username: (inp && inp.value || '').trim(), token: getToken() });
+          const username = (inp && inp.value || '').replace(/^@/, '').trim();
+          const token = getToken();
+          const secret = secretInput ? secretInput.value.trim() : '';
+          if (liveConnected) {
+            socket.emit('tiktok:disconnect', { token, secret });
+            liveConnected = false;
+            showBanner('Desconectado del LIVE.', false);
+            if (window.__tikpulseLive) window.__tikpulseLive.setStatus(false, username, 'Desconectado');
+            return;
+          }
+          if (!username || username === 'tu_usuario') {
+            showBanner('Escribe tu @usuario real de TikTok (debe estar EN VIVO ahora).', false);
+            return;
+          }
+          if (btnText) btnText.textContent = 'Conectando...';
+          showBanner(`Conectando con @${username} en TikTok LIVE...`, true);
+          socket.emit('tiktok:connect', { username, token, secret });
         });
       }
-      socket.on('tiktok:gifts_catalog', (list) => {
-        if (window.__tikpulseApplyLiveGifts) window.__tikpulseApplyLiveGifts(list);
+
+      socket.on('tiktok:status', (d) => {
+        liveConnected = Boolean(d && d.connected);
+        showBanner(liveConnected ? `✅ Conectado EN VIVO a ${d.username}` : `Desconectado de ${d.username || ''}`, liveConnected);
+        if (window.__tikpulseLive) window.__tikpulseLive.setStatus(liveConnected, d && d.username, liveConnected ? `Conectado a ${d.username}` : 'LIVE desconectado');
       });
-      socket.on('tiktok:battle_update', (players) => {
-        if (window.__tikpulseApplyBattleUpdate) window.__tikpulseApplyBattleUpdate(players);
+      socket.on('tiktok:error', (d) => {
+        liveConnected = false;
+        const msg = (d && d.message) || 'No se pudo conectar con TikTok LIVE.';
+        showBanner('❌ ' + msg, false);
+        if (window.__tikpulseLive) window.__tikpulseLive.onError(msg);
       });
+      socket.on('tiktok:chat', (d) => window.__tikpulseLive && window.__tikpulseLive.onChat(d));
+      socket.on('tiktok:gift', (d) => window.__tikpulseLive && window.__tikpulseLive.onGift(d));
+      socket.on('tiktok:like', (d) => window.__tikpulseLive && window.__tikpulseLive.onLike(d));
+      socket.on('tiktok:follow', (d) => window.__tikpulseLive && window.__tikpulseLive.onFollow(d));
+      socket.on('tiktok:share', (d) => window.__tikpulseLive && window.__tikpulseLive.onShare(d));
+      socket.on('tiktok:join', (d) => window.__tikpulseLive && window.__tikpulseLive.onJoin(d));
+      socket.on('tiktok:sub', (d) => window.__tikpulseLive && window.__tikpulseLive.onSub(d));
+      socket.on('tiktok:viewers', (d) => window.__tikpulseLive && window.__tikpulseLive.onViewers(d));
+      socket.on('tiktok:gifts_catalog', (list) => window.__tikpulseApplyLiveGifts && window.__tikpulseApplyLiveGifts(list));
+      socket.on('tiktok:battle_update', (players) => window.__tikpulseApplyBattleUpdate && window.__tikpulseApplyBattleUpdate(players));
     })();
   </script>
 </body>
