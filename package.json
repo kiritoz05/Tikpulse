@@ -1,0 +1,19 @@
+{
+  "name": "tikpulse-live",
+  "version": "1.0.0",
+  "description": "Panel interactivo de TikTok LIVE con Alertas, TTS, ElevenLabs y Batallas PK (1v1, 2v2, Grupal)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "socket.io": "^4.7.5",
+    "tiktok-live-connector": "^2.0.0"
+  }
+}
