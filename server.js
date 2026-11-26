@@ -4,16 +4,20 @@ const http = require('http');
 const express = require('express');
 const cors = require('cors');
 const { Server } = require('socket.io');
-const { TikTokLiveConnection, WebcastEvent, ControlEvent } = require('tiktok-live-connector');
+const tiktokConnector = require('tiktok-live-connector');
+const { TikTokLiveConnection, WebcastEvent, ControlEvent, SignConfig } = tiktokConnector;
+
+if (process.env.EULER_API_KEY && SignConfig) {
+  SignConfig.apiKey = process.env.EULER_API_KEY.trim();
+}
 
 const app = express();
-const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || '';
-const PANEL_SECRET = process.env.PANEL_SECRET || '';
+const ALLOWED_ORIGIN = (process.env.ALLOWED_ORIGIN || '').trim();
+const PANEL_SECRET = (process.env.PANEL_SECRET || '').trim();
 const MAX_ACTIVE_ROOMS = Math.max(1, Number(process.env.MAX_ACTIVE_ROOMS) || 5);
 const USERNAME_RE = /^[a-zA-Z0-9._]{2,32}$/;
-const TOKEN_RE = /^[a-zA-Z0-9_-]{6,64}$/;
+const TOKEN_RE = /^[a-zA-Z0-9_-]{4,64}$/;
 
-// Security headers (no extra dependency needed)
 app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'no-referrer');
@@ -33,7 +37,6 @@ app.use(cors({
 app.use(express.json({ limit: '100kb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Simple in-memory IP rate limiter
 const rateBuckets = new Map();
 function allowRequest(ip, maxPerMin = 30) {
   const now = Date.now();
@@ -45,14 +48,17 @@ function allowRequest(ip, maxPerMin = 30) {
   return true;
 }
 
-app.get('/api/health', (_req, res) => res.json({ ok: true }));
+app.get('/api/health', (_req, res) => res.json({ ok: true, hasEulerKey: Boolean(process.env.EULER_API_KEY) }));
+app.get('/api/config', (_req, res) => res.json({
+  requiresSecret: Boolean(PANEL_SECRET),
+  hasEulerKey: Boolean(process.env.EULER_API_KEY)
+}));
 
-// Secure server-side proxy for ElevenLabs (keeps ELEVENLABS_API_KEY out of the browser!)
 app.post('/api/tts/elevenlabs', async (req, res) => {
   const ip = req.ip || req.socket.remoteAddress || 'unknown';
   if (!allowRequest(ip, 25)) return res.status(429).json({ error: 'Demasiadas peticiones' });
   if (PANEL_SECRET && req.headers['x-panel-secret'] !== PANEL_SECRET) {
-    return res.status(401).json({ error: 'No autorizado' });
+    return res.status(401).json({ error: 'Clave del panel (PANEL_SECRET) incorrecta' });
   }
   const apiKey = process.env.ELEVENLABS_API_KEY;
   if (!apiKey) return res.status(503).json({ error: 'ELEVENLABS_API_KEY no configurada en el servidor' });
@@ -102,40 +108,57 @@ io.on('connection', (socket) => {
   });
 
   socket.on('overlay:emit', ({ token, secret, payload }) => {
-    if (PANEL_SECRET && secret !== PANEL_SECRET) return;
+    if (PANEL_SECRET && String(secret || '').trim() !== PANEL_SECRET) return;
     if (!TOKEN_RE.test(String(token || '')) || !payload) return;
     io.to(token).emit('overlay:event', payload);
   });
 
   socket.on('tiktok:connect', async ({ username, token, secret }) => {
-    if (!allowRequest(ip, 15)) {
+    if (!allowRequest(ip, 20)) {
       return socket.emit('tiktok:error', { message: 'Límite de intentos alcanzado. Espera 1 minuto.' });
     }
-    if (PANEL_SECRET && secret !== PANEL_SECRET) {
-      return socket.emit('tiktok:error', { message: 'Clave del panel incorrecta.' });
+    if (PANEL_SECRET && String(secret || '').trim() !== PANEL_SECRET) {
+      return socket.emit('tiktok:error', { message: 'Clave del panel (PANEL_SECRET) incorrecta. Ingrésala junto al usuario o quita PANEL_SECRET en Render.' });
     }
     const cleanUser = String(username || '').replace(/^@/, '').trim();
-    if (!USERNAME_RE.test(cleanUser) || !TOKEN_RE.test(String(token || ''))) {
-      return socket.emit('tiktok:error', { message: 'Usuario o token inválido.' });
+    const cleanToken = TOKEN_RE.test(String(token || '')) ? String(token) : 'tp_default';
+    if (!USERNAME_RE.test(cleanUser)) {
+      return socket.emit('tiktok:error', { message: 'Usuario inválido. Escribe tu @usuario de TikTok sin espacios.' });
     }
-    if (!activeConnections.has(token) && activeConnections.size >= MAX_ACTIVE_ROOMS) {
+    if (!activeConnections.has(cleanToken) && activeConnections.size >= MAX_ACTIVE_ROOMS) {
       return socket.emit('tiktok:error', { message: 'Límite máximo de salas activas alcanzado.' });
     }
 
-    socket.join(token);
-    disconnectRoom(token);
+    socket.join(cleanToken);
+    disconnectRoom(cleanToken);
 
     const options = { enableExtendedGiftInfo: true };
-    if (process.env.EULER_API_KEY) options.signApiKey = process.env.EULER_API_KEY;
+    if (process.env.EULER_API_KEY) options.signApiKey = process.env.EULER_API_KEY.trim();
 
+    console.log(`[TikPulse] Conectando a @${cleanUser} (EulerKey: ${Boolean(options.signApiKey)})`);
     const tiktok = new TikTokLiveConnection(cleanUser, options);
-    activeConnections.set(token, tiktok);
-    const emitToRoom = (ev, data) => io.to(token).emit(ev, data);
+    activeConnections.set(cleanToken, tiktok);
+    const emitToRoom = (ev, data) => io.to(cleanToken).emit(ev, data);
 
-    tiktok.on(ControlEvent.CONNECTED, (st) => emitToRoom('tiktok:status', { connected: true, username: '@' + cleanUser, roomId: st?.roomId || '' }));
-    tiktok.on(ControlEvent.DISCONNECTED, () => emitToRoom('tiktok:status', { connected: false, username: '@' + cleanUser }));
+    tiktok.on(ControlEvent.CONNECTED, (st) => {
+      console.log(`[TikPulse] Conectado a @${cleanUser} (roomId: ${st?.roomId || ''})`);
+      emitToRoom('tiktok:status', { connected: true, username: '@' + cleanUser, roomId: st?.roomId || '' });
+    });
+    tiktok.on(ControlEvent.DISCONNECTED, () => {
+      emitToRoom('tiktok:status', { connected: false, username: '@' + cleanUser });
+    });
+    tiktok.on(ControlEvent.ERROR, (err) => {
+      console.error(`[TikPulse] Error en @${cleanUser}:`, err?.info || err?.message || err);
+    });
     tiktok.on(WebcastEvent.CHAT, (d) => emitToRoom('tiktok:chat', { user: '@' + (d.user?.uniqueId || d.uniqueId || 'user'), text: String(d.comment || '').slice(0, 240) }));
-    tiktok.on(WebcastEvent.GIFT, (d) => emitToRoom('tiktok:gift', { user: '@' + (d.user?.uniqueId || d.uniqueId || 'user'), giftName: d.giftName || d.extendedGiftInfo?.name || 'Regalo', coins: Number(d.diamondCount || 1), repeatCount: Number(d.repeatCount || 1), repeatEnd: Boolean(d.repeatEnd), giftType: d.giftType }));
+    tiktok.on(WebcastEvent.GIFT, (d) => emitToRoom('tiktok:gift', {
+      user: '@' + (d.user?.uniqueId || d.uniqueId || 'user'),
+      giftName: d.giftName || d.extendedGiftInfo?.name || 'Regalo',
+      coins: Number(d.diamondCount || d.extendedGiftInfo?.diamond_count || 1),
+      repeatCount: Number(d.repeatCount || 1),
+      repeatEnd: Boolean(d.repeatEnd),
+      giftType: d.giftType
+    }));
     tiktok.on(WebcastEvent.LIKE, (d) => emitToRoom('tiktok:like', { user: '@' + (d.user?.uniqueId || d.uniqueId || 'user'), likeCount: Number(d.likeCount || 1), totalLikeCount: Number(d.totalLikeCount || 0) }));
     tiktok.on(WebcastEvent.FOLLOW, (d) => emitToRoom('tiktok:follow', { user: '@' + (d.user?.uniqueId || d.uniqueId || 'user') }));
     tiktok.on(WebcastEvent.SHARE, (d) => emitToRoom('tiktok:share', { user: '@' + (d.user?.uniqueId || d.uniqueId || 'user') }));
@@ -156,7 +179,8 @@ io.on('connection', (socket) => {
     });
 
     try {
-      await tiktok.connect();
+      const st = await tiktok.connect();
+      emitToRoom('tiktok:status', { connected: true, username: '@' + cleanUser, roomId: st?.roomId || '' });
       try {
         const rawGifts = await tiktok.fetchAvailableGifts();
         const catalog = (Array.isArray(rawGifts) ? rawGifts : []).map((g) => ({
@@ -168,16 +192,26 @@ io.on('connection', (socket) => {
         if (catalog.length) emitToRoom('tiktok:gifts_catalog', catalog);
       } catch (_) {}
     } catch (err) {
-      emitToRoom('tiktok:error', { message: err?.message || 'No se pudo conectar (verifica que el usuario esté EN VIVO).' });
-      disconnectRoom(token);
+      const rawMsg = err?.message || String(err || '');
+      console.error(`[TikPulse] Falló conexión a @${cleanUser}:`, rawMsg);
+      let friendly = rawMsg || 'No se pudo conectar. Verifica que el usuario esté EN VIVO ahora mismo.';
+      if (/offline|not live|roomId/i.test(rawMsg)) {
+        friendly = `El usuario @${cleanUser} no está EN VIVO en este momento (o su cuenta es privada).`;
+      } else if (/sign|euler|401|403|api key/i.test(rawMsg)) {
+        friendly = `Error de API Key de EulerStream (${rawMsg}). Revisa tu variable EULER_API_KEY.`;
+      }
+      socket.emit('tiktok:error', { message: friendly });
+      disconnectRoom(cleanToken);
     }
   });
 
   socket.on('tiktok:disconnect', ({ token, secret }) => {
-    if (PANEL_SECRET && secret !== PANEL_SECRET) return;
-    if (TOKEN_RE.test(String(token || ''))) disconnectRoom(token);
+    if (PANEL_SECRET && String(secret || '').trim() !== PANEL_SECRET) return;
+    if (TOKEN_RE.test(String(token || ''))) disconnectRoom(String(token));
   });
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`TikPanel Pro seguro corriendo en puerto ${PORT}`));
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`TikPulse LIVE corriendo en http://0.0.0.0:${PORT} | EulerKey: ${Boolean(process.env.EULER_API_KEY)} | PanelSecret: ${Boolean(PANEL_SECRET)}`);
+});
