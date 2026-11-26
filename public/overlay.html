@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TikPulse LIVE — Overlay Transparente</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <style>
+    html, body { background: transparent !important; margin: 0; padding: 0; overflow: hidden; font-family: Inter, system-ui, sans-serif; }
+    @keyframes popIn { 0% { opacity: 0; transform: translateY(14px) scale(0.9); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
+    .animate-pop { animation: popIn 0.25s ease-out forwards; }
+  </style>
+</head>
+<body class="w-screen h-screen flex flex-col justify-between p-4 text-white">
+  <div id="pkBar" class="hidden w-full max-w-md mx-auto bg-black/75 backdrop-blur-md rounded-2xl p-3 border border-cyan-400/50"></div>
+  <div id="alertCenter" class="flex-1 flex items-center justify-center"></div>
+  <div id="chatBottom" class="w-full max-w-md mx-auto space-y-1.5"></div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token') || '';
+    const socket = io();
+    if (token) socket.emit('room:join', { token });
+
+    const alertCenter = document.getElementById('alertCenter');
+    const chatBottom = document.getElementById('chatBottom');
+    let hideTimer = null;
+
+    function showAlert(emoji, title, sub) {
+      if (hideTimer) clearTimeout(hideTimer);
+      alertCenter.innerHTML = '';
+      const box = document.createElement('div');
+      box.className = 'px-6 py-4 rounded-2xl bg-black/85 border-2 border-cyan-400 text-center shadow-2xl animate-pop max-w-sm w-full';
+      const e = document.createElement('div'); e.className = 'text-4xl mb-1'; e.textContent = emoji;
+      const t = document.createElement('div'); t.className = 'text-base font-extrabold text-white'; t.textContent = title;
+      const s = document.createElement('div'); s.className = 'text-xs font-bold text-amber-300 mt-1'; s.textContent = sub;
+      box.append(e, t, s);
+      alertCenter.appendChild(box);
+      hideTimer = setTimeout(() => { alertCenter.innerHTML = ''; }, 5000);
+    }
+
+    function pushChat(user, text) {
+      const line = document.createElement('div');
+      line.className = 'bg-black/65 backdrop-blur-sm rounded-lg px-3 py-1.5 text-sm border border-white/10 animate-pop';
+      const u = document.createElement('span'); u.className = 'text-cyan-300 font-bold mr-1.5'; u.textContent = user + ':';
+      const m = document.createElement('span'); m.textContent = text;
+      line.append(u, m);
+      chatBottom.appendChild(line);
+      while (chatBottom.children.length > 4) chatBottom.firstChild.remove();
+    }
+
+    socket.on('tiktok:gift', (g) => {
+      if (g.giftType === 1 && !g.repeatEnd) return;
+      showAlert('🎁', `¡${g.giftName} ×${g.repeatCount} de ${g.user}!`, `+${g.coins * g.repeatCount} monedas`);
+    });
+    socket.on('tiktok:follow', (d) => showAlert('⭐', `¡Nuevo seguidor: ${d.user}!`, 'Gracias por seguir'));
+    socket.on('tiktok:sub', (d) => showAlert('👑', `¡${d.user} se SUSCRIBIÓ!`, 'Bienvenido al club VIP'));
+    socket.on('tiktok:chat', (c) => pushChat(c.user, c.text));
+    socket.on('overlay:event', (ev) => showAlert(ev.emoji || '✨', ev.title || 'Alerta', ev.sub || ''));
+  </script>
+</body>
+</html>
