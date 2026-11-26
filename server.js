@@ -103,17 +103,18 @@ function createInitialRoomState(username) {
     username: '@' + username,
     connected: false,
     roomId: '',
-    stats: { likes: 0, viewers: 0, follows: 0, diamonds: 0, shares: 0, subs: 0 },
+    ownerUserId: '',
+    stats: { likes: 0, viewers: 0, follows: 0, coins: 0, shares: 0, subs: 0 },
     topLikes: new Map(),
-    topDiamonds: new Map(),
+    topCoins: new Map(),
     giftsCatalog: [],
     battle: {
       active: false,
       status: 0,
-      duration: 300,
-      hostMap: {}, // hostUserId -> { id, name, score, contributors: [{ user, points }] }
+      hostMap: {},        // hostUserId -> { id, name, score, contributors: [{ user, points }] }
       players: [],
-      throws: []   // { user, giftName, coins, repeatCount, total, time }
+      matchGifters: new Map(), // user -> { user, coins, giftsCount, lastGift }
+      throws: []
     }
   };
 }
@@ -125,17 +126,20 @@ function serializeRoomStats(rs) {
     roomId: rs.roomId,
     stats: rs.stats,
     topLikes: Array.from(rs.topLikes.entries()).map(([user, val]) => ({ user, val })).sort((a, b) => b.val - a.val).slice(0, 15),
-    topDiamonds: Array.from(rs.topDiamonds.entries()).map(([user, val]) => ({ user, val })).sort((a, b) => b.val - a.val).slice(0, 15)
+    topCoins: Array.from(rs.topCoins.entries()).map(([user, val]) => ({ user, val })).sort((a, b) => b.val - a.val).slice(0, 15)
   };
 }
 
 function serializeBattle(rs) {
+  const matchTopUsers = Array.from(rs.battle.matchGifters.values())
+    .sort((a, b) => b.coins - a.coins)
+    .slice(0, 20);
   return {
     active: rs.battle.active,
     status: rs.battle.status,
-    duration: rs.battle.duration,
     players: rs.battle.players,
-    throws: rs.battle.throws.slice(0, 25)
+    matchTopUsers,
+    throws: rs.battle.throws.slice(0, 30)
   };
 }
 
@@ -149,88 +153,127 @@ function disconnectRoom(token) {
   if (rs) rs.connected = false;
 }
 
+function safeId(val) {
+  if (val === null || val === undefined) return '';
+  return String(val).trim();
+}
+
 function parseUserLabel(u, fallback = 'Usuario') {
   if (!u) return fallback;
-  const uid = u.uniqueId || u.displayId || u.user?.uniqueId || u.user?.displayId;
   const nick = u.nickname || u.nickName || u.user?.nickname || u.user?.nickName;
+  const uid = u.uniqueId || u.displayId || u.user?.uniqueId || u.user?.displayId;
+  if (nick && uid) return `${nick} (@${String(uid).replace(/^@/, '')})`;
   if (uid) return '@' + String(uid).replace(/^@/, '');
   if (nick) return String(nick);
   return fallback;
 }
 
+function hydrateFromRoomInfo(rs, rInfo) {
+  if (!rInfo || typeof rInfo !== 'object') return;
+  const ownerId = safeId(rInfo.owner_user_id || rInfo.owner?.id_str || rInfo.owner?.id);
+  if (ownerId) rs.ownerUserId = ownerId;
+
+  const likes = Number(rInfo.like_count || rInfo.stats?.like_count || 0);
+  const viewers = Number(rInfo.user_count || 0);
+  const shares = Number(rInfo.stats?.share_count || rInfo.share_count || 0);
+  if (likes > 0) rs.stats.likes = likes;
+  if (viewers > 0) rs.stats.viewers = viewers;
+  if (shares > 0) rs.stats.shares = shares;
+
+  // Hydrate mid-battle state if user joined while a battle is already live!
+  const lm = rInfo.link_mic || {};
+  const bScores = lm.battle_scores || rInfo.battle_info?.battle_scores || [];
+  if (Array.isArray(bScores) && bScores.length) {
+    rs.battle.active = true;
+    rs.battle.status = 1;
+    bScores.forEach((bs, idx) => {
+      const hid = safeId(bs.user_id || bs.host_user_id || idx);
+      const isOwner = ownerId && hid === ownerId;
+      const existing = rs.battle.hostMap[hid];
+      rs.battle.hostMap[hid] = {
+        id: hid,
+        name: existing?.name || (isOwner ? rs.username : (bs.nickname || `Oponente #${idx + 1}`)),
+        score: Number(bs.score || bs.points || 0),
+        contributors: existing?.contributors || []
+      };
+    });
+    rs.battle.players = Object.values(rs.battle.hostMap);
+  }
+}
+
 function parseBattleStart(rs, d) {
   const hostMap = {};
-  // v2 protobuf: d.anchorInfo (Array or Map/Object)
   const anchors = d?.anchorInfo;
   if (Array.isArray(anchors)) {
     anchors.forEach((info, idx) => {
-      const hid = String(info?.user?.userId || info?.userId || idx);
+      const hid = safeId(info?.user?.userId || info?.userId || idx);
       hostMap[hid] = {
         id: hid,
-        name: parseUserLabel(info?.user || info, `Host ${idx + 1}`),
+        name: parseUserLabel(info?.user || info, `Oponente ${idx + 1}`),
         score: 0,
         contributors: []
       };
     });
   } else if (anchors && typeof anchors === 'object') {
     Object.entries(anchors).forEach(([k, info], idx) => {
-      const hid = String(info?.user?.userId || info?.userId || k || idx);
+      const hid = safeId(info?.user?.userId || info?.userId || k || idx);
       hostMap[hid] = {
         id: hid,
-        name: parseUserLabel(info?.user || info, `Host ${idx + 1}`),
+        name: parseUserLabel(info?.user || info, `Oponente ${idx + 1}`),
         score: 0,
         contributors: []
       };
     });
   }
-  // v1 compat: d.battleUsers
   if (!Object.keys(hostMap).length && Array.isArray(d?.battleUsers)) {
     d.battleUsers.forEach((u, idx) => {
-      const hid = String(u?.userId || idx);
+      const hid = safeId(u?.userId || idx);
       hostMap[hid] = {
         id: hid,
-        name: parseUserLabel(u, `Host ${idx + 1}`),
+        name: parseUserLabel(u, `Oponente ${idx + 1}`),
         score: 0,
         contributors: []
       };
     });
   }
-  const dur = Number(d?.battleSetting?.duration || 300);
   rs.battle = {
     active: true,
     status: 1,
-    duration: dur > 0 ? dur : 300,
     hostMap,
     players: Object.values(hostMap),
+    matchGifters: new Map(),
     throws: []
   };
 }
 
 function parseBattleArmies(rs, d) {
   const status = Number(d?.battleStatus ?? 1);
-  // Collect entries from d.battleItems (Array or Map/Object) or d.battleArmies (Array)
   let rawEntries = [];
+
   if (Array.isArray(d?.battleItems) && d.battleItems.length) {
-    rawEntries = d.battleItems.map((it, i) => [String(it?.hostUserId || i), it]);
+    rawEntries = d.battleItems.map((it, i) => [safeId(it?.hostUserId || it?.userId || i), it]);
   } else if (d?.battleItems && typeof d.battleItems === 'object' && Object.keys(d.battleItems).length) {
-    rawEntries = Object.entries(d.battleItems).map(([k, it]) => [String(it?.hostUserId || k), it]);
+    rawEntries = Object.entries(d.battleItems).map(([k, it]) => [safeId(it?.hostUserId || k), it]);
   } else if (Array.isArray(d?.battleArmies) && d.battleArmies.length) {
-    rawEntries = d.battleArmies.map((it, i) => [String(it?.hostUserId || i), it]);
+    rawEntries = d.battleArmies.map((it, i) => [safeId(it?.hostUserId || i), it]);
+  } else if (d?.armies && typeof d.armies === 'object' && Object.keys(d.armies).length) {
+    rawEntries = Object.entries(d.armies).map(([k, it]) => [safeId(it?.hostUserId || k), it]);
   }
 
   if (!rawEntries.length) return false;
 
-  rs.battle.active = status !== 2; // status 1 = active, 2 = ended/punishment
+  rs.battle.active = status !== 2;
   rs.battle.status = status;
 
   rawEntries.forEach(([hid, item], idx) => {
     const existing = rs.battle.hostMap[hid];
-    const hostName = existing?.name || parseUserLabel(item?.hostUser || item?.user, `@host_${hid.slice(-4)}`);
+    const isOwner = rs.ownerUserId && hid === rs.ownerUserId;
+    const hostName = existing?.name || (isOwner ? rs.username : parseUserLabel(item?.hostUser || item?.user, `Oponente #${idx + 1}`));
 
-    // Extract real score (prefer explicit hostScore/points, else battleGroups points)
-    let score = Number(item?.hostScore ?? item?.points ?? 0);
+    let score = Number(item?.hostScore ?? item?.points ?? item?.score ?? 0);
     const contributors = [];
 
+    // v2 protobuf: battleGroups = [{ points, users: [{ nickname, uniqueId, score }] }]
     if (Array.isArray(item?.battleGroups) && item.battleGroups.length) {
       let groupMax = 0;
       item.battleGroups.forEach((grp) => {
@@ -245,10 +288,10 @@ function parseBattleArmies(rs, d) {
           });
         }
       });
-      if (score === 0 && groupMax > 0) score = groupMax;
+      if (groupMax > score) score = groupMax;
     }
 
-    const extraLists = [item?.participants, item?.userArmies, item?.users];
+    const extraLists = [item?.participants, item?.userArmies, item?.users, item?.armyUsers];
     extraLists.forEach((arr) => {
       if (Array.isArray(arr)) {
         arr.forEach((u) => {
@@ -267,7 +310,7 @@ function parseBattleArmies(rs, d) {
       id: hid,
       name: hostName,
       score,
-      contributors: contributors.slice(0, 8)
+      contributors: contributors.slice(0, 10)
     };
   });
 
@@ -292,13 +335,8 @@ async function startTikTokConnection(socket, cleanUser, cleanToken) {
 
   tiktok.on(ControlEvent.CONNECTED, (st) => {
     rs.connected = true;
-    rs.roomId = st?.roomId || '';
-    const rInfo = st?.roomInfo || tiktok.roomInfo || {};
-    const initLikes = Number(rInfo?.like_count || rInfo?.stats?.like_count || 0);
-    const initViewers = Number(rInfo?.user_count || 0);
-    if (initLikes > 0) rs.stats.likes = initLikes;
-    if (initViewers > 0) rs.stats.viewers = initViewers;
-    console.log(`[TikPulse] Conectado a @${cleanUser} (roomId: ${rs.roomId}, likes: ${rs.stats.likes})`);
+    rs.roomId = st?.roomId || rs.roomId;
+    hydrateFromRoomInfo(rs, st?.roomInfo || tiktok.roomInfo);
     emitToRoom('tiktok:status', { connected: true, username: rs.username, roomId: rs.roomId });
     emitToRoom('tiktok:stats_sync', serializeRoomStats(rs));
     emitToRoom('tiktok:battle_update', serializeBattle(rs));
@@ -324,29 +362,35 @@ async function startTikTokConnection(socket, cleanUser, cleanToken) {
     const user = parseUserLabel(d.user || d, '@user');
     const giftName = d.giftName || d.extendedGiftInfo?.name || 'Regalo';
     const coins = Number(d.diamondCount || d.extendedGiftInfo?.diamond_count || 1);
-    const repeatCount = Number(d.repeatCount || 1);
+    const repeatCount = Math.max(1, Number(d.repeatCount || 1));
     const repeatEnd = Boolean(d.repeatEnd);
     const giftType = d.giftType;
 
-    // Count finished combos (or non-streakable gifts)
+    // Count exact real coins when combo completes (or non-streak gift)
     if (giftType !== 1 || repeatEnd) {
-      const total = Math.max(1, coins) * Math.max(1, repeatCount);
-      rs.stats.diamonds += total;
-      rs.topDiamonds.set(user, (rs.topDiamonds.get(user) || 0) + total);
+      const total = Math.max(1, coins) * repeatCount;
+      rs.stats.coins += total;
+      rs.topCoins.set(user, (rs.topCoins.get(user) || 0) + total);
 
-      // Record who threw in the current real battle!
-      if (rs.battle.active) {
-        rs.battle.throws.unshift({
-          user,
-          giftName,
-          coins,
-          repeatCount,
-          total,
-          time: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
-        });
-        if (rs.battle.throws.length > 30) rs.battle.throws.pop();
-        emitToRoom('tiktok:battle_update', serializeBattle(rs));
-      }
+      // Track who threw in the current match
+      const prev = rs.battle.matchGifters.get(user) || { user, coins: 0, giftsCount: 0, lastGift: '' };
+      prev.coins += total;
+      prev.giftsCount += repeatCount;
+      prev.lastGift = `${giftName} ×${repeatCount}`;
+      rs.battle.matchGifters.set(user, prev);
+
+      rs.battle.throws.unshift({
+        user,
+        giftName,
+        coins,
+        repeatCount,
+        total,
+        time: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+      });
+      if (rs.battle.throws.length > 40) rs.battle.throws.pop();
+
+      emitToRoom('tiktok:stats_sync', serializeRoomStats(rs));
+      emitToRoom('tiktok:battle_update', serializeBattle(rs));
     }
 
     emitToRoom('tiktok:gift', { user, giftName, coins, repeatCount, repeatEnd, giftType });
@@ -370,8 +414,10 @@ async function startTikTokConnection(socket, cleanUser, cleanToken) {
 
   tiktok.on(WebcastEvent.SHARE, (d) => {
     const user = parseUserLabel(d.user || d, '@user');
-    rs.stats.shares += 1;
-    emitToRoom('tiktok:share', { user });
+    const totalShare = Number(d.totalShareCount || d.shareCount || 0);
+    if (totalShare > rs.stats.shares) rs.stats.shares = totalShare;
+    else rs.stats.shares += 1;
+    emitToRoom('tiktok:share', { user, totalShares: rs.stats.shares });
   });
 
   tiktok.on(WebcastEvent.MEMBER, (d) => {
@@ -389,25 +435,36 @@ async function startTikTokConnection(socket, cleanUser, cleanToken) {
   });
 
   tiktok.on(WebcastEvent.LINK_MIC_BATTLE, (d) => {
+    console.log('[TikPulse] LINK_MIC_BATTLE:', JSON.stringify(d).slice(0, 400));
     parseBattleStart(rs, d);
     emitToRoom('tiktok:battle_update', serializeBattle(rs));
   });
 
   tiktok.on(WebcastEvent.LINK_MIC_ARMIES, (d) => {
+    console.log('[TikPulse] LINK_MIC_ARMIES:', JSON.stringify(d).slice(0, 400));
     if (parseBattleArmies(rs, d)) {
       emitToRoom('tiktok:battle_update', serializeBattle(rs));
     }
   });
 
+  if (WebcastEvent.LINK_MIC_BATTLE_PUNISH_FINISH) {
+    tiktok.on(WebcastEvent.LINK_MIC_BATTLE_PUNISH_FINISH, () => {
+      rs.battle.active = false;
+      rs.battle.status = 2;
+      emitToRoom('tiktok:battle_update', serializeBattle(rs));
+    });
+  }
+
   try {
     const st = await tiktok.connect();
     rs.connected = true;
     rs.roomId = st?.roomId || rs.roomId;
-    const rInfo = st?.roomInfo || tiktok.roomInfo || {};
-    const initLikes = Number(rInfo?.like_count || rInfo?.stats?.like_count || 0);
-    const initViewers = Number(rInfo?.user_count || 0);
-    if (initLikes > 0) rs.stats.likes = initLikes;
-    if (initViewers > 0) rs.stats.viewers = initViewers;
+    hydrateFromRoomInfo(rs, st?.roomInfo || tiktok.roomInfo);
+    try {
+      const freshInfo = await tiktok.fetchRoomInfo();
+      hydrateFromRoomInfo(rs, freshInfo);
+    } catch (_) {}
+
     emitToRoom('tiktok:status', { connected: true, username: rs.username, roomId: rs.roomId });
     emitToRoom('tiktok:stats_sync', serializeRoomStats(rs));
     emitToRoom('tiktok:battle_update', serializeBattle(rs));
@@ -446,7 +503,6 @@ io.on('connection', (socket) => {
     if (TOKEN_RE.test(String(token || ''))) socket.join(String(token));
   });
 
-  // Seamless resume after page refresh (F5) without disconnecting TikTok LIVE!
   socket.on('room:resume', async ({ token, username, secret }) => {
     const cleanToken = TOKEN_RE.test(String(token || '')) ? String(token) : '';
     if (!cleanToken) return;
@@ -461,7 +517,6 @@ io.on('connection', (socket) => {
       if (rs.giftsCatalog.length) socket.emit('tiktok:gifts_catalog', rs.giftsCatalog);
       return;
     }
-    // If server restarted or dropped while browser had a saved user, reconnect cleanly
     const cleanUser = String(username || '').replace(/^@/, '').trim();
     if (USERNAME_RE.test(cleanUser) && allowRequest(ip, 20)) {
       await startTikTokConnection(socket, cleanUser, cleanToken);
