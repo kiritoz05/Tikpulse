@@ -136,6 +136,27 @@ app.post('/api/tts/fish', async (req, res) => {
 });
 
 
+
+app.post('/api/tts/streamelements', async (req, res) => {
+  const ip = req.ip || req.socket.remoteAddress || 'unknown';
+  if (!allowRequest(ip, 40)) return res.status(429).json({ error: 'Demasiadas peticiones' });
+  const text = String(req.body?.text || '').trim().slice(0, 240);
+  const voice = String(req.body?.voice || 'Mia').replace(/[^a-zA-Z]/g, '') || 'Mia';
+  if (!text) return res.status(400).json({ error: 'Texto vacío' });
+  try {
+    const url = `https://api.streamelements.com/kappa/v2/speech?voice=${encodeURIComponent(voice)}&text=${encodeURIComponent(text)}`;
+    const upstream = await fetch(url, {
+      headers: { 'User-Agent': 'Mozilla/5.0' }
+    });
+    if (!upstream.ok) return res.status(upstream.status).json({ error: 'StreamElements TTS no disponible' });
+    const buf = Buffer.from(await upstream.arrayBuffer());
+    res.setHeader('Content-Type', 'audio/mpeg');
+    res.send(buf);
+  } catch (_) {
+    res.status(502).json({ error: 'Error conectando con StreamElements TTS' });
+  }
+});
+
 app.post('/api/tts/google', async (req, res) => {
   const ip = req.ip || req.socket.remoteAddress || 'unknown';
   if (!allowRequest(ip, 40)) return res.status(429).json({ error: 'Demasiadas peticiones' });
