@@ -137,6 +137,71 @@ app.post('/api/tts/fish', async (req, res) => {
 
 
 
+
+app.post('/api/tts/tiktok', async (req, res) => {
+  const ip = req.ip || req.socket.remoteAddress || 'unknown';
+  if (!allowRequest(ip, 40)) return res.status(429).json({ error: 'Demasiadas peticiones' });
+  const text = String(req.body?.text || '').trim().slice(0, 220);
+  const voice = String(req.body?.voice || 'es_mx_002').replace(/[^a-zA-Z0-9_]/g, '') || 'es_mx_002';
+  if (!text) return res.status(400).json({ error: 'Texto vacío' });
+
+  const endpoints = [
+    'https://tiktok-tts.weilnet.workers.dev/api/generation',
+    'https://gesserit.co/api/tiktok-tts'
+  ];
+  for (const ep of endpoints) {
+    try {
+      const upstream = await fetch(ep, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0' },
+        body: JSON.stringify({ text, voice }),
+        signal: AbortSignal.timeout(4500)
+      });
+      if (!upstream.ok) continue;
+      const data = await upstream.json().catch(() => null);
+      const b64 = data?.data || data?.base64 || '';
+      if (b64) {
+        const buf = Buffer.from(b64, 'base64');
+        if (buf.length > 200) {
+          res.setHeader('Content-Type', 'audio/mpeg');
+          return res.send(buf);
+        }
+      }
+    } catch (_) {}
+  }
+  res.status(502).json({ error: 'TikTok TTS temporalmente no disponible' });
+});
+
+app.post('/api/tts/streamlabs', async (req, res) => {
+  const ip = req.ip || req.socket.remoteAddress || 'unknown';
+  if (!allowRequest(ip, 40)) return res.status(429).json({ error: 'Demasiadas peticiones' });
+  const text = String(req.body?.text || '').trim().slice(0, 220);
+  const voice = String(req.body?.voice || 'Mia').replace(/[^a-zA-Z]/g, '') || 'Mia';
+  if (!text) return res.status(400).json({ error: 'Texto vacío' });
+  try {
+    const upstream = await fetch('https://streamlabs.com/polly/speak', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'User-Agent': 'Mozilla/5.0',
+        Referer: 'https://streamlabs.com/'
+      },
+      body: JSON.stringify({ voice, text }),
+      signal: AbortSignal.timeout(4500)
+    });
+    if (!upstream.ok) return res.status(upstream.status).json({ error: 'Streamlabs Polly no disponible' });
+    const data = await upstream.json().catch(() => null);
+    if (!data?.speak_url) return res.status(502).json({ error: 'Sin audio de Streamlabs' });
+    const audioRes = await fetch(data.speak_url, { signal: AbortSignal.timeout(4500) });
+    if (!audioRes.ok) return res.status(502).json({ error: 'No se pudo descargar audio Polly' });
+    const buf = Buffer.from(await audioRes.arrayBuffer());
+    res.setHeader('Content-Type', 'audio/mpeg');
+    res.send(buf);
+  } catch (_) {
+    res.status(502).json({ error: 'Streamlabs Polly no disponible' });
+  }
+});
+
 app.post('/api/tts/streamelements', async (req, res) => {
   const ip = req.ip || req.socket.remoteAddress || 'unknown';
   if (!allowRequest(ip, 40)) return res.status(429).json({ error: 'Demasiadas peticiones' });
@@ -1243,6 +1308,195 @@ async function startTikTokConnection(socket, cleanUser, cleanToken) {
   }
 }
 
+
+// ==================== MULTI-SALA 2 vs 2 (HASTA 4 ANFITRIONES INDIVIDUALES) ====================
+const multiBattleSessions = new Map(); // token -> { active, hosts: [...], matchGifters: Map, throws: [] }
+
+function disconnectMultiBattle(token) {
+  const sess = multiBattleSessions.get(token);
+  if (!sess) return;
+  sess.active = false;
+  (sess.hosts || []).forEach((h) => {
+    if (h.tiktok) {
+      try { h.tiktok.disconnect(); } catch (_) {}
+      h.tiktok = null;
+    }
+    h.connected = false;
+  });
+  multiBattleSessions.delete(token);
+}
+
+function serializeMultiBattle(sess) {
+  if (!sess) return { active: false, multiMode: false, players: [], matchTopUsers: [], throws: [] };
+  const players = (sess.hosts || []).map((h) => ({
+    id: h.ownerUserId || h.username,
+    name: h.displayName || h.username,
+    username: h.username,
+    team: h.team,
+    connected: Boolean(h.connected),
+    statusText: h.statusText || (h.connected ? 'EN VIVO' : 'Conectando...'),
+    score: Number(h.score || 0),
+    isOwner: h.slot === 0
+  }));
+  const team1Total = players.filter((p) => p.team === 1).reduce((s, p) => s + p.score, 0);
+  const team2Total = players.filter((p) => p.team === 2).reduce((s, p) => s + p.score, 0);
+  const matchTopUsers = Array.from(sess.matchGifters.values())
+    .filter((u) => Number(u.coins || 0) > 0)
+    .sort((a, b) => b.coins - a.coins)
+    .slice(0, 20);
+  return {
+    active: Boolean(sess.active),
+    multiMode: true,
+    mode: players.length >= 3 ? `Multi-Sala 2 vs 2 (${players.length} salas)` : `Multi-Sala (${players.length} salas)`,
+    team1Total,
+    team2Total,
+    players,
+    matchTopUsers,
+    throws: sess.throws.slice(0, 35)
+  };
+}
+
+async function startMultiBattle(socket, cleanToken, rawUsers) {
+  socket.join(cleanToken);
+  disconnectMultiBattle(cleanToken);
+
+  const cleaned = (Array.isArray(rawUsers) ? rawUsers : [])
+    .slice(0, 4)
+    .map((u, idx) => ({
+      slot: idx,
+      team: idx < 2 ? 1 : 2,
+      cleanUser: String(u || '').replace(/^@/, '').trim()
+    }))
+    .filter((x) => USERNAME_RE.test(x.cleanUser));
+
+  if (cleaned.length < 2) {
+    socket.emit('tiktok:error', { message: 'Escribe al menos 2 @usuarios válidos para conectar Multi-Sala.' });
+    return;
+  }
+
+  const sess = {
+    active: true,
+    hosts: cleaned.map((x) => ({
+      slot: x.slot,
+      team: x.team,
+      username: '@' + x.cleanUser,
+      cleanUser: x.cleanUser,
+      displayName: '@' + x.cleanUser,
+      ownerUserId: '',
+      connected: false,
+      statusText: 'Conectando...',
+      score: 0,
+      giftPriceById: new Map(),
+      giftPriceByName: new Map(),
+      giftStreaks: new Map(),
+      tiktok: null
+    })),
+    matchGifters: new Map(),
+    throws: []
+  };
+  multiBattleSessions.set(cleanToken, sess);
+
+  const emitMulti = () => io.to(cleanToken).emit('battle:multi_update', serializeMultiBattle(sess));
+  emitMulti();
+
+  await Promise.all(sess.hosts.map(async (h) => {
+    const options = { enableExtendedGiftInfo: true, fetchRoomInfoOnConnect: true };
+    if (process.env.EULER_API_KEY) options.signApiKey = process.env.EULER_API_KEY.trim();
+    const conn = new TikTokLiveConnection(h.cleanUser, options);
+    h.tiktok = conn;
+
+    conn.on(ControlEvent.CONNECTED, (st) => {
+      h.connected = true;
+      h.statusText = 'EN VIVO';
+      const rInfo = st?.roomInfo?.data || st?.roomInfo || conn.roomInfo?.data || conn.roomInfo;
+      if (rInfo?.owner) {
+        h.ownerUserId = safeId(rInfo.owner_user_id || rInfo.owner.id_str || rInfo.owner.id);
+        h.displayName = rInfo.owner.nickname || rInfo.owner.nickName || h.username;
+      }
+      emitMulti();
+    });
+
+    conn.on(ControlEvent.DISCONNECTED, () => {
+      h.connected = false;
+      h.statusText = 'Desconectado';
+      emitMulti();
+    });
+
+    conn.on(WebcastEvent.GIFT, (d) => {
+      if (!sess.active) return;
+      const sender = parseUserLabel(d.user || d, '@user');
+      const giftId = safeId(d.giftId || d.gift?.id || d.giftDetails?.id || '');
+      const giftName = d.giftDetails?.giftName || d.gift?.name || d.giftName || d.extendedGiftInfo?.name || 'Regalo';
+      let unitCoins = Number(d.giftDetails?.diamondCount ?? d.gift?.diamond_count ?? d.diamondCount ?? d.extendedGiftInfo?.diamond_count ?? 0);
+      if (!unitCoins && giftId && h.giftPriceById.has(giftId)) unitCoins = h.giftPriceById.get(giftId);
+      if (!unitCoins && h.giftPriceByName.has(giftName.toLowerCase())) unitCoins = h.giftPriceByName.get(giftName.toLowerCase());
+      if (!unitCoins) unitCoins = 1;
+
+      const repeatCount = Math.max(1, Number(d.repeatCount || 1));
+      const repeatEnd = Boolean(d.repeatEnd);
+      const giftType = Number(d.giftDetails?.giftType ?? d.giftType ?? 0);
+      const groupId = safeId(d.groupId || d.common?.msgId || '');
+      const streakKey = `${sender}:${giftId || giftName}:${groupId || 's'}`;
+      const prevStreak = h.giftStreaks.get(streakKey);
+      let deltaCount = repeatCount;
+      if (prevStreak && repeatCount >= prevStreak.count && (Date.now() - prevStreak.ts) < 20000) {
+        deltaCount = repeatCount - prevStreak.count;
+      }
+      h.giftStreaks.set(streakKey, { count: repeatCount, ts: Date.now() });
+      if (repeatEnd || giftType !== 1) h.giftStreaks.delete(streakKey);
+
+      if (deltaCount > 0) {
+        const deltaCoins = unitCoins * deltaCount;
+        h.score += deltaCoins;
+        const prevG = sess.matchGifters.get(sender) || { user: sender, coins: 0, giftsCount: 0, lastGift: '' };
+        prevG.coins += deltaCoins;
+        prevG.giftsCount += deltaCount;
+        prevG.lastGift = `${giftName} → ${h.displayName}`;
+        sess.matchGifters.set(sender, prevG);
+        emitMulti();
+      }
+
+      if (giftType !== 1 || repeatEnd) {
+        const total = unitCoins * repeatCount;
+        sess.throws.unshift({
+          user: sender,
+          giftName: `${giftName} (a ${h.displayName})`,
+          coins: unitCoins,
+          repeatCount,
+          total,
+          time: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+        });
+        if (sess.throws.length > 40) sess.throws.pop();
+        emitMulti();
+      }
+    });
+
+    try {
+      const st = await conn.connect();
+      h.connected = true;
+      h.statusText = 'EN VIVO';
+      const rInfo = st?.roomInfo?.data || st?.roomInfo || conn.roomInfo?.data || conn.roomInfo;
+      if (rInfo?.owner) {
+        h.ownerUserId = safeId(rInfo.owner_user_id || rInfo.owner.id_str || rInfo.owner.id);
+        h.displayName = rInfo.owner.nickname || rInfo.owner.nickName || h.username;
+      }
+      emitMulti();
+      try {
+        const rawGifts = await conn.fetchAvailableGifts();
+        (Array.isArray(rawGifts) ? rawGifts : []).forEach((g) => {
+          const c = Number(g.diamond_count || 1);
+          if (g.id) h.giftPriceById.set(safeId(g.id), c);
+          if (g.name) h.giftPriceByName.set(String(g.name).toLowerCase(), c);
+        });
+      } catch (_) {}
+    } catch (err) {
+      h.connected = false;
+      h.statusText = 'Offline / Error';
+      emitMulti();
+    }
+  }));
+}
+
 io.on('connection', (socket) => {
   const ip = socket.handshake.address || 'unknown';
 
@@ -1261,9 +1515,13 @@ io.on('connection', (socket) => {
       socket.emit('tiktok:status', { connected: true, username: rs.username, roomId: rs.roomId });
       socket.emit('tiktok:stats_sync', serializeRoomStats(rs));
       socket.emit('tiktok:battle_update', serializeBattle(rs));
+      const ms = multiBattleSessions.get(cleanToken);
+      if (ms && ms.active) socket.emit('battle:multi_update', serializeMultiBattle(ms));
       if (rs.giftsCatalog.length) socket.emit('tiktok:gifts_catalog', rs.giftsCatalog);
       return;
     }
+    const msOnly = multiBattleSessions.get(cleanToken);
+    if (msOnly && msOnly.active) socket.emit('battle:multi_update', serializeMultiBattle(msOnly));
     const cleanUser = String(username || '').replace(/^@/, '').trim();
     if (USERNAME_RE.test(cleanUser) && allowRequest(ip, 20)) {
       await startTikTokConnection(socket, cleanUser, cleanToken);
@@ -1292,6 +1550,34 @@ io.on('connection', (socket) => {
       return socket.emit('tiktok:error', { message: 'Límite máximo de salas activas alcanzado.' });
     }
     await startTikTokConnection(socket, cleanUser, cleanToken);
+  });
+
+
+  socket.on('battle:multi_connect', async ({ token, users, secret }) => {
+    if (!allowRequest(ip, 15)) return socket.emit('tiktok:error', { message: 'Espera unos segundos antes de reconectar Multi-Sala.' });
+    if (PANEL_SECRET && String(secret || '').trim() !== PANEL_SECRET) {
+      return socket.emit('tiktok:error', { message: 'Clave del panel (PANEL_SECRET) incorrecta.' });
+    }
+    const cleanToken = TOKEN_RE.test(String(token || '')) ? String(token) : 'tp_default';
+    await startMultiBattle(socket, cleanToken, users);
+  });
+
+  socket.on('battle:multi_reset_scores', ({ token }) => {
+    const cleanToken = TOKEN_RE.test(String(token || '')) ? String(token) : '';
+    const sess = multiBattleSessions.get(cleanToken);
+    if (!sess) return;
+    sess.hosts.forEach((h) => { h.score = 0; });
+    sess.matchGifters = new Map();
+    sess.throws = [];
+    io.to(cleanToken).emit('battle:multi_update', serializeMultiBattle(sess));
+  });
+
+  socket.on('battle:multi_disconnect', ({ token }) => {
+    const cleanToken = TOKEN_RE.test(String(token || '')) ? String(token) : '';
+    if (cleanToken) {
+      disconnectMultiBattle(cleanToken);
+      io.to(cleanToken).emit('battle:multi_update', { active: false, multiMode: false, players: [], matchTopUsers: [], throws: [] });
+    }
   });
 
   socket.on('tiktok:disconnect', ({ token, secret }) => {
