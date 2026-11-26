@@ -35,6 +35,12 @@ app.use(cors({
   }
 }));
 app.use(express.json({ limit: '100kb' }));
+app.use((req, res, next) => {
+  if (req.path === '/' || req.path.endsWith('.html')) {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+  }
+  next();
+});
 app.use(express.static(path.join(__dirname, 'public')));
 
 const rateBuckets = new Map();
@@ -86,6 +92,48 @@ app.post('/api/tts/elevenlabs', async (req, res) => {
   }
 });
 
+
+app.post('/api/tts/fish', async (req, res) => {
+  const ip = req.ip || req.socket.remoteAddress || 'unknown';
+  if (!allowRequest(ip, 30)) return res.status(429).json({ error: 'Demasiadas peticiones' });
+  if (PANEL_SECRET && req.headers['x-panel-secret'] !== PANEL_SECRET) {
+    return res.status(401).json({ error: 'Clave del panel (PANEL_SECRET) incorrecta' });
+  }
+  const apiKey = String(req.body?.apiKey || process.env.FISH_API_KEY || '').trim();
+  if (!apiKey) return res.status(503).json({ error: 'Falta tu Fish Audio API Key (pégala en TTS o configúrala en FISH_API_KEY en Railway)' });
+
+  const text = String(req.body?.text || '').trim().slice(0, 260);
+  const referenceId = String(req.body?.referenceId || '').trim().replace(/[^a-zA-Z0-9_-]/g, '');
+  const allowedModels = new Set(['s2.1-pro-free', 's2.1-pro', 's2-pro']);
+  const reqModel = String(req.body?.model || 's2.1-pro-free').trim();
+  const model = allowedModels.has(reqModel) ? reqModel : 's2.1-pro-free';
+  if (!text) return res.status(400).json({ error: 'Texto vacío' });
+
+  const payload = { text, format: 'mp3', latency: 'balanced', normalize: true };
+  if (referenceId) payload.reference_id = referenceId;
+
+  try {
+    const upstream = await fetch('https://api.fish.audio/v1/tts', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        model
+      },
+      body: JSON.stringify(payload)
+    });
+    if (!upstream.ok) {
+      const errTxt = await upstream.text().catch(() => '');
+      return res.status(upstream.status).json({ error: `Fish Audio error (${upstream.status}): ${errTxt.slice(0, 120)}` });
+    }
+    const buf = Buffer.from(await upstream.arrayBuffer());
+    res.setHeader('Content-Type', 'audio/mpeg');
+    res.send(buf);
+  } catch (_) {
+    res.status(502).json({ error: 'No se pudo conectar con Fish Audio' });
+  }
+});
+
 app.get('/overlay', (_req, res) => res.sendFile(path.join(__dirname, 'public', 'overlay.html')));
 app.get('/overlay-likes.html', (_req, res) => res.sendFile(path.join(__dirname, 'public', 'overlay.html')));
 app.get('/widget/:type', (_req, res) => res.sendFile(path.join(__dirname, 'public', 'overlay.html')));
@@ -125,6 +173,7 @@ function createInitialRoomState(username) {
       mode: '',
       hostMap: {},
       players: [],
+      individualHosts: new Map(), // userId -> { id, name, score, rank }
       matchGifters: new Map(),
       throws: []
     }
@@ -160,12 +209,16 @@ function deepHarvestUsers(rs, obj, depth = 0) {
     }
     return;
   }
-  const uid = safeId(obj.userId || obj.user_id || obj.id_str || obj.id || obj.uid || obj.hostUserId || obj.host_user_id || obj.anchorId || obj.anchor_id);
+  const uid = safeId(obj.userId || obj.UserId || obj.user_id || obj.id_str || obj.id || obj.Id || obj.uid || obj.hostUserId || obj.HostUserId || obj.host_user_id || obj.anchorId || obj.anchor_id);
   const label = parseUserLabel(obj, '');
   if (uid && label && !label.startsWith('Anfitrión #') && !label.startsWith('Equipo #')) {
     rs.knownUsers.set(uid, label);
     if (rs.battle.hostMap[uid] && (rs.battle.hostMap[uid].name.startsWith('Anfitrión #') || rs.battle.hostMap[uid].name.startsWith('Equipo #'))) {
       rs.battle.hostMap[uid].name = label;
+    }
+    if (rs.battle.individualHosts && rs.battle.individualHosts.has(uid)) {
+      const ih = rs.battle.individualHosts.get(uid);
+      if (!ih.name || ih.name.startsWith('Anfitrión #')) ih.name = label;
     }
   }
   const keys = Object.keys(obj);
@@ -182,9 +235,9 @@ function deepHarvestUsers(rs, obj, depth = 0) {
 
 function parseUserLabel(u, fallback = 'Usuario') {
   if (!u || typeof u !== 'object') return fallback;
-  const src = u.user || u;
-  const nick = src.nickname || src.nickName || '';
-  const uid = src.uniqueId || src.displayId || src.display_id || '';
+  const src = u.user || u.User || u.anchorInfo?.user || u;
+  const nick = src.nickname || src.nickName || src.NickName || src.Nickname || '';
+  const uid = src.uniqueId || src.UniqueId || src.displayId || src.DisplayId || src.display_id || src.unique_id || '';
   if (nick && uid && nick.toLowerCase() !== String(uid).toLowerCase()) {
     return `${nick} (@${String(uid).replace(/^@/, '')})`;
   }
@@ -257,15 +310,40 @@ function serializeBattle(rs) {
     .filter((u) => Number(u.coins || 0) > 0)
     .sort((a, b) => b.coins - a.coins)
     .slice(0, 20);
+  // Refresh any placeholder names from knownUsers right before serializing
+  Object.values(rs.battle.hostMap).forEach((p) => {
+    if (p && p.id && p.name.startsWith('Anfitrión #')) {
+      const resolved = resolveHostName(rs, p.id, null, 0);
+      if (resolved && !resolved.startsWith('Anfitrión #')) p.name = resolved;
+    }
+  });
   const players = Object.values(rs.battle.hostMap)
     .filter((p) => p && (p.score > 0 || !p.isGhost))
     .sort((a, b) => Number(b.score || 0) - Number(a.score || 0));
+
+  const individualHosts = Array.from((rs.battle.individualHosts || new Map()).values())
+    .map((h, i) => {
+      const resolved = resolveHostName(rs, h.id, null, i);
+      return {
+        id: h.id,
+        name: (resolved && !resolved.startsWith('Anfitrión #')) ? resolved : (h.name || `Anfitrión #${i + 1}`),
+        score: Number(h.score || 0),
+        rank: Number(h.rank || 0)
+      };
+    })
+    .sort((a, b) => b.score - a.score);
+
+  const mode = individualHosts.length >= 4 && players.length === 2
+    ? '2 vs 2'
+    : (players.length === 2 ? '1 vs 1 / 2 vs 2' : (players.length > 2 ? `Grupal (${players.length})` : ''));
+
   return {
     active: rs.battle.active,
     status: rs.battle.status,
     battleId: rs.battle.battleId || '',
-    mode: rs.battle.mode || (players.length === 2 ? '1v1 / 2v2' : (players.length > 2 ? `Grupal (${players.length})` : '')),
+    mode,
     players,
+    individualHosts,
     matchTopUsers,
     throws: rs.battle.throws.slice(0, 35)
   };
@@ -361,8 +439,35 @@ function hydrateFromRoomInfo(rs, rawInfo) {
     });
   }
 
+  // Harvest individual linked hosts from roomInfo.link_mic for 2v2 / multi-host display
+  const linkedList = lm.linked_user_list || lm.multi_live_user_list || lm.channel_info?.linked_user_list || [];
+  if (Array.isArray(linkedList)) {
+    linkedList.forEach((u, idx) => {
+      const uid = safeId(u?.id_str || u?.id || u?.userId || u?.user?.id_str || u?.user?.id);
+      if (!uid) return;
+      rememberUser(rs, u, uid);
+      const prev = rs.battle.individualHosts.get(uid) || { id: uid, name: resolveHostName(rs, uid, u, idx), score: 0, rank: 0 };
+      const betterName = resolveHostName(rs, uid, u, idx);
+      if (!betterName.startsWith('Anfitrión #')) prev.name = betterName;
+      rs.battle.individualHosts.set(uid, prev);
+    });
+  }
+
   // Only seed battle_scores from roomInfo if we don't already have live LINK_MIC_ARMIES scores
   const bScores = lm.battle_scores || rInfo.battle_info?.battle_scores || [];
+  if (Array.isArray(bScores)) {
+    bScores.forEach((bs, idx) => {
+      const hid = safeId(bs.user_id || bs.host_user_id || bs.id);
+      if (!hid) return;
+      rememberUser(rs, bs, hid);
+      const prev = rs.battle.individualHosts.get(hid) || { id: hid, name: resolveHostName(rs, hid, bs, idx), score: 0, rank: 0 };
+      const sc = Number(bs.score || bs.points || 0);
+      if (sc > prev.score) prev.score = sc;
+      const betterName = resolveHostName(rs, hid, bs, idx);
+      if (!betterName.startsWith('Anfitrión #')) prev.name = betterName;
+      rs.battle.individualHosts.set(hid, prev);
+    });
+  }
   if (Array.isArray(bScores) && bScores.length && !Object.keys(rs.battle.hostMap).length) {
     rs.battle.active = true;
     rs.battle.status = 1;
@@ -428,6 +533,10 @@ function parseBattleStart(rs, d) {
       };
     });
   }
+  const indiv = new Map();
+  Object.values(hostMap).forEach((h) => {
+    indiv.set(h.id, { id: h.id, name: h.name, score: 0, rank: 0 });
+  });
   rs.battle = {
     active: true,
     status: 1,
@@ -435,6 +544,7 @@ function parseBattleStart(rs, d) {
     mode: '',
     hostMap,
     players: Object.values(hostMap),
+    individualHosts: indiv,
     matchGifters: new Map(),
     throws: []
   };
@@ -448,6 +558,7 @@ function parseBattleArmies(rs, d) {
   // If a new battle started, reset stale gifters & hosts cleanly
   if (incomingBattleId && rs.battle.battleId && incomingBattleId !== rs.battle.battleId) {
     rs.battle.hostMap = {};
+    rs.battle.individualHosts = new Map();
     rs.battle.matchGifters = new Map();
     rs.battle.throws = [];
   }
@@ -741,20 +852,50 @@ async function startTikTokConnection(socket, cleanUser, cleanToken) {
         const coins = Number(r.coinCount ?? r.coin_count ?? r.score ?? r.fanTicket ?? 0);
         const role = idx === 0 ? 'Top #1 👑' : (idx === 1 ? 'Top #2 🥈' : (idx === 2 ? 'Top #3 🥉' : (coins > 0 ? 'Donador 🎁' : 'En sala')));
         trackActiveViewer(rs, label, role);
+        if (coins > 0) {
+          const prevC = rs.topCoins.get(label) || 0;
+          if (coins > prevC) rs.topCoins.set(label, coins);
+        }
         return { rank: Number(r.rank || (idx + 1)), user: label, coins, role };
       });
     }
     emitToRoom('tiktok:viewers', {
       viewerCount: rs.stats.viewers,
       topViewers: buildTopViewersList(rs),
+      topCoins: Array.from(rs.topCoins.entries()).map(([user, val]) => ({ user, val })).sort((a, b) => b.val - a.val).slice(0, 15),
       activeViewers: Array.from(rs.activeViewers.entries()).slice(-25).reverse().map(([user, role]) => ({ user, role }))
     });
   });
 
   if (WebcastEvent.LINK_MIC_FAN_TICKET_METHOD) {
-    tiktok.on(WebcastEvent.LINK_MIC_FAN_TICKET_METHOD, (d) => {
-      if (Array.isArray(d?.fanTicketRoomNotice?.userFanTicket)) {
-        d.fanTicketRoomNotice.userFanTicket.forEach((u) => rememberUser(rs, u));
+    tiktok.on(WebcastEvent.LINK_MIC_FAN_TICKET_METHOD, async (d) => {
+      deepHarvestUsers(rs, d, 0);
+      const notice = d?.FanTicketRoomNotice || d?.fanTicketRoomNotice;
+      const list = notice?.UserFanTicketList || notice?.userFanTicketList || notice?.userFanTicket || [];
+      if (Array.isArray(list) && list.length) {
+        let missingName = false;
+        list.forEach((item, idx) => {
+          const uid = safeId(item?.UserId || item?.userId || item?.user_id || item?.user?.userId || item?.user?.id);
+          if (!uid) return;
+          rememberUser(rs, item?.user || item?.User || item, uid);
+          const score = Number(
+            item?.MatchTotalScore ?? item?.matchTotalScore ??
+            item?.FanTicket ?? item?.fanTicket ??
+            item?.score ?? 0
+          );
+          const rank = Number(item?.MatchRank ?? item?.matchRank ?? 0);
+          const name = resolveHostName(rs, uid, item?.user || item?.User || item, idx);
+          if (name.startsWith('Anfitrión #')) missingName = true;
+          rs.battle.individualHosts.set(uid, { id: uid, name, score, rank });
+        });
+        if (missingName && (Date.now() - rs.lastRoomRefreshTs) > 15000) {
+          rs.lastRoomRefreshTs = Date.now();
+          try {
+            const fresh = await tiktok.fetchRoomInfo();
+            hydrateFromRoomInfo(rs, fresh);
+          } catch (_) {}
+        }
+        emitToRoom('tiktok:battle_update', serializeBattle(rs));
       }
     });
   }
