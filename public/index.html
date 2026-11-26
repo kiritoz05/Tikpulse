@@ -426,7 +426,7 @@
               <h2 class="font-display text-base font-bold text-white">🔊 TTS Chat &amp; Voz</h2>
               <p class="text-xs text-slate-400">Voces neuronales gratis (Microsoft Edge + Google TTS), voz clonada con Fish Audio y cola sin errores.</p>
             </div>
-            <div class="flex items-center gap-2">
+            <div class="flex flex-wrap items-center gap-2">
               <button id="btnUnlockTtsAudio" type="button" class="px-3 py-1.5 rounded-xl bg-emerald-500/20 border border-emerald-400/40 text-emerald-200 text-xs font-extrabold">🔊 Activar Audio</button>
               <button id="btnTtsSkip" type="button" class="px-3 py-1.5 rounded-xl bg-amber-500/20 text-amber-200 text-xs font-bold">Saltar</button>
               <button id="btnTtsClear" type="button" class="px-3 py-1.5 rounded-xl bg-pinkNeon/20 text-pink-200 text-xs font-bold">Vaciar cola</button>
@@ -434,12 +434,13 @@
             </div>
           </div>
 
-          <div class="grid grid-cols-2 lg:grid-cols-5 gap-2">
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
             <button type="button" data-tts-engine="edge" class="tts-engine-btn subtab-btn active p-3 rounded-xl bg-bg border border-white/10 text-left"><div class="text-xs font-extrabold text-cyanNeon">🎙️ Edge Neural</div><div class="text-[10px] text-emerald-300 mt-0.5 font-semibold">GRATIS · 20 voces IA</div></button>
+            <button type="button" data-tts-engine="streamelements" class="tts-engine-btn subtab-btn p-3 rounded-xl bg-bg border border-white/10 text-left"><div class="text-xs font-extrabold text-white">🗣️ StreamElements</div><div class="text-[10px] text-emerald-300 mt-0.5 font-semibold">GRATIS · 14 voces streamer</div></button>
             <button type="button" data-tts-engine="google" class="tts-engine-btn subtab-btn p-3 rounded-xl bg-bg border border-white/10 text-left"><div class="text-xs font-extrabold text-white">🌐 Google TTS</div><div class="text-[10px] text-emerald-300 mt-0.5 font-semibold">GRATIS · 16 acentos</div></button>
-            <button type="button" data-tts-engine="fish" class="tts-engine-btn subtab-btn p-3 rounded-xl bg-bg border border-white/10 text-left"><div class="text-xs font-extrabold text-white">🐟 Fish Audio</div><div class="text-[10px] text-cyanNeon mt-0.5">Voz clonada IA</div></button>
-            <button type="button" data-tts-engine="browser" class="tts-engine-btn subtab-btn p-3 rounded-xl bg-bg border border-white/10 text-left"><div class="text-xs font-extrabold text-white">🔊 Navegador</div><div class="text-[10px] text-slate-400 mt-0.5">Local sin internet</div></button>
-            <button type="button" data-tts-engine="elevenlabs" class="tts-engine-btn subtab-btn p-3 rounded-xl bg-bg border border-white/10 text-left"><div class="text-xs font-extrabold text-white">✨ ElevenLabs</div><div class="text-[10px] text-slate-400 mt-0.5">API Key / Clonada</div></button>
+            <button type="button" data-tts-engine="browser" class="tts-engine-btn subtab-btn p-3 rounded-xl bg-bg border border-white/10 text-left"><div class="text-xs font-extrabold text-white">🔊 Navegador</div><div class="text-[10px] text-emerald-300 mt-0.5 font-semibold">GRATIS · Local celular</div></button>
+            <button type="button" data-tts-engine="fish" class="tts-engine-btn subtab-btn p-3 rounded-xl bg-bg border border-white/10 text-left"><div class="text-xs font-extrabold text-white">🐟 Fish Audio IA</div><div class="text-[10px] text-cyanNeon mt-0.5">Gratis s2.1 + Clonada</div></button>
+            <button type="button" data-tts-engine="elevenlabs" class="tts-engine-btn subtab-btn p-3 rounded-xl bg-bg border border-white/10 text-left"><div class="text-xs font-extrabold text-white">✨ ElevenLabs</div><div class="text-[10px] text-slate-400 mt-0.5">10K gratis / Clonada</div></button>
           </div>
 
           <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
@@ -484,6 +485,32 @@
                     <option value="pt-BR-AntonioNeural">Antonio Neural (Brasil · Masculina)</option>
                     <option value="en-US-EmmaMultilingualNeural">Emma Multilingual (Inglés/Español)</option>
                     <option value="en-US-AndrewMultilingualNeural">Andrew Multilingual (Inglés/Español)</option>
+                  </optgroup>
+                </select>
+              </div>
+
+
+              <!-- STREAMELEMENTS (GRATIS) -->
+              <div id="boxStreamElements" class="hidden bg-amber-500/10 border border-amber-400/35 rounded-xl p-4 space-y-2">
+                <div class="text-xs font-bold text-amber-300">🗣️ StreamElements / Polly · 100% Gratis (sin API Key)</div>
+                <select id="seVoiceSelect" class="w-full bg-bg border border-white/15 rounded-xl px-3 py-2 text-xs text-white">
+                  <optgroup label="🇪🇸 / 🇲🇽 / 🇺🇸 Español">
+                    <option value="Mia">Mia (México · Femenina)</option>
+                    <option value="Lupe">Lupe (LatAm · Femenina)</option>
+                    <option value="Miguel">Miguel (LatAm · Masculina)</option>
+                    <option value="Penelope">Penélope (LatAm · Femenina)</option>
+                    <option value="Lucia">Lucía (España · Femenina)</option>
+                    <option value="Conchita">Conchita (España · Clásica)</option>
+                    <option value="Enrique">Enrique (España · Masculina)</option>
+                  </optgroup>
+                  <optgroup label="🇧🇷 Portugués / 🇬🇧 Inglés (Clásicas Twitch)">
+                    <option value="Vitoria">Vitória (Brasil · Femenina)</option>
+                    <option value="Camila">Camila (Brasil · Femenina)</option>
+                    <option value="Ricardo">Ricardo (Brasil · Masculina)</option>
+                    <option value="Brian">Brian (UK · Clásica Streamer)</option>
+                    <option value="Joanna">Joanna (US · Femenina)</option>
+                    <option value="Matthew">Matthew (US · Masculina)</option>
+                    <option value="Ivy">Ivy (US · Infantil)</option>
                   </optgroup>
                 </select>
               </div>
@@ -857,6 +884,7 @@
         ttsEnabled: true,
         ttsEngine: 'edge',
         edgeVoice: 'es-PE-CamilaNeural',
+        seVoice: 'Mia',
         currentTtsAudio: null,
         googleAccent: 'es-US',
         elApiKey: '',
@@ -1063,6 +1091,20 @@
         }
       }
 
+      async function playStreamElementsTts(text) {
+        try {
+          const res = await fetch('/api/tts/streamelements', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text, voice: state.seVoice || 'Mia' })
+          });
+          if (!res.ok) throw new Error('SE ' + res.status);
+          return await playAudioBlob(await res.blob());
+        } catch (_) {
+          return false;
+        }
+      }
+
       async function playGoogleTts(text) {
         try {
           const res = await fetch('/api/tts/google', {
@@ -1204,6 +1246,12 @@
         if (state.ttsEngine === 'edge') {
           setTtsDiag('🔊 Leyendo con Edge Neural...');
           if (await playEdgeTts(item.text)) return done();
+          setTtsDiag('🌐 Respaldo automático: Google TTS...');
+          if (await playGoogleTts(item.text)) return done();
+        }
+        if (state.ttsEngine === 'streamelements') {
+          setTtsDiag('🗣️ Leyendo con StreamElements...');
+          if (await playStreamElementsTts(item.text)) return done();
           setTtsDiag('🌐 Respaldo automático: Google TTS...');
           if (await playGoogleTts(item.text)) return done();
         }
@@ -2219,6 +2267,7 @@
           state.ttsEngine = b.getAttribute('data-tts-engine');
           document.querySelectorAll('[data-tts-engine]').forEach((x) => x.classList.toggle('active', x === b));
           document.getElementById('boxEdgeTts')?.classList.toggle('hidden', state.ttsEngine !== 'edge');
+          document.getElementById('boxStreamElements')?.classList.toggle('hidden', state.ttsEngine !== 'streamelements');
           document.getElementById('boxGoogleTts')?.classList.toggle('hidden', state.ttsEngine !== 'google');
           document.getElementById('boxFishAudio')?.classList.toggle('hidden', state.ttsEngine !== 'fish');
           document.getElementById('boxElevenLabs')?.classList.toggle('hidden', state.ttsEngine !== 'elevenlabs');
@@ -2227,6 +2276,17 @@
         });
       });
       document.getElementById('googleAccentSelect').addEventListener('change', (e) => { state.googleAccent = e.target.value; });
+      const seSel = document.getElementById('seVoiceSelect');
+      if (seSel) {
+        seSel.addEventListener('change', (e) => {
+          state.seVoice = e.target.value;
+          try { localStorage.setItem('tikpulse_se_voice', state.seVoice); } catch (_) {}
+        });
+        try {
+          const savedSe = localStorage.getItem('tikpulse_se_voice');
+          if (savedSe) { state.seVoice = savedSe; seSel.value = savedSe; }
+        } catch (_) {}
+      }
       const edgeSel = document.getElementById('edgeVoiceSelect');
       if (edgeSel) {
         edgeSel.addEventListener('change', (e) => {
@@ -2252,6 +2312,7 @@
         state.ttsEngine = 'fish';
         document.querySelectorAll('[data-tts-engine]').forEach((x) => x.classList.toggle('active', x.getAttribute('data-tts-engine') === 'fish'));
         document.getElementById('boxEdgeTts')?.classList.add('hidden');
+        document.getElementById('boxStreamElements')?.classList.add('hidden');
         document.getElementById('boxGoogleTts')?.classList.add('hidden');
         document.getElementById('boxElevenLabs').classList.add('hidden');
         document.getElementById('boxFishAudio').classList.remove('hidden');
@@ -2366,7 +2427,6 @@
             chkTtsReadJoin: 'ttsReadJoin', chkUniqueVoice: 'ttsUniqueVoice', chkStripEmojis: 'stripEmojis'
           };
           Object.entries(map).forEach(([id, key]) => { const el = document.getElementById(id); if (el) el.checked = Boolean(state[key]); });
-                    if (prefEl) prefEl.value = state.ttsCommandPrefix || '';
         } catch (_) {}
       })();
       [
@@ -2377,7 +2437,6 @@
         const el = document.getElementById(id);
         if (el) el.addEventListener('change', (e) => { state[key] = e.target.checked; saveTtsPrefs(); });
       });
-            if (prefInp) prefInp.addEventListener('input', (e) => { state.ttsCommandPrefix = e.target.value; saveTtsPrefs(); });
       document.getElementById('ttsBlockedWords').addEventListener('input', (e) => { state.blockedWords = e.target.value; });
       document.getElementById('rngVol').addEventListener('input', (e) => { state.ttsVolume = Number(e.target.value) / 100; document.getElementById('lblVol').textContent = `${e.target.value}%`; });
       document.getElementById('rngRate').addEventListener('input', (e) => { state.ttsRate = Number(e.target.value); document.getElementById('lblRate').textContent = `${state.ttsRate.toFixed(2)}x`; });
