@@ -35,7 +35,7 @@ app.use(cors({
     return cb(new Error('Origin no permitido'));
   }
 }));
-app.use(express.json({ limit: '100kb' }));
+app.use(express.json({ limit: '8mb' }));
 app.use((req, res, next) => {
   if (req.path === '/' || req.path.endsWith('.html')) {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
@@ -283,7 +283,8 @@ function createInitialRoomState(username) {
       mode: '',
       hostMap: {},
       players: [],
-      individualHosts: new Map(), // userId -> { id, name, score, rank }
+      individualHosts: new Map(), // userId -> { id, name, score, rank, baseFanTicket }
+      fanTicketBaselines: new Map(), // userId -> starting fanTicket when battle started
       matchGifters: new Map(),
       throws: []
     }
@@ -459,7 +460,7 @@ function serializeBattle(rs) {
     });
 
   // Choose the richer host list (individualHosts if >= 2, otherwise rawPlayers)
-  const unified = rawIndiv.length >= 2 ? rawIndiv : (rawPlayers.length ? rawPlayers : rawIndiv);
+  const unified = rawIndiv.length >= 3 ? rawIndiv : (rawIndiv.length === 2 && rawIndiv.some((h) => h.score > 0) ? rawIndiv : (rawPlayers.length ? rawPlayers : rawIndiv));
 
   // FIXED ORDER: Connected streamer (isOwner) ALWAYS index 0, rivals keep stable insertion order (never jump/swap!)
   const orderedHosts = [
@@ -694,6 +695,7 @@ function parseBattleStart(rs, d) {
     hostMap,
     players: Object.values(hostMap),
     individualHosts: indiv,
+    fanTicketBaselines: new Map(),
     matchGifters: new Map(),
     throws: []
   };
@@ -708,6 +710,7 @@ function parseBattleArmies(rs, d) {
   if (incomingBattleId && rs.battle.battleId && incomingBattleId !== rs.battle.battleId) {
     rs.battle.hostMap = {};
     rs.battle.individualHosts = new Map();
+    rs.battle.fanTicketBaselines = new Map();
     rs.battle.matchGifters = new Map();
     rs.battle.throws = [];
   }
@@ -808,6 +811,20 @@ function parseBattleArmies(rs, d) {
   // Replace hostMap with ONLY the current live snapshot (never keep phantom 0-pt duplicates!)
   rs.battle.hostMap = nextHostMap;
   rs.battle.players = Object.values(nextHostMap);
+
+  // If LINK_MIC_ARMIES carries 3+ individual hosts directly, sync them into individualHosts too!
+  const snapList = Object.values(nextHostMap);
+  if (snapList.length >= 3) {
+    snapList.forEach((h) => {
+      const prev = rs.battle.individualHosts.get(h.id);
+      rs.battle.individualHosts.set(h.id, {
+        id: h.id,
+        name: (!h.name.startsWith('Anfitrión #')) ? h.name : (prev?.name || h.name),
+        score: Number(h.score || 0),
+        rank: prev?.rank || 0
+      });
+    });
+  }
   return { updated: true, hasUnknownHost };
 }
 
@@ -1042,7 +1059,7 @@ async function startTikTokConnection(socket, cleanUser, cleanToken) {
   if (WebcastEvent.LINK_MIC_FAN_TICKET_METHOD) {
     tiktok.on(WebcastEvent.LINK_MIC_FAN_TICKET_METHOD, async (d) => {
       deepHarvestUsers(rs, d, 0);
-      const notice = d?.FanTicketRoomNotice || d?.fanTicketRoomNotice;
+      const notice = d?.FanTicketRoomNotice || d?.fanTicketRoomNotice || d;
       const list = notice?.UserFanTicketList || notice?.userFanTicketList || notice?.userFanTicket || [];
       if (Array.isArray(list) && list.length) {
         let missingName = false;
@@ -1050,15 +1067,29 @@ async function startTikTokConnection(socket, cleanUser, cleanToken) {
           const uid = safeId(item?.UserId || item?.userId || item?.user_id || item?.user?.userId || item?.user?.id);
           if (!uid) return;
           rememberUser(rs, item?.user || item?.User || item, uid);
-          const score = Number(
-            item?.MatchTotalScore ?? item?.matchTotalScore ??
-            item?.FanTicket ?? item?.fanTicket ??
-            item?.score ?? 0
-          );
+
+          const matchScore = Number(item?.MatchTotalScore ?? item?.matchTotalScore ?? item?.battleScore ?? 0);
+          const rawFanTicket = Number(item?.FanTicket ?? item?.fanTicket ?? item?.score ?? 0);
+          let score = matchScore;
+          if (score <= 0 && rawFanTicket > 0) {
+            if (!rs.battle.fanTicketBaselines) rs.battle.fanTicketBaselines = new Map();
+            if (!rs.battle.fanTicketBaselines.has(uid)) {
+              rs.battle.fanTicketBaselines.set(uid, rawFanTicket);
+            }
+            const delta = rawFanTicket - (rs.battle.fanTicketBaselines.get(uid) || 0);
+            score = delta > 0 ? delta : rawFanTicket;
+          }
+
           const rank = Number(item?.MatchRank ?? item?.matchRank ?? 0);
           const name = resolveHostName(rs, uid, item?.user || item?.User || item, idx);
           if (name.startsWith('Anfitrión #')) missingName = true;
-          rs.battle.individualHosts.set(uid, { id: uid, name, score, rank });
+          const prev = rs.battle.individualHosts.get(uid);
+          rs.battle.individualHosts.set(uid, {
+            id: uid,
+            name: (!name.startsWith('Anfitrión #')) ? name : (prev?.name || name),
+            score: Math.max(score, prev?.score || 0),
+            rank: rank || prev?.rank || 0
+          });
         });
         if (missingName && (Date.now() - rs.lastRoomRefreshTs) > 15000) {
           rs.lastRoomRefreshTs = Date.now();
