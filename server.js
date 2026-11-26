@@ -374,7 +374,7 @@ function createInitialRoomState(username) {
     recentSocial: new Map(), // dedupe SHARE/FOLLOW vs SOCIAL
     lastRoomRefreshTs: 0,
     stats: { likes: 0, viewers: 0, follows: 0, coins: 0, shares: 0, subs: 0 },
-    rankInfo: { ownerRank: 0, rankLabel: '' },
+    rankInfo: { ownerRank: 0, rankLabel: '', updates: [] },
     topLikes: new Map(),
     topCoins: new Map(),
     topViewers: [], // ranked viewers from ROOM_USER (ranksList / topViewers)
@@ -1069,16 +1069,45 @@ async function startTikTokConnection(socket, cleanUser, cleanToken) {
     });
   }
 
+  function pushRankUpdate(rs, entry) {
+    if (!rs.rankInfo) rs.rankInfo = { ownerRank: 0, rankLabel: '', updates: [] };
+    if (!Array.isArray(rs.rankInfo.updates)) rs.rankInfo.updates = [];
+    if (entry.ownerRank > 0) rs.rankInfo.ownerRank = entry.ownerRank;
+    if (entry.label) rs.rankInfo.rankLabel = entry.label;
+    rs.rankInfo.updates.unshift({
+      source: entry.source || 'TikTok',
+      ownerRank: entry.ownerRank || 0,
+      label: String(entry.label || '').slice(0, 140),
+      time: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+    });
+    if (rs.rankInfo.updates.length > 15) rs.rankInfo.updates.pop();
+    emitToRoom('tiktok:stats_sync', serializeRoomStats(rs));
+  }
+
   if (WebcastEvent.RANK_UPDATE) {
     tiktok.on(WebcastEvent.RANK_UPDATE, (d) => {
-      const first = Array.isArray(d?.updatesList) ? d.updatesList[0] : (Array.isArray(d?.updates) ? d.updates[0] : null);
-      if (first) {
-        const rk = Number(first.ownerRank ?? first.rank ?? 0);
-        if (rk > 0) {
-          rs.rankInfo = { ownerRank: rk, rankLabel: first.defaultContent || first.rankName || `Top #${rk}` };
-          emitToRoom('tiktok:stats_sync', serializeRoomStats(rs));
-        }
-      }
+      const list = Array.isArray(d?.updatesList) ? d.updatesList : (Array.isArray(d?.updates) ? d.updates : []);
+      list.forEach((u) => {
+        const rk = Number(u?.ownerRank ?? u?.rank ?? 0);
+        const lbl = u?.defaultContent || u?.rankName || u?.defaultPattern || (rk > 0 ? `Puesto #${rk} en Ranking TikTok` : '');
+        if (rk > 0 || lbl) pushRankUpdate(rs, { source: 'RANK_UPDATE', ownerRank: rk, label: lbl });
+      });
+    });
+  }
+
+  if (WebcastEvent.RANK_TEXT) {
+    tiktok.on(WebcastEvent.RANK_TEXT, (d) => {
+      const rk = Number(d?.ownerIdxAfterUpdate ?? d?.ownerIdxBeforeUpdate ?? 0);
+      const lbl = d?.selfGetBadgeMsg?.defaultPattern || d?.otherGetBadgeMsg?.defaultPattern || (rk > 0 ? `Subió al puesto #${rk}` : '');
+      if (rk > 0 || lbl) pushRankUpdate(rs, { source: 'RANK_TEXT', ownerRank: rk, label: lbl });
+    });
+  }
+
+  if (WebcastEvent.HOURLY_RANK) {
+    tiktok.on(WebcastEvent.HOURLY_RANK, (d) => {
+      const rk = Number(d?.ownerRank ?? d?.rank ?? 0);
+      const lbl = d?.defaultContent || d?.title || (rk > 0 ? `Ranking Diario/Horario #${rk}` : 'Actualización de Ranking Horario');
+      pushRankUpdate(rs, { source: 'HOURLY_RANK', ownerRank: rk, label: lbl });
     });
   }
 
