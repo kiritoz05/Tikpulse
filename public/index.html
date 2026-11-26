@@ -334,6 +334,76 @@
             </div>
           </div>
         </div>
+      
+        <!-- 🏆 RANKING DIARIO & TOP DE LIGA (FRAGMENTOS A1–D5) -->
+        <div class="tp-card rounded-2xl p-4 sm:p-5 space-y-4 border border-amber-400/25">
+          <div class="flex flex-wrap items-center justify-between gap-2.5">
+            <div>
+              <h2 class="font-display text-sm sm:text-base font-extrabold text-amber-300">🏆 Ranking Diario &amp; Liga de Fragmentos (A1–D5)</h2>
+              <p class="text-[11px] text-slate-400">Monedas acumuladas de hoy y cuánto falta en tiempo real para mantener o ganar fragmentos en tu liga.</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <span id="liveRankBadge" class="hidden text-[11px] px-2.5 py-1 rounded-full bg-amber-500/20 border border-amber-400/40 text-amber-200 font-extrabold">🏅 Top #--</span>
+              <button id="btnResetDailyCoins" type="button" class="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/15 text-[11px] font-bold text-slate-300">🔄 Reiniciar día</button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-3.5 items-stretch">
+            <div class="lg:col-span-4 rounded-xl bg-bg/90 border border-amber-400/30 p-3.5 flex flex-col justify-between space-y-2.5">
+              <div>
+                <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Monedas acumuladas hoy</div>
+                <div id="dailyCoinsTotal" class="font-display text-2xl sm:text-3xl font-extrabold text-amber-300 mt-0.5">0 <span class="text-sm">🪙</span></div>
+              </div>
+              <div class="grid grid-cols-3 gap-2 pt-1 border-t border-white/10">
+                <div>
+                  <label class="block text-[10px] text-slate-400 mb-1">Tu Liga</label>
+                  <select id="leagueTierSelect" class="w-full bg-card border border-white/15 rounded-lg px-2 py-1.5 text-xs font-extrabold text-cyanNeon">
+                    <option value="A1">A1</option><option value="A2">A2</option><option value="A3">A3</option>
+                    <option value="B1">B1</option><option value="B2">B2</option><option value="B3">B3</option><option value="B4">B4</option><option value="B5">B5</option>
+                    <option value="C1" selected>C1</option><option value="C2">C2</option><option value="C3">C3</option><option value="C4">C4</option><option value="C5">C5</option>
+                    <option value="D1">D1</option><option value="D2">D2</option><option value="D3">D3</option><option value="D4">D4</option><option value="D5">D5</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-[10px] text-slate-400 mb-1">Mantener</label>
+                  <input id="leagueKeepGoal" type="number" min="0" value="3000" class="w-full bg-card border border-white/15 rounded-lg px-2 py-1.5 text-xs font-bold text-emerald-300" />
+                </div>
+                <div>
+                  <label class="block text-[10px] text-slate-400 mb-1">+1 Frag.</label>
+                  <input id="leagueWinGoal" type="number" min="1" value="10000" class="w-full bg-card border border-white/15 rounded-lg px-2 py-1.5 text-xs font-bold text-amber-300" />
+                </div>
+              </div>
+            </div>
+
+            <div class="lg:col-span-8 grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <!-- NO PERDER FRAGMENTO -->
+              <div class="rounded-xl bg-bg/90 border border-emerald-400/30 p-3.5 flex flex-col justify-between space-y-2.5">
+                <div class="flex items-center justify-between gap-2">
+                  <span class="text-xs font-extrabold text-emerald-300">🛡️ No perder fragmento</span>
+                  <span id="leagueKeepPct" class="text-[11px] font-bold text-emerald-200">0%</span>
+                </div>
+                <div id="leagueKeepText" class="font-display text-lg font-extrabold text-white">Faltan 3.000 🪙</div>
+                <div class="w-full h-2.5 rounded-full bg-slate-900 overflow-hidden">
+                  <div id="leagueKeepBar" class="h-full rounded-full transition-all duration-300" style="width:0%; background:linear-gradient(90deg,#10b981,#00f2ea)"></div>
+                </div>
+                <div class="text-[10px] text-slate-400">Zona segura para conservar tus fragmentos actuales de liga.</div>
+              </div>
+
+              <!-- GANAR +1 FRAGMENTO -->
+              <div class="rounded-xl bg-bg/90 border border-amber-400/35 p-3.5 flex flex-col justify-between space-y-2.5">
+                <div class="flex items-center justify-between gap-2">
+                  <span class="text-xs font-extrabold text-amber-300">⬆️ Ganar +1 fragmento</span>
+                  <span id="leagueWinPct" class="text-[11px] font-bold text-amber-200">0%</span>
+                </div>
+                <div id="leagueWinText" class="font-display text-lg font-extrabold text-white">Faltan 10.000 🪙</div>
+                <div class="w-full h-2.5 rounded-full bg-slate-900 overflow-hidden">
+                  <div id="leagueWinBar" class="h-full rounded-full transition-all duration-300" style="width:0%; background:linear-gradient(90deg,#f59e0b,#fe2c55)"></div>
+                </div>
+                <div class="text-[10px] text-slate-400">4 fragmentos te suben de división en TikTok LIVE (ajustable a tu grupo del día).</div>
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
 
       <!-- TAB 2: 🎁 REGALOS CON IMAGEN Y ALERTAS CON MÚSICA (ESTILO TIKFINITY) -->
@@ -434,19 +504,17 @@
             </div>
           </div>
 
-          <!-- SELECTOR DE MOTOR DE VOZ (6 MOTORES · TWITCH / KICK / TIKTOK) -->
-          <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
-            <button type="button" data-tts-engine="google" class="tts-engine-btn subtab-btn active p-3 rounded-xl bg-bg border border-white/10 text-left"><div class="text-xs font-extrabold text-cyanNeon">🌐 Google + Efectos</div><div class="text-[10px] text-emerald-300 mt-0.5 font-semibold">100% Estable · 16 acentos</div></button>
-            <button type="button" data-tts-engine="tiktok" class="tts-engine-btn subtab-btn p-3 rounded-xl bg-bg border border-white/10 text-left"><div class="text-xs font-extrabold text-white">🎭 TikTok Viral</div><div class="text-[10px] text-pink-300 mt-0.5 font-semibold">Ghostface, Stitch, Rocket...</div></button>
-            <button type="button" data-tts-engine="streamelements" class="tts-engine-btn subtab-btn p-3 rounded-xl bg-bg border border-white/10 text-left"><div class="text-xs font-extrabold text-white">🗣️ Twitch / Kick Bot</div><div class="text-[10px] text-amber-300 mt-0.5 font-semibold">Polly: Mia, Brian, Conchita</div></button>
-            <button type="button" data-tts-engine="browser" class="tts-engine-btn subtab-btn p-3 rounded-xl bg-bg border border-white/10 text-left"><div class="text-xs font-extrabold text-white">⚡ Voz Celular (0 ms)</div><div class="text-[10px] text-emerald-300 mt-0.5 font-semibold">Instantánea sin retraso</div></button>
-            <button type="button" data-tts-engine="fish" class="tts-engine-btn subtab-btn p-3 rounded-xl bg-bg border border-white/10 text-left"><div class="text-xs font-extrabold text-white">🐟 Fish Audio IA</div><div class="text-[10px] text-cyanNeon mt-0.5">Voz clonada · s2.1</div></button>
-            <button type="button" data-tts-engine="elevenlabs" class="tts-engine-btn subtab-btn p-3 rounded-xl bg-bg border border-white/10 text-left"><div class="text-xs font-extrabold text-white">✨ ElevenLabs IA</div><div class="text-[10px] text-slate-400 mt-0.5">API Key / Clonada</div></button>
+          <!-- SELECTOR DE MOTOR DE VOZ (4 MOTORES ESTABLES) -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <button type="button" data-tts-engine="google" class="tts-engine-btn subtab-btn active p-3 rounded-xl bg-bg border border-white/10 text-left"><div class="text-xs font-extrabold text-cyanNeon">🌐 Google + Efectos</div><div class="text-[10px] text-emerald-300 mt-0.5 font-semibold">GRATIS · 16 acentos</div></button>
+            <button type="button" data-tts-engine="streamelements" class="tts-engine-btn subtab-btn p-3 rounded-xl bg-bg border border-white/10 text-left"><div class="text-xs font-extrabold text-white">🗣️ Twitch / Kick Bot</div><div class="text-[10px] text-amber-300 mt-0.5 font-semibold">GRATIS · 14 voces</div></button>
+            <button type="button" data-tts-engine="fish" class="tts-engine-btn subtab-btn p-3 rounded-xl bg-bg border border-white/10 text-left"><div class="text-xs font-extrabold text-white">🐟 Fish Audio IA</div><div class="text-[10px] text-cyanNeon mt-0.5">Voces tts-voices.js</div></button>
+            <button type="button" data-tts-engine="elevenlabs" class="tts-engine-btn subtab-btn p-3 rounded-xl bg-bg border border-white/10 text-left"><div class="text-xs font-extrabold text-white">✨ ElevenLabs IA</div><div class="text-[10px] text-pink-300 mt-0.5">Voces tts-voices.js</div></button>
           </div>
 
           <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
             <div class="lg:col-span-7 space-y-3.5">
-              <!-- MODULADOR DE VOZ GRACIOSA (FUNCIONA EN GOOGLE, TIKTOK, TWITCH/KICK Y FISH!) -->
+              <!-- MODULADOR DE VOZ GRACIOSA (FUNCIONA EN TODOS LOS MOTORES) -->
               <div class="bg-gradient-to-r from-pinkNeon/10 to-amber-500/10 border border-pinkNeon/35 rounded-xl p-3.5 space-y-2">
                 <div class="flex items-center justify-between">
                   <span class="text-xs font-extrabold text-pink-200">🎭 Efecto de Voz Graciosa (Estilo Twitch / Kick)</span>
@@ -463,87 +531,55 @@
                 </select>
               </div>
 
-              <!-- TIKTOK VIRAL TTS -->
-              <div id="boxTikTokTts" class="hidden bg-pinkNeon/10 border border-pinkNeon/35 rounded-xl p-3.5 space-y-2">
-                <div class="text-xs font-bold text-pink-200">🎭 Voces Virales de TikTok (Ghostface, Stitch, Rocket, Español)</div>
-                <select id="tiktokVoiceSelect" class="w-full bg-bg border border-white/15 rounded-xl px-3 py-2 text-xs text-white">
-                  <optgroup label="🇪🇸 / 🇲🇽 Español TikTok">
-                    <option value="es_mx_002">🇲🇽 Mexicano Gracioso (es_mx_002)</option>
-                    <option value="es_002">🇪🇸 Español Masculino (es_002)</option>
-                  </optgroup>
-                  <optgroup label="🎭 Personajes Graciosos (Twitch / TikTok)">
-                    <option value="en_us_ghostface">👻 Ghostface / Scream</option>
-                    <option value="en_us_stitch">👾 Stitch</option>
-                    <option value="en_us_rocket">🦝 Rocket</option>
-                    <option value="en_us_c3po">🤖 C-3PO Robot</option>
-                    <option value="en_us_chewbacca">🐻 Chewbacca</option>
-                    <option value="en_us_stormtrooper">🪖 Stormtrooper</option>
-                    <option value="en_us_001">👩 Chica TikTok Viral</option>
-                    <option value="en_male_funny">😂 Voz Graciosa (Funny)</option>
-                    <option value="en_male_narration">🎬 Narrador Épico</option>
-                    <option value="br_005">🇧🇷 Brasileño TikTok</option>
-                  </optgroup>
+              <!-- GOOGLE TTS -->
+              <div id="boxGoogleTts" class="bg-cyanNeon/10 border border-cyanNeon/30 rounded-xl p-3.5 space-y-2">
+                <div class="text-xs font-bold text-cyanNeon">🌐 Google TTS · 16 Acentos Gratis (sin API Key)</div>
+                <select id="googleAccentSelect" class="w-full bg-bg border border-white/15 rounded-xl px-3 py-2 text-xs text-white">
+                  <option value="es-PE">Español (Perú)</option><option value="es-US">Español (Latinoamérica / US)</option><option value="es-MX">Español (México)</option><option value="es-CO">Español (Colombia)</option><option value="es-AR">Español (Argentina)</option><option value="es-CL">Español (Chile)</option><option value="es-ES">Español (España)</option><option value="pt-BR">Portugués (Brasil)</option><option value="en-US">English (US)</option><option value="en-GB">English (UK)</option><option value="fr-FR">Français</option><option value="de-DE">Deutsch</option><option value="it-IT">Italiano</option><option value="ja-JP">日本語</option><option value="ko-KR">한국어</option><option value="ru-RU">Русский</option>
                 </select>
               </div>
 
-              <!-- VOZ RÁPIDA NAVEGADOR (0 MS) -->
-              <div id="boxBrowserVoiceWrap" class="hidden bg-emerald-500/10 border border-emerald-400/35 rounded-xl p-3.5 space-y-2">
-                <div class="flex items-center justify-between"><span class="text-xs font-bold text-emerald-300">⚡ Voz instantánea del dispositivo (0 ms de retraso)</span><span class="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-200 font-bold">Más rápida</span></div>
-                <select id="browserVoiceSelect" class="w-full bg-bg border border-white/15 rounded-xl px-3 py-2 text-xs text-white"><option value="">Automática (Español)</option></select>
-              </div>
-
-              <!-- EDGE NEURAL -->
-              <div id="boxEdgeTts" class="hidden bg-emerald-500/10 border border-emerald-400/35 rounded-xl p-3.5 space-y-2">
-                <div class="text-xs font-bold text-emerald-300">🎙️ Microsoft Edge Neural · 20 Voces IA Gratis</div>
-                <select id="edgeVoiceSelect" class="w-full bg-bg border border-white/15 rounded-xl px-3 py-2 text-xs text-white">
-                  <optgroup label="🇵🇪 Perú"><option value="es-PE-CamilaNeural">Camila Neural (Perú · Femenina)</option><option value="es-PE-AlexNeural">Alex Neural (Perú · Masculina)</option></optgroup>
-                  <optgroup label="🇲🇽 México"><option value="es-MX-DaliaNeural">Dalia Neural (México · Femenina)</option><option value="es-MX-JorgeNeural">Jorge Neural (México · Masculina)</option><option value="es-MX-LarissaNeural">Larissa Neural (México · Juvenil)</option><option value="es-MX-LibertoNeural">Liberto Neural (México · Locutor)</option></optgroup>
-                  <optgroup label="🇨🇴 Colombia"><option value="es-CO-SalomeNeural">Salomé Neural (Colombia · Femenina)</option><option value="es-CO-GonzaloNeural">Gonzalo Neural (Colombia · Masculina)</option></optgroup>
-                  <optgroup label="🇦🇷 Argentina"><option value="es-AR-ElenaNeural">Elena Neural (Argentina · Femenina)</option><option value="es-AR-TomasNeural">Tomás Neural (Argentina · Masculina)</option></optgroup>
-                  <optgroup label="🇨🇱 Chile"><option value="es-CL-CatalinaNeural">Catalina Neural (Chile · Femenina)</option><option value="es-CL-LorenzoNeural">Lorenzo Neural (Chile · Masculina)</option></optgroup>
-                  <optgroup label="🇪🇸 España"><option value="es-ES-ElviraNeural">Elvira Neural (España · Femenina)</option><option value="es-ES-AlvaroNeural">Álvaro Neural (España · Masculina)</option></optgroup>
-                  <optgroup label="🇺🇸 Latino / Brasil / Inglés"><option value="es-US-PalomaNeural">Paloma Neural (LatAm · Femenina)</option><option value="es-US-AlonsoNeural">Alonso Neural (LatAm · Masculina)</option><option value="pt-BR-FranciscaNeural">Francisca Neural (Brasil)</option><option value="pt-BR-AntonioNeural">Antonio Neural (Brasil)</option><option value="en-US-EmmaMultilingualNeural">Emma Multilingual</option><option value="en-US-AndrewMultilingualNeural">Andrew Multilingual</option></optgroup>
-                </select>
-              </div>
-
-              <!-- STREAMELEMENTS -->
+              <!-- STREAMELEMENTS / STREAMLABS POLLY -->
               <div id="boxStreamElements" class="hidden bg-amber-500/10 border border-amber-400/35 rounded-xl p-3.5 space-y-2">
-                <div class="text-xs font-bold text-amber-300">🗣️ StreamElements · 14 Voces Streamer Gratis</div>
+                <div class="text-xs font-bold text-amber-300">🗣️ Voces Twitch / Kick Bot (Polly Gratis)</div>
                 <select id="seVoiceSelect" class="w-full bg-bg border border-white/15 rounded-xl px-3 py-2 text-xs text-white">
                   <optgroup label="Español"><option value="Mia">Mia (México · Femenina)</option><option value="Lupe">Lupe (LatAm · Femenina)</option><option value="Miguel">Miguel (LatAm · Masculina)</option><option value="Penelope">Penélope (LatAm · Femenina)</option><option value="Lucia">Lucía (España · Femenina)</option><option value="Conchita">Conchita (España · Clásica)</option><option value="Enrique">Enrique (España · Masculina)</option></optgroup>
                   <optgroup label="Portugués / Inglés"><option value="Vitoria">Vitória (Brasil)</option><option value="Camila">Camila (Brasil)</option><option value="Ricardo">Ricardo (Brasil)</option><option value="Brian">Brian (UK · Clásica Twitch)</option><option value="Joanna">Joanna (US)</option><option value="Matthew">Matthew (US)</option><option value="Ivy">Ivy (US)</option></optgroup>
                 </select>
               </div>
 
-              <!-- GOOGLE TTS -->
-              <div id="boxGoogleTts" class="bg-cyanNeon/10 border border-cyanNeon/30 rounded-xl p-3.5 space-y-2">
-                <div class="text-xs font-bold text-cyanNeon">🌐 Google TTS · 16 Acentos Gratis</div>
-                <select id="googleAccentSelect" class="w-full bg-bg border border-white/15 rounded-xl px-3 py-2 text-xs text-white">
-                  <option value="es-PE">Español (Perú)</option><option value="es-US">Español (Latinoamérica / US)</option><option value="es-MX">Español (México)</option><option value="es-CO">Español (Colombia)</option><option value="es-AR">Español (Argentina)</option><option value="es-CL">Español (Chile)</option><option value="es-ES">Español (España)</option><option value="pt-BR">Portugués (Brasil)</option><option value="en-US">English (US)</option><option value="en-GB">English (UK)</option><option value="fr-FR">Français</option><option value="de-DE">Deutsch</option><option value="it-IT">Italiano</option><option value="ja-JP">日本語</option><option value="ko-KR">한국어</option><option value="ru-RU">Русский</option>
-                </select>
-              </div>
-
-              <!-- FISH AUDIO -->
+              <!-- FISH AUDIO (SIN PEDIR API KEY EN LA WEB · USA RAILWAY + tts-voices.js) -->
               <div id="boxFishAudio" class="hidden bg-cyanNeon/10 border border-cyanNeon/35 rounded-xl p-3.5 space-y-2.5">
-                <div class="flex items-center justify-between"><span class="text-xs font-bold text-cyanNeon">🐟 Fish Audio IA · Voz Clonada</span><a href="https://fish.audio/" target="_blank" rel="noopener noreferrer" class="text-[10px] px-2 py-0.5 rounded bg-cyanNeon/20 text-cyanNeon font-bold">Abrir Fish Audio ↗</a></div>
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <span class="text-xs font-bold text-cyanNeon">🐟 Fish Audio IA · Lista desde tts-voices.js</span>
+                  <span id="fishKeyBadge" class="text-[10px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-200 font-bold">Verificando Railway...</span>
+                </div>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <div><label class="block text-[11px] text-slate-300 mb-1">Fish API Key</label><input id="fishApiKey" type="password" autocomplete="off" placeholder="Pega tu API Key" class="w-full bg-bg border border-white/15 rounded-lg px-3 py-2 text-xs text-white" /></div>
-                  <div><label class="block text-[11px] text-slate-300 mb-1">Modelo</label><select id="fishModelSelect" class="w-full bg-bg border border-white/15 rounded-lg px-3 py-2 text-xs text-white"><option value="s2.1-pro-free">s2.1-pro-free (Gratis)</option><option value="s2.1-pro">s2.1-pro (Pro)</option><option value="s2-pro">s2-pro (Clonación)</option></select></div>
+                  <div>
+                    <label class="block text-[11px] text-slate-300 mb-1">Elegir voz (edita tts-voices.js en GitHub)</label>
+                    <select id="fishVoiceSelect" class="w-full bg-bg border border-white/15 rounded-lg px-3 py-2 text-xs text-white"><option value="">🐟 Voz por defecto Fish Audio</option></select>
+                  </div>
+                  <div>
+                    <label class="block text-[11px] text-slate-300 mb-1">Modelo Fish Audio</label>
+                    <select id="fishModelSelect" class="w-full bg-bg border border-white/15 rounded-lg px-3 py-2 text-xs text-white"><option value="s2.1-pro-free">s2.1-pro-free (Gratis)</option><option value="s2.1-pro">s2.1-pro (Pro)</option><option value="s2-pro">s2-pro (Clonación)</option></select>
+                  </div>
                 </div>
                 <div class="grid grid-cols-1 sm:grid-cols-12 gap-2 items-end">
-                  <div class="sm:col-span-8"><label class="block text-[11px] text-slate-300 mb-1">Reference ID / Model ID</label><input id="fishRefId" type="text" placeholder="Ej: 933563129e564b19a115bedd57b7406a" class="w-full bg-bg border border-white/15 rounded-lg px-3 py-2 text-xs font-mono text-cyanNeon" /></div>
+                  <div class="sm:col-span-8"><label class="block text-[11px] text-slate-300 mb-1">Reference ID extra (opcional)</label><input id="fishRefId" type="text" placeholder="Déjalo vacío para usar la voz elegida arriba" class="w-full bg-bg border border-white/15 rounded-lg px-3 py-2 text-xs font-mono text-cyanNeon" /></div>
                   <div class="sm:col-span-4"><button id="btnTestFishVoice" type="button" class="w-full px-3 py-2 rounded-lg bg-cyanNeon/20 border border-cyanNeon/40 text-xs font-extrabold text-cyanNeon">▶ Probar Fish</button></div>
                 </div>
               </div>
 
-              <!-- ELEVENLABS -->
+              <!-- ELEVENLABS (SIN PEDIR API KEY EN LA WEB · USA RAILWAY + tts-voices.js) -->
               <div id="boxElevenLabs" class="hidden bg-pinkNeon/10 border border-pinkNeon/35 rounded-xl p-3.5 space-y-2.5">
-                <div class="text-xs font-bold text-pink-200">✨ ElevenLabs IA</div>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <div><label class="block text-[11px] text-slate-300 mb-1">API Key</label><input id="elApiKey" type="password" autocomplete="off" placeholder="API Key" class="w-full bg-bg border border-white/15 rounded-lg px-3 py-2 text-xs text-white" /></div>
-                  <div><label class="block text-[11px] text-slate-300 mb-1">Voz</label><select id="elVoiceSelect" class="w-full bg-bg border border-white/15 rounded-lg px-3 py-2 text-xs text-white"><option value="EXAVITQu4vr4xnSDxMaL">Bella</option><option value="21m00Tcm4TlvDq8ikWAM">Rachel</option><option value="AZnzlk1XvdvUeBnXmlld">Domi</option><option value="ErXwobaYiN019PkySvjV">Antoni</option><option value="pNInz6obpgDQGcFmaJgB">Adam</option></select></div>
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <span class="text-xs font-bold text-pink-200">✨ ElevenLabs IA · Lista desde tts-voices.js</span>
+                  <span id="elKeyBadge" class="text-[10px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-200 font-bold">Verificando Railway...</span>
                 </div>
-                <div><label class="block text-[11px] text-slate-300 mb-1">Voice ID clonada (opcional)</label><input id="elCustomVoiceId" type="text" placeholder="Pega tu Voice ID" class="w-full bg-bg border border-white/15 rounded-lg px-3 py-2 text-xs font-mono text-cyanNeon" /></div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div><label class="block text-[11px] text-slate-300 mb-1">Elegir voz (edita tts-voices.js en GitHub)</label><select id="elVoiceSelect" class="w-full bg-bg border border-white/15 rounded-lg px-3 py-2 text-xs text-white"><option value="EXAVITQu4vr4xnSDxMaL">Bella (Femenina suave)</option></select></div>
+                  <div><label class="block text-[11px] text-slate-300 mb-1">Voice ID extra (opcional)</label><input id="elCustomVoiceId" type="text" placeholder="Opcional si ya está en tts-voices.js" class="w-full bg-bg border border-white/15 rounded-lg px-3 py-2 text-xs font-mono text-cyanNeon" /></div>
+                </div>
               </div>
 
               <!-- MODO DE LECTURA + AGRADECIMIENTO DE REGALOS -->
@@ -900,6 +936,8 @@
         likes: 0,
         follows: 0,
         diamonds: 0,
+        dailyCoins: 0,
+        rankInfo: { ownerRank: 0, rankLabel: '' },
         shares: 0,
         subs: 0,
         pendingAudioUrl: null,
@@ -920,6 +958,7 @@
         elCustomVoiceId: '',
         fishApiKey: '',
         fishRefId: '',
+        fishVoiceId: '',
         fishModel: 's2.1-pro-free',
         ttsVolume: 0.85,
         ttsRate: 1.05,
@@ -1021,7 +1060,7 @@
       function loadVoices() {
         if (!('speechSynthesis' in window)) return;
         voices = window.speechSynthesis.getVoices() || [];
-        const sel = document.getElementById('browserVoiceSelect');
+        const sel = null;
         if (!sel) return;
         sel.innerHTML = '<option value="">Automática (Español)</option>';
         [...voices].sort((a, b) => (a.lang.startsWith('es') ? 0 : 1) - (b.lang.startsWith('es') ? 0 : 1))
@@ -1193,7 +1232,7 @@
             body: JSON.stringify({
               text,
               apiKey: state.fishApiKey.trim(),
-              referenceId: state.fishRefId.trim(),
+              referenceId: (state.fishRefId.trim() || state.fishVoiceId || ''),
               model: state.fishModel || 's2.1-pro-free'
             })
           });
@@ -1295,7 +1334,161 @@
             const d = await res.json();
             if (!res.ok) throw new Error(d.error || 'Error subiendo audio');
             toast(`🎵 "${file.name}" agregado a tu biblioteca`);
-            refreshSoundLibrary();
+            
+      const LEAGUE_DEFAULTS = {
+        A1: [150000, 400000], A2: [90000, 220000], A3: [55000, 140000],
+        B1: [35000, 85000], B2: [22000, 55000], B3: [15000, 38000], B4: [10000, 26000], B5: [7000, 18000],
+        C1: [3000, 10000], C2: [2000, 7000], C3: [1200, 4500], C4: [800, 3000], C5: [500, 2000],
+        D1: [300, 1200], D2: [200, 800], D3: [100, 500], D4: [50, 300], D5: [20, 150]
+      };
+      function todayDateStr() {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      }
+      function saveDailyCoinsLocal(val) {
+        try { localStorage.setItem('tikpulse_daily_coins', JSON.stringify({ date: todayDateStr(), coins: Number(val || 0) })); } catch (_) {}
+      }
+      function loadDailyCoinsLocal() {
+        try {
+          const obj = JSON.parse(localStorage.getItem('tikpulse_daily_coins') || 'null');
+          if (obj && obj.date === todayDateStr()) return Number(obj.coins || 0);
+        } catch (_) {}
+        return 0;
+      }
+      state.dailyCoins = loadDailyCoinsLocal();
+
+      function renderLeagueAndDaily() {
+        const totalToday = Math.max(Number(state.dailyCoins || 0), Number(state.diamonds || 0));
+        const dailyEl = document.getElementById('dailyCoinsTotal');
+        if (dailyEl) dailyEl.innerHTML = `${totalToday.toLocaleString('es-ES')} <span class="text-sm">🪙</span>`;
+
+        const rkBadge = document.getElementById('liveRankBadge');
+        if (rkBadge) {
+          if (state.rankInfo && Number(state.rankInfo.ownerRank) > 0) {
+            rkBadge.textContent = `🏅 Puesto #${state.rankInfo.ownerRank}`;
+            rkBadge.classList.remove('hidden');
+          } else {
+            rkBadge.classList.add('hidden');
+          }
+        }
+
+        const keepGoal = Math.max(1, Number(document.getElementById('leagueKeepGoal')?.value || 3000));
+        const winGoal = Math.max(1, Number(document.getElementById('leagueWinGoal')?.value || 10000));
+
+        const keepRem = Math.max(0, keepGoal - totalToday);
+        const keepPct = Math.min(100, Math.round((totalToday / keepGoal) * 100));
+        const kTxt = document.getElementById('leagueKeepText');
+        const kPct = document.getElementById('leagueKeepPct');
+        const kBar = document.getElementById('leagueKeepBar');
+        if (kTxt) kTxt.textContent = keepRem === 0 ? '✅ ¡Fragmento asegurado!' : `Faltan ${keepRem.toLocaleString('es-ES')} 🪙`;
+        if (kPct) kPct.textContent = `${keepPct}%`;
+        if (kBar) kBar.style.width = `${keepPct}%`;
+
+        const winRem = Math.max(0, winGoal - totalToday);
+        const winPct = Math.min(100, Math.round((totalToday / winGoal) * 100));
+        const wTxt = document.getElementById('leagueWinText');
+        const wPct = document.getElementById('leagueWinPct');
+        const wBar = document.getElementById('leagueWinBar');
+        if (wTxt) wTxt.textContent = winRem === 0 ? '🏆 ¡+1 Fragmento ganado!' : `Faltan ${winRem.toLocaleString('es-ES')} 🪙`;
+        if (wPct) wPct.textContent = `${winPct}%`;
+        if (wBar) wBar.style.width = `${winPct}%`;
+      }
+
+      (function initLeagueControls() {
+        const sel = document.getElementById('leagueTierSelect');
+        const keepInp = document.getElementById('leagueKeepGoal');
+        const winInp = document.getElementById('leagueWinGoal');
+        const resetBtn = document.getElementById('btnResetDailyCoins');
+        try {
+          const saved = JSON.parse(localStorage.getItem('tikpulse_league_cfg') || 'null');
+          if (saved) {
+            if (sel && saved.tier) sel.value = saved.tier;
+            if (keepInp && saved.keep) keepInp.value = saved.keep;
+            if (winInp && saved.win) winInp.value = saved.win;
+          }
+        } catch (_) {}
+        const saveCfg = () => {
+          try {
+            localStorage.setItem('tikpulse_league_cfg', JSON.stringify({
+              tier: sel?.value || 'C1',
+              keep: Number(keepInp?.value || 3000),
+              win: Number(winInp?.value || 10000)
+            }));
+          } catch (_) {}
+          renderLeagueAndDaily();
+        };
+        sel?.addEventListener('change', () => {
+          const def = LEAGUE_DEFAULTS[sel.value];
+          if (def && keepInp && winInp) { keepInp.value = def[0]; winInp.value = def[1]; }
+          saveCfg();
+        });
+        keepInp?.addEventListener('input', saveCfg);
+        winInp?.addEventListener('input', saveCfg);
+        resetBtn?.addEventListener('click', () => {
+          state.dailyCoins = 0;
+          saveDailyCoinsLocal(0);
+          renderLeagueAndDaily();
+          toast('Ranking diario reiniciado a 0 🪙');
+        });
+      })();
+
+      renderLeagueAndDaily();
+      refreshSoundLibrary();
+      
+      async function loadServerTtsVoices() {
+        try {
+          const res = await fetch('/api/tts/voices');
+          const d = await res.json();
+          const fBadge = document.getElementById('fishKeyBadge');
+          if (fBadge) {
+            fBadge.textContent = d.hasFishKey ? '✅ API activa en Railway' : '⚠️ Agrega FISH_API_KEY en Railway';
+            fBadge.className = d.hasFishKey
+              ? 'text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold'
+              : 'text-[10px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-200 font-bold';
+          }
+          const eBadge = document.getElementById('elKeyBadge');
+          if (eBadge) {
+            eBadge.textContent = d.hasElevenLabsKey ? '✅ API activa en Railway' : '⚠️ Agrega ELEVENLABS_API_KEY en Railway';
+            eBadge.className = d.hasElevenLabsKey
+              ? 'text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold'
+              : 'text-[10px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-200 font-bold';
+          }
+          const fSel = document.getElementById('fishVoiceSelect');
+          if (fSel && Array.isArray(d.fishVoices) && d.fishVoices.length) {
+            fSel.innerHTML = '';
+            d.fishVoices.forEach((v) => {
+              const opt = document.createElement('option');
+              opt.value = v.id || '';
+              opt.textContent = v.name || v.id || 'Voz Fish';
+              fSel.appendChild(opt);
+            });
+            const savedFv = localStorage.getItem('tikpulse_fish_voice_id');
+            if (savedFv !== null) { state.fishVoiceId = savedFv; fSel.value = savedFv; }
+          }
+          const eSel = document.getElementById('elVoiceSelect');
+          if (eSel && Array.isArray(d.elevenLabsVoices) && d.elevenLabsVoices.length) {
+            eSel.innerHTML = '';
+            d.elevenLabsVoices.forEach((v) => {
+              const opt = document.createElement('option');
+              opt.value = v.id || '';
+              opt.textContent = v.name || v.id || 'Voz ElevenLabs';
+              eSel.appendChild(opt);
+            });
+            const savedEv = localStorage.getItem('tikpulse_el_voice_id');
+            if (savedEv) { state.elVoiceId = savedEv; eSel.value = savedEv; }
+          }
+        } catch (_) {}
+      }
+      document.getElementById('fishVoiceSelect')?.addEventListener('change', (e) => {
+        state.fishVoiceId = e.target.value;
+        try { localStorage.setItem('tikpulse_fish_voice_id', state.fishVoiceId); } catch (_) {}
+      });
+      document.getElementById('elVoiceSelect')?.addEventListener('change', (e) => {
+        state.elVoiceId = e.target.value;
+        try { localStorage.setItem('tikpulse_el_voice_id', state.elVoiceId); } catch (_) {}
+      });
+      loadServerTtsVoices();
+
           } catch (err) {
             toast(err?.message || 'No se pudo subir el audio', 'pink');
           }
@@ -1587,6 +1780,7 @@
 
         document.getElementById('rankTotalDiamonds').textContent = `${state.diamonds.toLocaleString('es-ES')} 🪙`;
         document.getElementById('rankTotalLikes').textContent = `${state.likes.toLocaleString('es-ES')} ❤️`;
+        if (typeof renderLeagueAndDaily === 'function') renderLeagueAndDaily();
         renderRankList('rankDiamondsList', state.topDiamonds, '🪙', '#F59E0B', 10);
         renderRankList('rankLikesList', state.topLikes, '❤️', '#FE2C55', 10);
         renderRankList('overlayTop6List', state.topLikes, '❤️', '#00F2EA', 6);
@@ -2093,9 +2287,24 @@
           renderCountersAndFeeds();
           if (infoMsg) toast(infoMsg, state.connected ? 'cyan' : 'pink');
         },
+        onStreamEnd() {
+          state.likes = 0; state.viewers = 0; state.follows = 0; state.diamonds = 0; state.shares = 0; state.subs = 0;
+          state.topLikes = []; state.topDiamonds = []; state.topViewers = [];
+          this.lastRoomId = '';
+          renderCountersAndFeeds();
+        },
         syncStats(syncData) {
           if (!syncData) return;
           this.realMode = true;
+          const incomingRoom = String(syncData.roomId || '');
+          const incomingUser = String(syncData.username || '').toLowerCase();
+          if ((incomingRoom && this.lastRoomId && incomingRoom !== this.lastRoomId) ||
+              (incomingUser && this.lastUsername && incomingUser !== this.lastUsername)) {
+            state.likes = 0; state.follows = 0; state.diamonds = 0; state.shares = 0; state.subs = 0;
+            state.topLikes = []; state.topDiamonds = [];
+          }
+          if (incomingRoom) this.lastRoomId = incomingRoom;
+          if (incomingUser) this.lastUsername = incomingUser;
           const s = syncData.stats || {};
           state.likes = Math.max(state.likes, Number(s.likes || 0));
           state.viewers = Number(s.viewers || 0);
@@ -2103,6 +2312,13 @@
           state.diamonds = Math.max(state.diamonds, Number(s.coins ?? s.diamonds ?? 0));
           state.shares = Math.max(state.shares, Number(s.shares || 0));
           state.subs = Math.max(state.subs, Number(s.subs || 0));
+          if (typeof syncData.dailyCoins === 'number') {
+            state.dailyCoins = Math.max(state.dailyCoins, syncData.dailyCoins, state.diamonds);
+            saveDailyCoinsLocal(state.dailyCoins);
+          }
+          if (syncData.rankInfo && Number(syncData.rankInfo.ownerRank) > 0) {
+            state.rankInfo = syncData.rankInfo;
+          }
           if (Array.isArray(syncData.topLikes)) state.topLikes = syncData.topLikes;
           if (Array.isArray(syncData.topCoins)) state.topDiamonds = syncData.topCoins;
           if (Array.isArray(syncData.topViewers)) state.topViewers = syncData.topViewers;
@@ -2357,22 +2573,16 @@
         b.addEventListener('click', () => {
           state.ttsEngine = b.getAttribute('data-tts-engine');
           document.querySelectorAll('[data-tts-engine]').forEach((x) => x.classList.toggle('active', x === b));
-          document.getElementById('boxEdgeTts')?.classList.toggle('hidden', state.ttsEngine !== 'edge');
-          document.getElementById('boxTikTokTts')?.classList.toggle('hidden', state.ttsEngine !== 'tiktok');
           document.getElementById('boxStreamElements')?.classList.toggle('hidden', state.ttsEngine !== 'streamelements');
           document.getElementById('boxGoogleTts')?.classList.toggle('hidden', state.ttsEngine !== 'google');
           document.getElementById('boxFishAudio')?.classList.toggle('hidden', state.ttsEngine !== 'fish');
           document.getElementById('boxElevenLabs')?.classList.toggle('hidden', state.ttsEngine !== 'elevenlabs');
-          document.getElementById('boxBrowserVoiceWrap')?.classList.toggle('hidden', state.ttsEngine !== 'browser');
           try { localStorage.setItem('tikpulse_tts_engine', state.ttsEngine); } catch (_) {}
         });
       });
       function applyTtsEngineUi(eng) {
         state.ttsEngine = eng || 'browser';
         document.querySelectorAll('[data-tts-engine]').forEach((x) => x.classList.toggle('active', x.getAttribute('data-tts-engine') === state.ttsEngine));
-        document.getElementById('boxBrowserVoiceWrap')?.classList.toggle('hidden', state.ttsEngine !== 'browser');
-        document.getElementById('boxEdgeTts')?.classList.toggle('hidden', state.ttsEngine !== 'edge');
-        document.getElementById('boxTikTokTts')?.classList.toggle('hidden', state.ttsEngine !== 'tiktok');
           document.getElementById('boxStreamElements')?.classList.toggle('hidden', state.ttsEngine !== 'streamelements');
         document.getElementById('boxGoogleTts')?.classList.toggle('hidden', state.ttsEngine !== 'google');
         document.getElementById('boxFishAudio')?.classList.toggle('hidden', state.ttsEngine !== 'fish');
@@ -2380,7 +2590,7 @@
       }
       try {
         const savedEng = localStorage.getItem('tikpulse_tts_engine');
-        applyTtsEngineUi(savedEng || 'google');
+        applyTtsEngineUi(['google', 'streamelements', 'fish', 'elevenlabs'].includes(savedEng) ? savedEng : 'google');
       } catch (_) { applyTtsEngineUi('google'); }
       const chatModeSel = document.getElementById('ttsChatMode');
       if (chatModeSel) {
@@ -2416,17 +2626,6 @@
           if (savedFx) { state.ttsFunnyEffect = savedFx; fxSel.value = savedFx; }
         } catch (_) {}
       }
-      const tkSel = document.getElementById('tiktokVoiceSelect');
-      if (tkSel) {
-        tkSel.addEventListener('change', (e) => {
-          state.tiktokVoice = e.target.value;
-          try { localStorage.setItem('tikpulse_tk_voice', state.tiktokVoice); } catch (_) {}
-        });
-        try {
-          const savedTk = localStorage.getItem('tikpulse_tk_voice');
-          if (savedTk) { state.tiktokVoice = savedTk; tkSel.value = savedTk; }
-        } catch (_) {}
-      }
       const seSel = document.getElementById('seVoiceSelect');
       if (seSel) {
         seSel.addEventListener('change', (e) => {
@@ -2438,19 +2637,6 @@
           if (savedSe) { state.seVoice = savedSe; seSel.value = savedSe; }
         } catch (_) {}
       }
-      const edgeSel = document.getElementById('edgeVoiceSelect');
-      if (edgeSel) {
-        edgeSel.addEventListener('change', (e) => {
-          state.edgeVoice = e.target.value;
-          try { localStorage.setItem('tikpulse_edge_voice', state.edgeVoice); } catch (_) {}
-        });
-        try {
-          const savedEdge = localStorage.getItem('tikpulse_edge_voice');
-          if (savedEdge) { state.edgeVoice = savedEdge; edgeSel.value = savedEdge; }
-        } catch (_) {}
-      }
-      document.getElementById('elApiKey').addEventListener('input', (e) => { state.elApiKey = e.target.value; });
-      document.getElementById('fishApiKey').addEventListener('input', (e) => { state.fishApiKey = e.target.value; });
       document.getElementById('fishRefId').addEventListener('input', (e) => {
         state.fishRefId = e.target.value;
         try { localStorage.setItem('tikpulse_fish_ref_id', state.fishRefId); } catch (_) {}
@@ -2462,7 +2648,6 @@
       document.getElementById('btnTestFishVoice').addEventListener('click', () => {
         state.ttsEngine = 'fish';
         document.querySelectorAll('[data-tts-engine]').forEach((x) => x.classList.toggle('active', x.getAttribute('data-tts-engine') === 'fish'));
-        document.getElementById('boxEdgeTts')?.classList.add('hidden');
         document.getElementById('boxStreamElements')?.classList.add('hidden');
         document.getElementById('boxGoogleTts')?.classList.add('hidden');
         document.getElementById('boxElevenLabs').classList.add('hidden');
@@ -2547,7 +2732,6 @@
           if (mediaRecorder && mediaRecorder.state === 'recording') mediaRecorder.stop();
         });
       })();
-      document.getElementById('browserVoiceSelect').addEventListener('change', (e) => { state.browserVoiceUri = e.target.value; });
       document.getElementById('ttsCooldownSec').addEventListener('input', (e) => { state.ttsCooldownSec = Math.max(0, Number(e.target.value) || 0); });
       document.getElementById('ttsMinCoins').addEventListener('input', (e) => { state.ttsMinCoins = Math.max(0, Number(e.target.value) || 0); });
       document.getElementById('chkStripEmojis').addEventListener('change', (e) => { state.stripEmojis = e.target.checked; });
@@ -2790,7 +2974,8 @@
         liveConnected = Boolean(d && d.connected);
         if (liveConnected && d.username) localStorage.setItem('tikpulse_live_user', String(d.username).replace(/^@/, ''));
         showBanner(liveConnected ? `✅ Conectado EN VIVO a ${d.username}` : `Desconectado de ${d.username || ''}`, liveConnected);
-        if (window.__tikpulseLive) window.__tikpulseLive.setStatus(liveConnected, d && d.username, liveConnected ? `Conectado a ${d.username}` : 'LIVE desconectado');
+        if (d && d.streamEnded && window.__tikpulseLive && window.__tikpulseLive.onStreamEnd) window.__tikpulseLive.onStreamEnd();
+        if (window.__tikpulseLive) window.__tikpulseLive.setStatus(liveConnected, d && d.username, liveConnected ? `Conectado a ${d.username}` : (d && d.streamEnded ? 'LIVE finalizado (likes reiniciados)' : 'LIVE desconectado'));
       });
       socket.on('tiktok:stats_sync', (d) => window.__tikpulseLive && window.__tikpulseLive.syncStats(d));
       socket.on('tiktok:error', (d) => {
