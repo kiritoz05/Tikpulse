@@ -418,183 +418,140 @@
         </div>
       </section>
 
-      <!-- TAB 3: 🔊 TTS CHAT & VOZ (OPTIMIZADO + VOCES GRATIS NEURALES + FISH AUDIO) -->
+      <!-- TAB 3: 🔊 TTS CHAT & VOZ (SIN RETRASO · VOCES GRATIS + IA) -->
       <section id="tab-voz" class="tab-panel hidden space-y-4">
         <div class="tp-card rounded-2xl p-4 sm:p-5 space-y-4">
-          <div class="flex flex-wrap items-center justify-between gap-3">
+          <div class="flex flex-wrap items-center justify-between gap-2.5">
             <div>
               <h2 class="font-display text-base font-bold text-white">🔊 TTS Chat &amp; Voz</h2>
-              <p class="text-xs text-slate-400">Voces neuronales gratis (Microsoft Edge + Google TTS), voz clonada con Fish Audio y cola sin errores.</p>
+              <p class="text-xs text-slate-400">Lectura rápida sin retraso, voces gratis y agradecimiento automático de regalos.</p>
             </div>
             <div class="flex flex-wrap items-center gap-2">
               <button id="btnUnlockTtsAudio" type="button" class="px-3 py-1.5 rounded-xl bg-emerald-500/20 border border-emerald-400/40 text-emerald-200 text-xs font-extrabold">🔊 Activar Audio</button>
               <button id="btnTtsSkip" type="button" class="px-3 py-1.5 rounded-xl bg-amber-500/20 text-amber-200 text-xs font-bold">Saltar</button>
-              <button id="btnTtsClear" type="button" class="px-3 py-1.5 rounded-xl bg-pinkNeon/20 text-pink-200 text-xs font-bold">Vaciar cola</button>
+              <button id="btnTtsClear" type="button" class="px-3 py-1.5 rounded-xl bg-pinkNeon/20 text-pink-200 text-xs font-bold">Vaciar</button>
               <button id="toggleMasterTts" type="button" class="toggle-switch active" aria-label="Activar TTS"></button>
             </div>
           </div>
 
+          <!-- SELECTOR DE MOTOR DE VOZ (6 MOTORES) -->
           <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
-            <button type="button" data-tts-engine="edge" class="tts-engine-btn subtab-btn active p-3 rounded-xl bg-bg border border-white/10 text-left"><div class="text-xs font-extrabold text-cyanNeon">🎙️ Edge Neural</div><div class="text-[10px] text-emerald-300 mt-0.5 font-semibold">GRATIS · 20 voces IA</div></button>
-            <button type="button" data-tts-engine="streamelements" class="tts-engine-btn subtab-btn p-3 rounded-xl bg-bg border border-white/10 text-left"><div class="text-xs font-extrabold text-white">🗣️ StreamElements</div><div class="text-[10px] text-emerald-300 mt-0.5 font-semibold">GRATIS · 14 voces streamer</div></button>
+            <button type="button" data-tts-engine="browser" class="tts-engine-btn subtab-btn active p-3 rounded-xl bg-bg border border-white/10 text-left"><div class="text-xs font-extrabold text-cyanNeon">⚡ Voz Rápida (0 ms)</div><div class="text-[10px] text-emerald-300 mt-0.5 font-semibold">GRATIS · Sin retraso</div></button>
             <button type="button" data-tts-engine="google" class="tts-engine-btn subtab-btn p-3 rounded-xl bg-bg border border-white/10 text-left"><div class="text-xs font-extrabold text-white">🌐 Google TTS</div><div class="text-[10px] text-emerald-300 mt-0.5 font-semibold">GRATIS · 16 acentos</div></button>
-            <button type="button" data-tts-engine="browser" class="tts-engine-btn subtab-btn p-3 rounded-xl bg-bg border border-white/10 text-left"><div class="text-xs font-extrabold text-white">🔊 Navegador</div><div class="text-[10px] text-emerald-300 mt-0.5 font-semibold">GRATIS · Local celular</div></button>
-            <button type="button" data-tts-engine="fish" class="tts-engine-btn subtab-btn p-3 rounded-xl bg-bg border border-white/10 text-left"><div class="text-xs font-extrabold text-white">🐟 Fish Audio IA</div><div class="text-[10px] text-cyanNeon mt-0.5">Gratis s2.1 + Clonada</div></button>
-            <button type="button" data-tts-engine="elevenlabs" class="tts-engine-btn subtab-btn p-3 rounded-xl bg-bg border border-white/10 text-left"><div class="text-xs font-extrabold text-white">✨ ElevenLabs</div><div class="text-[10px] text-slate-400 mt-0.5">10K gratis / Clonada</div></button>
+            <button type="button" data-tts-engine="streamelements" class="tts-engine-btn subtab-btn p-3 rounded-xl bg-bg border border-white/10 text-left"><div class="text-xs font-extrabold text-white">🗣️ StreamElements</div><div class="text-[10px] text-emerald-300 mt-0.5 font-semibold">GRATIS · 14 voces</div></button>
+            <button type="button" data-tts-engine="edge" class="tts-engine-btn subtab-btn p-3 rounded-xl bg-bg border border-white/10 text-left"><div class="text-xs font-extrabold text-white">🎙️ Edge Neural</div><div class="text-[10px] text-emerald-300 mt-0.5 font-semibold">GRATIS · 20 voces IA</div></button>
+            <button type="button" data-tts-engine="fish" class="tts-engine-btn subtab-btn p-3 rounded-xl bg-bg border border-white/10 text-left"><div class="text-xs font-extrabold text-white">🐟 Fish Audio IA</div><div class="text-[10px] text-cyanNeon mt-0.5">Voz clonada · s2.1</div></button>
+            <button type="button" data-tts-engine="elevenlabs" class="tts-engine-btn subtab-btn p-3 rounded-xl bg-bg border border-white/10 text-left"><div class="text-xs font-extrabold text-white">✨ ElevenLabs IA</div><div class="text-[10px] text-slate-400 mt-0.5">API Key / Clonada</div></button>
           </div>
 
           <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
             <div class="lg:col-span-7 space-y-3.5">
-              <!-- EDGE NEURAL (GRATIS) -->
-              <div id="boxEdgeTts" class="bg-emerald-500/10 border border-emerald-400/35 rounded-xl p-4 space-y-2.5">
-                <div class="flex items-center justify-between">
-                  <span class="text-xs font-bold text-emerald-300">🎙️ Microsoft Edge Neural · 100% Gratis (sin API Key)</span>
-                  <span class="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-200 font-bold">Recomendado</span>
-                </div>
+              <!-- VOZ RÁPIDA NAVEGADOR (0 MS) -->
+              <div id="boxBrowserVoiceWrap" class="bg-emerald-500/10 border border-emerald-400/35 rounded-xl p-3.5 space-y-2">
+                <div class="flex items-center justify-between"><span class="text-xs font-bold text-emerald-300">⚡ Voz instantánea del dispositivo (0 ms de retraso)</span><span class="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-200 font-bold">Más rápida</span></div>
+                <select id="browserVoiceSelect" class="w-full bg-bg border border-white/15 rounded-xl px-3 py-2 text-xs text-white"><option value="">Automática (Español)</option></select>
+              </div>
+
+              <!-- EDGE NEURAL -->
+              <div id="boxEdgeTts" class="hidden bg-emerald-500/10 border border-emerald-400/35 rounded-xl p-3.5 space-y-2">
+                <div class="text-xs font-bold text-emerald-300">🎙️ Microsoft Edge Neural · 20 Voces IA Gratis</div>
                 <select id="edgeVoiceSelect" class="w-full bg-bg border border-white/15 rounded-xl px-3 py-2 text-xs text-white">
-                  <optgroup label="🇵🇪 Perú">
-                    <option value="es-PE-CamilaNeural">Camila Neural (Perú · Femenina)</option>
-                    <option value="es-PE-AlexNeural">Alex Neural (Perú · Masculina)</option>
-                  </optgroup>
-                  <optgroup label="🇲🇽 México">
-                    <option value="es-MX-DaliaNeural">Dalia Neural (México · Femenina)</option>
-                    <option value="es-MX-JorgeNeural">Jorge Neural (México · Masculina)</option>
-                    <option value="es-MX-LarissaNeural">Larissa Neural (México · Juvenil)</option>
-                    <option value="es-MX-LibertoNeural">Liberto Neural (México · Locutor)</option>
-                  </optgroup>
-                  <optgroup label="🇨🇴 Colombia">
-                    <option value="es-CO-SalomeNeural">Salomé Neural (Colombia · Femenina)</option>
-                    <option value="es-CO-GonzaloNeural">Gonzalo Neural (Colombia · Masculina)</option>
-                  </optgroup>
-                  <optgroup label="🇦🇷 Argentina">
-                    <option value="es-AR-ElenaNeural">Elena Neural (Argentina · Femenina)</option>
-                    <option value="es-AR-TomasNeural">Tomás Neural (Argentina · Masculina)</option>
-                  </optgroup>
-                  <optgroup label="🇨🇱 Chile">
-                    <option value="es-CL-CatalinaNeural">Catalina Neural (Chile · Femenina)</option>
-                    <option value="es-CL-LorenzoNeural">Lorenzo Neural (Chile · Masculina)</option>
-                  </optgroup>
-                  <optgroup label="🇪🇸 España">
-                    <option value="es-ES-ElviraNeural">Elvira Neural (España · Femenina)</option>
-                    <option value="es-ES-AlvaroNeural">Álvaro Neural (España · Masculina)</option>
-                  </optgroup>
-                  <optgroup label="🇺🇸 Latino / Inglés / Brasil">
-                    <option value="es-US-PalomaNeural">Paloma Neural (LatAm · Femenina)</option>
-                    <option value="es-US-AlonsoNeural">Alonso Neural (LatAm · Masculina)</option>
-                    <option value="pt-BR-FranciscaNeural">Francisca Neural (Brasil · Femenina)</option>
-                    <option value="pt-BR-AntonioNeural">Antonio Neural (Brasil · Masculina)</option>
-                    <option value="en-US-EmmaMultilingualNeural">Emma Multilingual (Inglés/Español)</option>
-                    <option value="en-US-AndrewMultilingualNeural">Andrew Multilingual (Inglés/Español)</option>
-                  </optgroup>
+                  <optgroup label="🇵🇪 Perú"><option value="es-PE-CamilaNeural">Camila Neural (Perú · Femenina)</option><option value="es-PE-AlexNeural">Alex Neural (Perú · Masculina)</option></optgroup>
+                  <optgroup label="🇲🇽 México"><option value="es-MX-DaliaNeural">Dalia Neural (México · Femenina)</option><option value="es-MX-JorgeNeural">Jorge Neural (México · Masculina)</option><option value="es-MX-LarissaNeural">Larissa Neural (México · Juvenil)</option><option value="es-MX-LibertoNeural">Liberto Neural (México · Locutor)</option></optgroup>
+                  <optgroup label="🇨🇴 Colombia"><option value="es-CO-SalomeNeural">Salomé Neural (Colombia · Femenina)</option><option value="es-CO-GonzaloNeural">Gonzalo Neural (Colombia · Masculina)</option></optgroup>
+                  <optgroup label="🇦🇷 Argentina"><option value="es-AR-ElenaNeural">Elena Neural (Argentina · Femenina)</option><option value="es-AR-TomasNeural">Tomás Neural (Argentina · Masculina)</option></optgroup>
+                  <optgroup label="🇨🇱 Chile"><option value="es-CL-CatalinaNeural">Catalina Neural (Chile · Femenina)</option><option value="es-CL-LorenzoNeural">Lorenzo Neural (Chile · Masculina)</option></optgroup>
+                  <optgroup label="🇪🇸 España"><option value="es-ES-ElviraNeural">Elvira Neural (España · Femenina)</option><option value="es-ES-AlvaroNeural">Álvaro Neural (España · Masculina)</option></optgroup>
+                  <optgroup label="🇺🇸 Latino / Brasil / Inglés"><option value="es-US-PalomaNeural">Paloma Neural (LatAm · Femenina)</option><option value="es-US-AlonsoNeural">Alonso Neural (LatAm · Masculina)</option><option value="pt-BR-FranciscaNeural">Francisca Neural (Brasil)</option><option value="pt-BR-AntonioNeural">Antonio Neural (Brasil)</option><option value="en-US-EmmaMultilingualNeural">Emma Multilingual</option><option value="en-US-AndrewMultilingualNeural">Andrew Multilingual</option></optgroup>
                 </select>
               </div>
 
-
-              <!-- STREAMELEMENTS (GRATIS) -->
-              <div id="boxStreamElements" class="hidden bg-amber-500/10 border border-amber-400/35 rounded-xl p-4 space-y-2">
-                <div class="text-xs font-bold text-amber-300">🗣️ StreamElements / Polly · 100% Gratis (sin API Key)</div>
+              <!-- STREAMELEMENTS -->
+              <div id="boxStreamElements" class="hidden bg-amber-500/10 border border-amber-400/35 rounded-xl p-3.5 space-y-2">
+                <div class="text-xs font-bold text-amber-300">🗣️ StreamElements · 14 Voces Streamer Gratis</div>
                 <select id="seVoiceSelect" class="w-full bg-bg border border-white/15 rounded-xl px-3 py-2 text-xs text-white">
-                  <optgroup label="🇪🇸 / 🇲🇽 / 🇺🇸 Español">
-                    <option value="Mia">Mia (México · Femenina)</option>
-                    <option value="Lupe">Lupe (LatAm · Femenina)</option>
-                    <option value="Miguel">Miguel (LatAm · Masculina)</option>
-                    <option value="Penelope">Penélope (LatAm · Femenina)</option>
-                    <option value="Lucia">Lucía (España · Femenina)</option>
-                    <option value="Conchita">Conchita (España · Clásica)</option>
-                    <option value="Enrique">Enrique (España · Masculina)</option>
-                  </optgroup>
-                  <optgroup label="🇧🇷 Portugués / 🇬🇧 Inglés (Clásicas Twitch)">
-                    <option value="Vitoria">Vitória (Brasil · Femenina)</option>
-                    <option value="Camila">Camila (Brasil · Femenina)</option>
-                    <option value="Ricardo">Ricardo (Brasil · Masculina)</option>
-                    <option value="Brian">Brian (UK · Clásica Streamer)</option>
-                    <option value="Joanna">Joanna (US · Femenina)</option>
-                    <option value="Matthew">Matthew (US · Masculina)</option>
-                    <option value="Ivy">Ivy (US · Infantil)</option>
-                  </optgroup>
+                  <optgroup label="Español"><option value="Mia">Mia (México · Femenina)</option><option value="Lupe">Lupe (LatAm · Femenina)</option><option value="Miguel">Miguel (LatAm · Masculina)</option><option value="Penelope">Penélope (LatAm · Femenina)</option><option value="Lucia">Lucía (España · Femenina)</option><option value="Conchita">Conchita (España · Clásica)</option><option value="Enrique">Enrique (España · Masculina)</option></optgroup>
+                  <optgroup label="Portugués / Inglés"><option value="Vitoria">Vitória (Brasil)</option><option value="Camila">Camila (Brasil)</option><option value="Ricardo">Ricardo (Brasil)</option><option value="Brian">Brian (UK · Clásica Twitch)</option><option value="Joanna">Joanna (US)</option><option value="Matthew">Matthew (US)</option><option value="Ivy">Ivy (US)</option></optgroup>
                 </select>
               </div>
 
-              <!-- GOOGLE TTS (GRATIS) -->
-              <div id="boxGoogleTts" class="hidden bg-cyanNeon/10 border border-cyanNeon/30 rounded-xl p-4 space-y-2">
-                <div class="text-xs font-bold text-cyanNeon">🌐 Google TTS · 100% Gratis (Proxy estable en Railway)</div>
+              <!-- GOOGLE TTS -->
+              <div id="boxGoogleTts" class="hidden bg-cyanNeon/10 border border-cyanNeon/30 rounded-xl p-3.5 space-y-2">
+                <div class="text-xs font-bold text-cyanNeon">🌐 Google TTS · 16 Acentos Gratis</div>
                 <select id="googleAccentSelect" class="w-full bg-bg border border-white/15 rounded-xl px-3 py-2 text-xs text-white">
                   <option value="es-PE">Español (Perú)</option><option value="es-US">Español (Latinoamérica / US)</option><option value="es-MX">Español (México)</option><option value="es-CO">Español (Colombia)</option><option value="es-AR">Español (Argentina)</option><option value="es-CL">Español (Chile)</option><option value="es-ES">Español (España)</option><option value="pt-BR">Portugués (Brasil)</option><option value="en-US">English (US)</option><option value="en-GB">English (UK)</option><option value="fr-FR">Français</option><option value="de-DE">Deutsch</option><option value="it-IT">Italiano</option><option value="ja-JP">日本語</option><option value="ko-KR">한국어</option><option value="ru-RU">Русский</option>
                 </select>
               </div>
 
-              <!-- FISH AUDIO (VOZ CLONADA) -->
-              <div id="boxFishAudio" class="hidden bg-cyanNeon/10 border border-cyanNeon/35 rounded-xl p-4 space-y-3">
-                <div class="flex flex-wrap items-center justify-between gap-2">
-                  <span class="text-xs font-bold text-cyanNeon">🐟 Fish Audio IA · Voz Clonada</span>
-                  <a href="https://fish.audio/" target="_blank" rel="noopener noreferrer" class="text-[10px] px-2 py-0.5 rounded bg-cyanNeon/20 text-cyanNeon font-bold hover:underline">Abrir Fish Audio ↗</a>
+              <!-- FISH AUDIO -->
+              <div id="boxFishAudio" class="hidden bg-cyanNeon/10 border border-cyanNeon/35 rounded-xl p-3.5 space-y-2.5">
+                <div class="flex items-center justify-between"><span class="text-xs font-bold text-cyanNeon">🐟 Fish Audio IA · Voz Clonada</span><a href="https://fish.audio/" target="_blank" rel="noopener noreferrer" class="text-[10px] px-2 py-0.5 rounded bg-cyanNeon/20 text-cyanNeon font-bold">Abrir Fish Audio ↗</a></div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div><label class="block text-[11px] text-slate-300 mb-1">Fish API Key</label><input id="fishApiKey" type="password" autocomplete="off" placeholder="Pega tu API Key" class="w-full bg-bg border border-white/15 rounded-lg px-3 py-2 text-xs text-white" /></div>
+                  <div><label class="block text-[11px] text-slate-300 mb-1">Modelo</label><select id="fishModelSelect" class="w-full bg-bg border border-white/15 rounded-lg px-3 py-2 text-xs text-white"><option value="s2.1-pro-free">s2.1-pro-free (Gratis)</option><option value="s2.1-pro">s2.1-pro (Pro)</option><option value="s2-pro">s2-pro (Clonación)</option></select></div>
                 </div>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  <div>
-                    <label class="block text-[11px] text-slate-300 mb-1">Fish API Key (o FISH_API_KEY en Railway)</label>
-                    <input id="fishApiKey" type="password" autocomplete="off" placeholder="Pega tu API Key" class="w-full bg-bg border border-white/15 rounded-lg px-3 py-2 text-xs text-white" />
-                  </div>
-                  <div>
-                    <label class="block text-[11px] text-slate-300 mb-1">Modelo</label>
-                    <select id="fishModelSelect" class="w-full bg-bg border border-white/15 rounded-lg px-3 py-2 text-xs text-white">
-                      <option value="s2.1-pro-free">s2.1-pro-free (Gratis cuenta nueva)</option>
-                      <option value="s2.1-pro">s2.1-pro (Pro)</option>
-                      <option value="s2-pro">s2-pro (Clonación)</option>
-                    </select>
-                  </div>
-                </div>
-                <div class="grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-end">
-                  <div class="sm:col-span-8">
-                    <label class="block text-[11px] text-slate-300 mb-1">Reference ID / Model ID de tu voz clonada</label>
-                    <input id="fishRefId" type="text" placeholder="Ej: 933563129e564b19a115bedd57b7406a" class="w-full bg-bg border border-white/15 rounded-lg px-3 py-2 text-xs font-mono text-cyanNeon" />
-                  </div>
-                  <div class="sm:col-span-4">
-                    <button id="btnTestFishVoice" type="button" class="w-full px-3 py-2 rounded-lg bg-cyanNeon/20 hover:bg-cyanNeon/30 border border-cyanNeon/40 text-xs font-extrabold text-cyanNeon transition">▶ Probar voz</button>
-                  </div>
+                <div class="grid grid-cols-1 sm:grid-cols-12 gap-2 items-end">
+                  <div class="sm:col-span-8"><label class="block text-[11px] text-slate-300 mb-1">Reference ID / Model ID</label><input id="fishRefId" type="text" placeholder="Ej: 933563129e564b19a115bedd57b7406a" class="w-full bg-bg border border-white/15 rounded-lg px-3 py-2 text-xs font-mono text-cyanNeon" /></div>
+                  <div class="sm:col-span-4"><button id="btnTestFishVoice" type="button" class="w-full px-3 py-2 rounded-lg bg-cyanNeon/20 border border-cyanNeon/40 text-xs font-extrabold text-cyanNeon">▶ Probar Fish</button></div>
                 </div>
               </div>
 
               <!-- ELEVENLABS -->
-              <div id="boxElevenLabs" class="hidden bg-pinkNeon/10 border border-pinkNeon/35 rounded-xl p-4 space-y-3">
-                <div class="flex items-center justify-between"><span class="text-xs font-bold text-pink-200">✨ ElevenLabs IA</span><span class="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold">Compatible Railway</span></div>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  <div><label class="block text-[11px] text-slate-300 mb-1">API Key (o ELEVENLABS_API_KEY)</label><input id="elApiKey" type="password" autocomplete="off" placeholder="API Key" class="w-full bg-bg border border-white/15 rounded-lg px-3 py-2 text-xs text-white" /></div>
-                  <div><label class="block text-[11px] text-slate-300 mb-1">Voz</label><select id="elVoiceSelect" class="w-full bg-bg border border-white/15 rounded-lg px-3 py-2 text-xs text-white"><option value="EXAVITQu4vr4xnSDxMaL">Bella</option><option value="21m00Tcm4TlvDq8ikWAM">Rachel</option><option value="AZnzlk1XvdvUeBnXmlld">Domi</option><option value="MF3mGyEYCl7XYWbV9V6O">Elli</option><option value="ErXwobaYiN019PkySvjV">Antoni</option><option value="pNInz6obpgDQGcFmaJgB">Adam</option><option value="TxGEqnHWrfWFTfGW9XjX">Josh</option><option value="onwK4e9ZLuTAKqWW03F9">Daniel</option></select></div>
+              <div id="boxElevenLabs" class="hidden bg-pinkNeon/10 border border-pinkNeon/35 rounded-xl p-3.5 space-y-2.5">
+                <div class="text-xs font-bold text-pink-200">✨ ElevenLabs IA</div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div><label class="block text-[11px] text-slate-300 mb-1">API Key</label><input id="elApiKey" type="password" autocomplete="off" placeholder="API Key" class="w-full bg-bg border border-white/15 rounded-lg px-3 py-2 text-xs text-white" /></div>
+                  <div><label class="block text-[11px] text-slate-300 mb-1">Voz</label><select id="elVoiceSelect" class="w-full bg-bg border border-white/15 rounded-lg px-3 py-2 text-xs text-white"><option value="EXAVITQu4vr4xnSDxMaL">Bella</option><option value="21m00Tcm4TlvDq8ikWAM">Rachel</option><option value="AZnzlk1XvdvUeBnXmlld">Domi</option><option value="ErXwobaYiN019PkySvjV">Antoni</option><option value="pNInz6obpgDQGcFmaJgB">Adam</option></select></div>
                 </div>
                 <div><label class="block text-[11px] text-slate-300 mb-1">Voice ID clonada (opcional)</label><input id="elCustomVoiceId" type="text" placeholder="Pega tu Voice ID" class="w-full bg-bg border border-white/15 rounded-lg px-3 py-2 text-xs font-mono text-cyanNeon" /></div>
               </div>
 
-              <!-- QUÉ LEER Y QUÉ SILENCIAR (LIMPIO) -->
+              <!-- MODO DE LECTURA + AGRADECIMIENTO DE REGALOS -->
               <div class="bg-bg/90 rounded-xl p-4 border border-white/10 space-y-3">
-                <div class="text-xs font-bold text-cyanNeon uppercase tracking-wider">¿Qué leer y qué silenciar?</div>
+                <div class="text-xs font-bold text-cyanNeon uppercase tracking-wider">Modo de lectura y agradecimientos</div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <div>
+                    <label class="block text-[11px] text-slate-400 mb-1">Cómo leer el chat</label>
+                    <select id="ttsChatMode" class="w-full bg-card border border-white/10 rounded-lg px-2.5 py-2 text-xs text-white font-semibold">
+                      <option value="full">Nombre + mensaje (Juan dice hola)</option>
+                      <option value="user_only">Solo el nombre / usuario (Juan)</option>
+                      <option value="msg_only">Solo el mensaje (hola)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block text-[11px] text-slate-400 mb-1">Frase al agradecer regalo ({usuario}, {cantidad}, {regalo})</label>
+                    <input id="ttsGiftThanksTpl" type="text" value="¡Muchas gracias {usuario} por {cantidad} {regalo}!" class="w-full bg-card border border-white/10 rounded-lg px-2.5 py-2 text-xs text-white" />
+                  </div>
+                </div>
+
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-200">
                   <label class="flex items-center gap-2 p-2 rounded-lg bg-card border border-white/5 cursor-pointer"><input id="chkTtsReadChat" type="checkbox" checked class="accent-cyanNeon" /> 💬 Leer mensajes del chat</label>
-                  <label class="flex items-center gap-2 p-2 rounded-lg bg-card border border-white/5 cursor-pointer"><input id="chkTtsReadGift" type="checkbox" checked class="accent-pinkNeon" /> 🎁 Leer "envió un regalo"</label>
+                  <label class="flex items-center gap-2 p-2 rounded-lg bg-card border border-pinkNeon/30 cursor-pointer"><input id="chkTtsReadGift" type="checkbox" checked class="accent-pinkNeon" /> 🙏 Agradecer cada regalo</label>
                   <label class="flex items-center gap-2 p-2 rounded-lg bg-card border border-white/5 cursor-pointer"><input id="chkGiftDefaultSfx" type="checkbox" checked class="accent-amber-400" /> 🔊 Sonido beep en regalos</label>
-                  <label class="flex items-center gap-2 p-2 rounded-lg bg-card border border-white/5 cursor-pointer"><input id="chkTtsReadFollow" type="checkbox" class="accent-cyanNeon" /> ⭐ Leer nuevos seguidores</label>
-                  <label class="flex items-center gap-2 p-2 rounded-lg bg-card border border-white/5 cursor-pointer"><input id="chkTtsReadSub" type="checkbox" checked class="accent-emerald-400" /> 👑 Leer suscripciones</label>
-                  <label class="flex items-center gap-2 p-2 rounded-lg bg-card border border-white/5 cursor-pointer"><input id="chkTtsReadShare" type="checkbox" class="accent-purple-400" /> 📢 Leer compartidos</label>
-                  <label class="flex items-center gap-2 p-2 rounded-lg bg-card border border-white/5 cursor-pointer"><input id="chkTtsReadJoin" type="checkbox" class="accent-slate-400" /> 👋 Leer entradas al LIVE</label>
+                  <label class="flex items-center gap-2 p-2 rounded-lg bg-card border border-white/5 cursor-pointer"><input id="chkTtsReadFollow" type="checkbox" class="accent-cyanNeon" /> ⭐ Agradecer nuevos seguidores</label>
+                  <label class="flex items-center gap-2 p-2 rounded-lg bg-card border border-white/5 cursor-pointer"><input id="chkTtsReadSub" type="checkbox" checked class="accent-emerald-400" /> 👑 Agradecer suscripciones</label>
+                  <label class="flex items-center gap-2 p-2 rounded-lg bg-card border border-white/5 cursor-pointer"><input id="chkTtsReadShare" type="checkbox" class="accent-purple-400" /> 📢 Agradecer compartidos</label>
+                  <label class="flex items-center gap-2 p-2 rounded-lg bg-card border border-white/5 cursor-pointer"><input id="chkTtsReadJoin" type="checkbox" class="accent-slate-400" /> 👋 Saludar entradas al LIVE</label>
                   <label class="flex items-center gap-2 p-2 rounded-lg bg-card border border-white/5 cursor-pointer"><input id="chkStripEmojis" type="checkbox" checked class="accent-cyanNeon" /> ✨ Limpiar emojis</label>
                 </div>
-                <div class="grid grid-cols-3 gap-2.5 pt-1">
-                  <div><label class="block text-[11px] text-slate-400 mb-1">Cooldown (s)</label><input id="ttsCooldownSec" type="number" min="0" max="60" value="3" class="w-full bg-card border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-cyanNeon font-bold" /></div>
+
+                <div class="grid grid-cols-3 gap-2 pt-1">
+                  <div><label class="block text-[11px] text-slate-400 mb-1">Cooldown (s)</label><input id="ttsCooldownSec" type="number" min="0" max="60" value="2" class="w-full bg-card border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-cyanNeon font-bold" /></div>
                   <div><label class="block text-[11px] text-slate-400 mb-1">Mín. monedas</label><input id="ttsMinCoins" type="number" min="0" value="1" class="w-full bg-card border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-amber-300 font-bold" /></div>
-                  <div><label class="block text-[11px] text-slate-400 mb-1">Palabras bloqueadas</label><input id="ttsBlockedWords" type="text" value="spam,http" class="w-full bg-card border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white" /></div>
+                  <div><label class="block text-[11px] text-slate-400 mb-1">Bloqueadas</label><input id="ttsBlockedWords" type="text" value="spam,http" class="w-full bg-card border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white" /></div>
                 </div>
               </div>
 
-              <!-- GRABADOR DE MUESTRA PARA CLONAR VOZ (PLEGABLE) -->
-              <details id="boxVoiceClone" class="bg-bg/80 border border-violet-400/25 rounded-xl p-3.5">
-                <summary class="text-xs font-extrabold text-violet-200 cursor-pointer select-none">🧬 Grabar muestra de voz para clonar (Fish Audio / ElevenLabs)</summary>
-                <div class="mt-3 space-y-2.5">
+              <details id="boxVoiceClone" class="bg-bg/80 border border-violet-400/25 rounded-xl p-3">
+                <summary class="text-xs font-extrabold text-violet-200 cursor-pointer select-none">🧬 Grabar muestra para clonar tu voz (Fish Audio / ElevenLabs)</summary>
+                <div class="mt-2.5 space-y-2">
                   <div class="flex flex-wrap items-center gap-2">
-                    <button id="btnRecVoiceStart" type="button" class="px-3 py-1.5 rounded-lg bg-pinkNeon/20 hover:bg-pinkNeon/30 border border-pinkNeon/40 text-xs font-bold text-pink-200">🎙️ Grabar 30–60s</button>
+                    <button id="btnRecVoiceStart" type="button" class="px-3 py-1.5 rounded-lg bg-pinkNeon/20 border border-pinkNeon/40 text-xs font-bold text-pink-200">🎙️ Grabar 30–60s</button>
                     <button id="btnRecVoiceStop" type="button" disabled class="px-3 py-1.5 rounded-lg bg-white/10 text-xs font-bold text-slate-300 disabled:opacity-40">⏹️ Detener</button>
                     <a id="btnRecVoiceDownload" download="mi-voz-tikpulse.webm" class="hidden px-3 py-1.5 rounded-lg bg-emerald-500/20 border border-emerald-400/40 text-xs font-bold text-emerald-200">⬇️ Descargar</a>
-                    <a href="https://fish.audio/" target="_blank" rel="noopener noreferrer" class="px-2.5 py-1.5 rounded-lg bg-cyanNeon/20 text-[11px] font-bold text-cyanNeon">Subir a Fish Audio ↗</a>
+                    <a href="https://fish.audio/" target="_blank" rel="noopener noreferrer" class="px-2.5 py-1.5 rounded-lg bg-cyanNeon/20 text-[11px] font-bold text-cyanNeon">Fish Audio ↗</a>
                   </div>
-                  <div id="recVoiceStatus" class="text-[11px] text-slate-400">Graba 30–60 s sin ruido de fondo, descárgalo y súbelo a Fish Audio para obtener tu Reference ID.</div>
+                  <div id="recVoiceStatus" class="text-[11px] text-slate-400">Graba 30–60 s sin ruido de fondo y súbelo a Fish Audio.</div>
                   <audio id="recVoicePreview" controls class="hidden w-full h-8"></audio>
                 </div>
               </details>
@@ -602,18 +559,17 @@
 
             <div class="lg:col-span-5 space-y-3.5">
               <div class="bg-bg/90 rounded-xl p-4 border border-white/10 space-y-3">
-                <div id="boxBrowserVoiceWrap" class="hidden"><label class="block text-xs text-slate-400 mb-1">Voz del navegador</label><select id="browserVoiceSelect" class="w-full bg-card border border-white/10 rounded-lg px-3 py-2 text-xs text-white"><option value="">Automática (Español)</option></select></div>
                 <div><div class="flex justify-between text-xs mb-1"><span>Volumen</span><span id="lblVol" class="text-cyanNeon font-bold">85%</span></div><input id="rngVol" type="range" min="0" max="100" value="85" class="w-full accent-pinkNeon" /></div>
-                <div><div class="flex justify-between text-xs mb-1"><span>Velocidad</span><span id="lblRate" class="text-cyanNeon font-bold">1.05x</span></div><input id="rngRate" type="range" min="0.5" max="2" step="0.05" value="1.05" class="w-full accent-cyanNeon" /></div>
+                <div><div class="flex justify-between text-xs mb-1"><span>Velocidad</span><span id="lblRate" class="text-cyanNeon font-bold">1.10x</span></div><input id="rngRate" type="range" min="0.5" max="2" step="0.05" value="1.10" class="w-full accent-cyanNeon" /></div>
                 <div class="pt-1 border-t border-white/10 space-y-2">
-                  <input id="ttsTestText" type="text" value="¡Hola! Bienvenidos al LIVE, gracias por las rosas" class="w-full bg-card border border-white/10 rounded-lg px-3 py-2 text-xs text-white" />
+                  <input id="ttsTestText" type="text" value="¡Hola! Gracias por las rosas en el LIVE" class="w-full bg-card border border-white/10 rounded-lg px-3 py-2 text-xs text-white" />
                   <button id="btnRunTtsTest" type="button" class="w-full tp-btn-primary py-2.5 rounded-xl text-xs">▶ Probar Voz Ahora</button>
                 </div>
               </div>
               <div class="bg-bg/90 rounded-xl p-4 border border-white/10 space-y-2">
-                <div class="flex items-center justify-between"><span class="text-xs font-bold text-white">Cola en vivo</span><span id="ttsQueueBadge" class="text-[11px] text-cyanNeon font-bold">0 en espera</span></div>
-                <div id="ttsDiagLine" class="text-[11px] text-emerald-300 font-semibold">Toca "🔊 Activar Audio" 1 vez si estás en celular.</div>
-                <div id="ttsQueueBox" class="space-y-1.5 max-h-48 overflow-y-auto text-xs"></div>
+                <div class="flex items-center justify-between"><span class="text-xs font-bold text-white">Cola en vivo (máx. 4 sin retraso)</span><span id="ttsQueueBadge" class="text-[11px] text-cyanNeon font-bold">0 en cola</span></div>
+                <div id="ttsDiagLine" class="text-[11px] text-emerald-300 font-semibold">Listo · Toca "🔊 Activar Audio" 1 vez al entrar.</div>
+                <div id="ttsQueueBox" class="space-y-1.5 max-h-52 overflow-y-auto text-xs"></div>
               </div>
             </div>
           </div>
@@ -882,7 +838,9 @@
         pendingAudioName: '',
         actions: loadSavedActions(),
         ttsEnabled: true,
-        ttsEngine: 'edge',
+        ttsEngine: 'browser',
+        ttsChatMode: 'full',
+        ttsGiftThanksTpl: '¡Muchas gracias {usuario} por {cantidad} {regalo}!',
         edgeVoice: 'es-PE-CamilaNeural',
         seVoice: 'Mia',
         currentTtsAudio: null,
@@ -1289,16 +1247,26 @@
         }
       }
 
-      function enqueueTts(raw, userKey = null) {
+      function enqueueTts(raw, userKey = null, priority = false) {
         if (!state.ttsEnabled) return;
-        if (userKey && state.ttsCooldownSec > 0) {
+        if (!priority && userKey && state.ttsCooldownSec > 0) {
           const now = Date.now();
           if (now - (state.ttsLastUserTs[userKey] || 0) < state.ttsCooldownSec * 1000) return;
           state.ttsLastUserTs[userKey] = now;
         }
         const clean = cleanTtsText(raw);
         if (!clean) return;
-        state.ttsQueue.push({ text: clean, userKey });
+        // Zero-delay cap: keep at most 4 items in queue (drop oldest non-priority chat if full, NEVER drop gifts!)
+        if (state.ttsQueue.length >= 4) {
+          const dropIdx = state.ttsQueue.findIndex((it, idx) => idx > 0 && !it.priority);
+          if (dropIdx > 0) state.ttsQueue.splice(dropIdx, 1);
+          else if (!priority) return;
+        }
+        if (priority && state.ttsQueue.length > 1) {
+          state.ttsQueue.splice(1, 0, { text: clean, userKey, priority: true });
+        } else {
+          state.ttsQueue.push({ text: clean, userKey, priority });
+        }
         pumpTts();
       }
 
@@ -1704,7 +1672,7 @@
             duration: total >= 1000 ? 6 : 4
           });
           if (total >= state.ttsMinCoins) {
-            enqueueTts('{nickname} envió {repeatCount} {giftName}'.replace('{nickname}', user.replace('@', '')).replace('{repeatCount}', String(repeatCount)).replace('{giftName}', gObj.name), user);
+            enqueueTts((state.ttsGiftThanksTpl || '¡Muchas gracias {usuario} por {cantidad} {regalo}!').replace('{usuario}', user.replace(/\s*\(@[^)]+\)\s*$/g, '').replace('@', '').trim()).replace('{cantidad}', String(repeatCount)).replace('{regalo}', gObj.name), user, true);
           }
         }
         renderCountersAndFeeds();
@@ -1740,7 +1708,13 @@
           const pref = '';
           if (!pref || text.trim().toLowerCase().startsWith(pref)) {
             const cleanTxt = pref ? text.trim().slice(pref.length).trim() : text;
-            if (cleanTxt) enqueueTts('{nickname} dice {message}'.replace('{nickname}', user.replace('@', '')).replace('{message}', cleanTxt), user);
+            if (cleanTxt) {
+              const cleanName = user.replace(/\s*\(@[^)]+\)\s*$/g, '').replace('@', '').trim() || 'Usuario';
+              let spoken = `${cleanName} dice ${cleanTxt}`;
+              if (state.ttsChatMode === 'user_only') spoken = cleanName;
+              else if (state.ttsChatMode === 'msg_only') spoken = cleanTxt;
+              enqueueTts(spoken, user, false);
+            }
           }
         }
         renderCountersAndFeeds();
@@ -2050,7 +2024,7 @@
             if (state.giftDefaultSfx) playSound(total >= 500 ? 'fanfare' : 'coin', null);
             queueAlert({ screen: total >= 1000 ? 'screen2' : 'screen1', badgeLabel: 'GIFT ALERT', emoji: gObj.emoji || '🎁', img: gObj.img || '', title: `¡${user} envió ${repeatCount}x ${gObj.name}! (+${total.toLocaleString('es-ES')} 🪙)`, duration: total >= 1000 ? 6 : 4 });
             if (state.ttsReadGift && total >= state.ttsMinCoins) {
-              enqueueTts('{nickname} envió {repeatCount} {giftName}'.replace('{nickname}', user.replace('@', '')).replace('{repeatCount}', String(repeatCount)).replace('{giftName}', gObj.name), user);
+              enqueueTts((state.ttsGiftThanksTpl || '¡Muchas gracias {usuario} por {cantidad} {regalo}!').replace('{usuario}', user.replace(/\s*\(@[^)]+\)\s*$/g, '').replace('@', '').trim()).replace('{cantidad}', String(repeatCount)).replace('{regalo}', gObj.name), user, true);
             }
           }
           renderCountersAndFeeds();
@@ -2275,6 +2249,42 @@
           try { localStorage.setItem('tikpulse_tts_engine', state.ttsEngine); } catch (_) {}
         });
       });
+      function applyTtsEngineUi(eng) {
+        state.ttsEngine = eng || 'browser';
+        document.querySelectorAll('[data-tts-engine]').forEach((x) => x.classList.toggle('active', x.getAttribute('data-tts-engine') === state.ttsEngine));
+        document.getElementById('boxBrowserVoiceWrap')?.classList.toggle('hidden', state.ttsEngine !== 'browser');
+        document.getElementById('boxEdgeTts')?.classList.toggle('hidden', state.ttsEngine !== 'edge');
+        document.getElementById('boxStreamElements')?.classList.toggle('hidden', state.ttsEngine !== 'streamelements');
+        document.getElementById('boxGoogleTts')?.classList.toggle('hidden', state.ttsEngine !== 'google');
+        document.getElementById('boxFishAudio')?.classList.toggle('hidden', state.ttsEngine !== 'fish');
+        document.getElementById('boxElevenLabs')?.classList.toggle('hidden', state.ttsEngine !== 'elevenlabs');
+      }
+      try {
+        const savedEng = localStorage.getItem('tikpulse_tts_engine');
+        applyTtsEngineUi(savedEng || 'browser');
+      } catch (_) { applyTtsEngineUi('browser'); }
+      const chatModeSel = document.getElementById('ttsChatMode');
+      if (chatModeSel) {
+        chatModeSel.addEventListener('change', (e) => {
+          state.ttsChatMode = e.target.value;
+          try { localStorage.setItem('tikpulse_tts_chat_mode', state.ttsChatMode); } catch (_) {}
+        });
+        try {
+          const savedCm = localStorage.getItem('tikpulse_tts_chat_mode');
+          if (savedCm) { state.ttsChatMode = savedCm; chatModeSel.value = savedCm; }
+        } catch (_) {}
+      }
+      const giftThanksInp = document.getElementById('ttsGiftThanksTpl');
+      if (giftThanksInp) {
+        giftThanksInp.addEventListener('input', (e) => {
+          state.ttsGiftThanksTpl = e.target.value;
+          try { localStorage.setItem('tikpulse_tts_gift_thanks', state.ttsGiftThanksTpl); } catch (_) {}
+        });
+        try {
+          const savedGt = localStorage.getItem('tikpulse_tts_gift_thanks');
+          if (savedGt) { state.ttsGiftThanksTpl = savedGt; giftThanksInp.value = savedGt; }
+        } catch (_) {}
+      }
       document.getElementById('googleAccentSelect').addEventListener('change', (e) => { state.googleAccent = e.target.value; });
       const seSel = document.getElementById('seVoiceSelect');
       if (seSel) {
