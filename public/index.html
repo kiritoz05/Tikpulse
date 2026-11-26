@@ -585,6 +585,7 @@
               </div>
               <div class="bg-bg/90 rounded-xl p-4 border border-white/10 space-y-2">
                 <div class="flex items-center justify-between"><span class="text-xs font-bold text-white">Cola en vivo</span><span id="ttsQueueBadge" class="text-[11px] text-cyanNeon font-bold">0 en espera</span></div>
+                <div id="ttsDiagLine" class="text-[11px] text-emerald-300 font-semibold">Toca "🔊 Activar Audio" 1 vez si estás en celular.</div>
                 <div id="ttsQueueBox" class="space-y-1.5 max-h-48 overflow-y-auto text-xs"></div>
               </div>
             </div>
@@ -942,11 +943,16 @@
       }
       function playSound(preset, customUrl) {
         if (!state.masterAlerts) return;
-        if (customUrl) {
-          try { const a = new Audio(customUrl); a.volume = state.ttsVolume; a.play().catch(() => {}); return; } catch (_) {}
-        }
-        if (typeof preset === 'string' && preset.startsWith('/sounds/')) {
-          try { const a = new Audio(preset); a.volume = state.ttsVolume; a.play().catch(() => {}); return; } catch (_) {}
+        const srcUrl = customUrl || (typeof preset === 'string' && preset.startsWith('/sounds/') ? preset : '');
+        if (srcUrl) {
+          try {
+            globalSfxAudio.pause();
+            globalSfxAudio.src = srcUrl;
+            globalSfxAudio.volume = state.ttsVolume;
+            globalSfxAudio.currentTime = 0;
+            globalSfxAudio.play().catch(() => {});
+            return;
+          } catch (_) {}
         }
         if (preset === 'bell') { playTone(880, 0.24, 'sine', 1320); setTimeout(() => playTone(1320, 0.2, 'sine'), 100); }
         else if (preset === 'laser') { playTone(980, 0.18, 'sawtooth', 240); }
@@ -996,6 +1002,19 @@
         });
       }
 
+      // Persistent pre-unlocked Audio elements so Android Chrome NEVER blocks WebSocket-triggered TTS or Alert sounds!
+      const SILENT_WAV = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
+      const globalTtsAudio = new Audio();
+      globalTtsAudio.preload = 'auto';
+      const globalSfxAudio = new Audio();
+      globalSfxAudio.preload = 'auto';
+      let mobileAudioUnlocked = false;
+
+      function setTtsDiag(msg) {
+        const el = document.getElementById('ttsDiagLine');
+        if (el) el.textContent = msg;
+      }
+
       function playAudioBlob(blob) {
         const url = URL.createObjectURL(blob);
         return new Promise((resolve) => {
@@ -1004,18 +1023,29 @@
             if (settled) return;
             settled = true;
             clearTimeout(guard);
+            globalTtsAudio.onended = null;
+            globalTtsAudio.onerror = null;
             try { URL.revokeObjectURL(url); } catch (_) {}
-            if (state.currentTtsAudio === a) state.currentTtsAudio = null;
+            if (state.currentTtsAudio === globalTtsAudio) state.currentTtsAudio = null;
             resolve(ok);
           };
-          const a = new Audio(url);
-          state.currentTtsAudio = a;
-          a.volume = state.ttsVolume;
-          a.playbackRate = Math.min(2, Math.max(0.5, state.ttsRate || 1));
-          const guard = setTimeout(() => { try { a.pause(); } catch (_) {} finish(true); }, 18000);
-          a.onended = () => finish(true);
-          a.onerror = () => finish(false);
-          a.play().catch(() => finish(false));
+          state.currentTtsAudio = globalTtsAudio;
+          globalTtsAudio.pause();
+          globalTtsAudio.src = url;
+          globalTtsAudio.volume = state.ttsVolume;
+          globalTtsAudio.playbackRate = Math.min(2, Math.max(0.5, state.ttsRate || 1));
+          const guard = setTimeout(() => { try { globalTtsAudio.pause(); } catch (_) {} finish(true); }, 18000);
+          globalTtsAudio.onended = () => finish(true);
+          globalTtsAudio.onerror = () => finish(false);
+          const p = globalTtsAudio.play();
+          if (p && typeof p.catch === 'function') {
+            p.catch((err) => {
+              if (err && err.name === 'NotAllowedError') {
+                setTtsDiag('🔇 Navegador bloqueó audio: toca "🔊 Activar Audio" arriba 1 vez');
+              }
+              finish(false);
+            });
+          }
         });
       }
 
@@ -1172,19 +1202,26 @@
         renderTtsQueue();
         const done = () => { state.ttsQueue.shift(); state.ttsSpeaking = false; pumpTts(); };
         if (state.ttsEngine === 'edge') {
+          setTtsDiag('🔊 Leyendo con Edge Neural...');
           if (await playEdgeTts(item.text)) return done();
+          setTtsDiag('🌐 Respaldo automático: Google TTS...');
+          if (await playGoogleTts(item.text)) return done();
         }
         if (state.ttsEngine === 'google') {
+          setTtsDiag('🌐 Leyendo con Google TTS...');
           if (await playGoogleTts(item.text)) return done();
         }
         if (state.ttsEngine === 'fish') {
+          setTtsDiag('🐟 Leyendo con Fish Audio...');
           if (await playFishAudio(item.text)) return done();
-          if (await playEdgeTts(item.text)) return done();
+          if (await playGoogleTts(item.text)) return done();
         }
         if (state.ttsEngine === 'elevenlabs') {
+          setTtsDiag('✨ Leyendo con ElevenLabs...');
           if (await playElevenLabs(item.text)) return done();
-          if (await playEdgeTts(item.text)) return done();
+          if (await playGoogleTts(item.text)) return done();
         }
+        setTtsDiag('🔊 Leyendo con voz del navegador...');
         if ('speechSynthesis' in window) {
           const u = new SpeechSynthesisUtterance(item.text);
           const v = pickVoiceForUser(item.userKey || item.user);
@@ -1995,7 +2032,9 @@
           if (d && Number(d.totalShares) > 0) state.shares = Number(d.totalShares);
           else state.shares += 1;
           state.activity.unshift({ kind: 'follow', user, text: 'compartió el LIVE 🔁' });
-          if (state.ttsReadShare) enqueueTts(`${user.replace('@', '')} compartió el directo`, user);
+          const matched = state.actions.find((a) => a.enabled && a.type === 'share');
+          if (matched) runAction(matched, user, 1);
+          else if (state.ttsReadShare) enqueueTts(`${user.replace('@', '')} compartió el directo`, user);
           renderCountersAndFeeds();
         },
         onJoin(d) {
@@ -2003,7 +2042,9 @@
           state.memberJoins.unshift({ user, time: 'Ahora' });
           if (state.memberJoins.length > 50) state.memberJoins.pop();
           state.activity.unshift({ kind: 'join', user, text: 'entró al LIVE 👋' });
-          if (state.ttsReadJoin) enqueueTts(`${user.replace('@', '')} entró al directo`, user);
+          const matched = state.actions.find((a) => a.enabled && a.type === 'join');
+          if (matched) runAction(matched, user, 1);
+          else if (state.ttsReadJoin) enqueueTts(`${user.replace('@', '')} entró al directo`, user);
           renderCountersAndFeeds();
         },
         onSub(d) {
@@ -2348,14 +2389,31 @@
             if (!audioCtx) audioCtx = new AC();
             if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
           }
+          if (!mobileAudioUnlocked) {
+            mobileAudioUnlocked = true;
+            [globalTtsAudio, globalSfxAudio].forEach((el) => {
+              try {
+                el.src = SILENT_WAV;
+                el.volume = 0.01;
+                const pr = el.play();
+                if (pr && typeof pr.then === 'function') {
+                  pr.then(() => { el.pause(); el.volume = state.ttsVolume; }).catch(() => { mobileAudioUnlocked = false; });
+                }
+              } catch (_) {}
+            });
+          }
           if ('speechSynthesis' in window) {
             const silent = new SpeechSynthesisUtterance('');
             silent.volume = 0;
             window.speechSynthesis.speak(silent);
           }
+          const b = document.getElementById('btnUnlockTtsAudio');
+          if (b) b.textContent = '✅ Audio Activo';
+          setTtsDiag('✅ Audio desbloqueado y listo');
         } catch (_) {}
       }
-      document.addEventListener('pointerdown', unlockMobileAudio, { once: true });
+      document.addEventListener('click', unlockMobileAudio, { once: true });
+      document.addEventListener('touchstart', unlockMobileAudio, { once: true });
       document.getElementById('btnUnlockTtsAudio')?.addEventListener('click', () => {
         unlockMobileAudio();
         const b = document.getElementById('btnUnlockTtsAudio');
@@ -2363,7 +2421,7 @@
         enqueueTts('Audio activado correctamente', 'Sistema');
       });
 
-      document.getElementById('btnRunTtsTest').addEventListener('click', () => enqueueTts(document.getElementById('ttsTestText').value));
+      document.getElementById('btnRunTtsTest').addEventListener('click', () => { unlockMobileAudio(); enqueueTts(document.getElementById('ttsTestText').value); });
       document.getElementById('toggleMasterTts').addEventListener('click', (e) => {
         state.ttsEnabled = !state.ttsEnabled;
         e.currentTarget.classList.toggle('active', state.ttsEnabled);
