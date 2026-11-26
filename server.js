@@ -134,6 +134,67 @@ app.post('/api/tts/fish', async (req, res) => {
   }
 });
 
+
+app.post('/api/tts/google', async (req, res) => {
+  const ip = req.ip || req.socket.remoteAddress || 'unknown';
+  if (!allowRequest(ip, 40)) return res.status(429).json({ error: 'Demasiadas peticiones' });
+  const text = String(req.body?.text || '').trim().slice(0, 200);
+  const lang = String(req.body?.lang || 'es-US').replace(/[^a-zA-Z-]/g, '') || 'es-US';
+  if (!text) return res.status(400).json({ error: 'Texto vacío' });
+  try {
+    const url = `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=${encodeURIComponent(lang)}&q=${encodeURIComponent(text)}`;
+    const upstream = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        Referer: 'https://translate.google.com/'
+      }
+    });
+    if (!upstream.ok) return res.status(upstream.status).json({ error: 'Google TTS no disponible' });
+    const buf = Buffer.from(await upstream.arrayBuffer());
+    res.setHeader('Content-Type', 'audio/mpeg');
+    res.send(buf);
+  } catch (_) {
+    res.status(502).json({ error: 'Error conectando con Google TTS' });
+  }
+});
+
+app.post('/api/tts/edge', async (req, res) => {
+  const ip = req.ip || req.socket.remoteAddress || 'unknown';
+  if (!allowRequest(ip, 40)) return res.status(429).json({ error: 'Demasiadas peticiones' });
+  const text = String(req.body?.text || '').trim().slice(0, 240);
+  const voice = String(req.body?.voice || 'es-PE-CamilaNeural').replace(/[^a-zA-Z0-9-]/g, '') || 'es-PE-CamilaNeural';
+  const rateNum = Math.min(2, Math.max(0.5, Number(req.body?.rate || 1)));
+  const ratePct = Math.round((rateNum - 1) * 100);
+  const rateStr = `${ratePct >= 0 ? '+' : ''}${ratePct}%`;
+  if (!text) return res.status(400).json({ error: 'Texto vacío' });
+
+  try {
+    const { EdgeTTS } = require('edge-tts-universal');
+    const tts = new EdgeTTS(text, voice, { rate: rateStr });
+    const result = await tts.synthesize();
+    const arrBuf = await result.audio.arrayBuffer();
+    const buf = Buffer.from(arrBuf);
+    if (!buf.length) throw new Error('Audio vacío');
+    res.setHeader('Content-Type', 'audio/mpeg');
+    res.send(buf);
+  } catch (err) {
+    // Automatic fallback to Google TTS so free neural TTS never goes silent
+    try {
+      const lang = voice.split('-').slice(0, 2).join('-') || 'es-US';
+      const url = `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=${encodeURIComponent(lang)}&q=${encodeURIComponent(text)}`;
+      const upstream = await fetch(url, {
+        headers: { 'User-Agent': 'Mozilla/5.0', Referer: 'https://translate.google.com/' }
+      });
+      if (!upstream.ok) throw new Error('Fallback failed');
+      const buf = Buffer.from(await upstream.arrayBuffer());
+      res.setHeader('Content-Type', 'audio/mpeg');
+      res.send(buf);
+    } catch (_) {
+      res.status(502).json({ error: 'Edge TTS temporalmente no disponible' });
+    }
+  }
+});
+
 app.get('/overlay', (_req, res) => res.sendFile(path.join(__dirname, 'public', 'overlay.html')));
 app.get('/overlay-likes.html', (_req, res) => res.sendFile(path.join(__dirname, 'public', 'overlay.html')));
 app.get('/widget/:type', (_req, res) => res.sendFile(path.join(__dirname, 'public', 'overlay.html')));
@@ -145,6 +206,7 @@ const io = new Server(server, {
 });
 
 const activeConnections = new Map();
+const roomSyncTimers = new Map();
 const roomStates = new Map();
 
 function createInitialRoomState(username) {
@@ -310,17 +372,7 @@ function serializeBattle(rs) {
     .filter((u) => Number(u.coins || 0) > 0)
     .sort((a, b) => b.coins - a.coins)
     .slice(0, 20);
-  // Refresh any placeholder names from knownUsers right before serializing
-  Object.values(rs.battle.hostMap).forEach((p) => {
-    if (p && p.id && p.name.startsWith('Anfitrión #')) {
-      const resolved = resolveHostName(rs, p.id, null, 0);
-      if (resolved && !resolved.startsWith('Anfitrión #')) p.name = resolved;
-    }
-  });
-  const players = Object.values(rs.battle.hostMap)
-    .filter((p) => p && (p.score > 0 || !p.isGhost))
-    .sort((a, b) => Number(b.score || 0) - Number(a.score || 0));
-
+  // Refresh individual host names from knownUsers
   const individualHosts = Array.from((rs.battle.individualHosts || new Map()).values())
     .map((h, i) => {
       const resolved = resolveHostName(rs, h.id, null, i);
@@ -333,9 +385,57 @@ function serializeBattle(rs) {
     })
     .sort((a, b) => b.score - a.score);
 
-  const mode = individualHosts.length >= 4 && players.length === 2
+  // Refresh top-bar players names: first by userId, then by exact score (1v1) or pair sum (2v2)!
+  const usedIndivIds = new Set();
+  const players = Object.values(rs.battle.hostMap)
+    .filter((p) => p && (p.score > 0 || !p.isGhost))
+    .sort((a, b) => Number(b.score || 0) - Number(a.score || 0))
+    .map((p, idx) => {
+      let name = p.name;
+      if (p.id && name.startsWith('Anfitrión #')) {
+        const resolved = resolveHostName(rs, p.id, null, idx);
+        if (resolved && !resolved.startsWith('Anfitrión #')) name = resolved;
+      }
+      // Match by exact score against individualHosts (fixes 1v1 where battleItems uses slot_0/teamId!)
+      if (name.startsWith('Anfitrión #') && individualHosts.length) {
+        const exact = individualHosts.find((h) => !usedIndivIds.has(h.id) && h.score === Number(p.score || 0) && h.name && !h.name.startsWith('Anfitrión #'));
+        if (exact) {
+          name = exact.name;
+          usedIndivIds.add(exact.id);
+        } else if (individualHosts.length >= 3 && Number(p.score || 0) > 0) {
+          // 2v2 subset-sum match: find two hosts whose scores add up to this team's score
+          outer: for (let a = 0; a < individualHosts.length; a++) {
+            for (let b = a + 1; b < individualHosts.length; b++) {
+              const ha = individualHosts[a], hb = individualHosts[b];
+              if (usedIndivIds.has(ha.id) || usedIndivIds.has(hb.id)) continue;
+              if (Math.abs((ha.score + hb.score) - Number(p.score || 0)) <= 5) {
+                const nA = ha.name.split(' (')[0];
+                const nB = hb.name.split(' (')[0];
+                if (!nA.startsWith('Anfitrión #') || !nB.startsWith('Anfitrión #')) {
+                  name = `${nA} + ${nB}`;
+                  usedIndivIds.add(ha.id);
+                  usedIndivIds.add(hb.id);
+                  break outer;
+                }
+              }
+            }
+          }
+        }
+      }
+      return { ...p, name };
+    });
+
+  // If 1v1 and one side is still unnamed while we know ownerDisplayName and the other side isn't owner, assign owner if missing
+  if (players.length === 2 && rs.ownerDisplayName && !players.some((p) => p.name === rs.ownerDisplayName)) {
+    const firstUnknown = players.find((p) => p.name.startsWith('Anfitrión #'));
+    if (firstUnknown && !individualHosts.some((h) => h.name === rs.ownerDisplayName)) {
+      firstUnknown.name = rs.ownerDisplayName;
+    }
+  }
+
+  const mode = individualHosts.length >= 3 && players.length === 2
     ? '2 vs 2'
-    : (players.length === 2 ? '1 vs 1 / 2 vs 2' : (players.length > 2 ? `Grupal (${players.length})` : ''));
+    : (players.length === 2 ? '1 vs 1' : (players.length > 2 ? `Grupal (${players.length})` : ''));
 
   return {
     active: rs.battle.active,
@@ -350,6 +450,8 @@ function serializeBattle(rs) {
 }
 
 function disconnectRoom(token) {
+  const t = roomSyncTimers.get(token);
+  if (t) { clearInterval(t); roomSyncTimers.delete(token); }
   const existing = activeConnections.get(token);
   if (existing) {
     try { existing.disconnect(); } catch (_) {}
@@ -415,11 +517,13 @@ function hydrateFromRoomInfo(rs, rawInfo) {
   const likes = Number(rInfo.like_count || rInfo.stats?.like_count || 0);
   const viewers = Number(rInfo.user_count || 0);
   const shares = Number(rInfo.stats?.share_count || rInfo.share_count || 0);
-  const initCoins = Number(rInfo.stats?.fan_ticket || rInfo.stats?.diamond_count || rInfo.room_ticket || 0);
+  const follows = Number(rInfo.stats?.follow_count || rInfo.follow_count || 0);
+  const initCoins = Number(rInfo.stats?.fan_ticket || rInfo.stats?.diamond_count || rInfo.room_ticket || rInfo.fan_ticket || 0);
 
   if (likes > rs.stats.likes) rs.stats.likes = likes;
   if (viewers > 0) rs.stats.viewers = viewers;
   if (shares > rs.stats.shares) rs.stats.shares = shares;
+  if (follows > rs.stats.follows) rs.stats.follows = follows;
   if (initCoins > rs.stats.coins) rs.stats.coins = initCoins;
 
   // Deep-harvest all nested userId -> nickname mappings from roomInfo
@@ -679,7 +783,17 @@ async function startTikTokConnection(socket, cleanUser, cleanToken) {
   socket.join(cleanToken);
   disconnectRoom(cleanToken);
 
+  const prevRs = roomStates.get(cleanToken);
+  const sameUser = prevRs && prevRs.username.toLowerCase() === ('@' + cleanUser).toLowerCase();
   const rs = createInitialRoomState(cleanUser);
+  if (sameUser) {
+    rs.stats = { ...prevRs.stats };
+    rs.topLikes = new Map(prevRs.topLikes);
+    rs.topCoins = new Map(prevRs.topCoins);
+    rs.knownUsers = new Map(prevRs.knownUsers);
+    rs.activeViewers = new Map(prevRs.activeViewers);
+    rs.topViewers = [...(prevRs.topViewers || [])];
+  }
   roomStates.set(cleanToken, rs);
 
   const options = { enableExtendedGiftInfo: true, fetchRoomInfoOnConnect: true };
@@ -697,6 +811,19 @@ async function startTikTokConnection(socket, cleanUser, cleanToken) {
     emitToRoom('tiktok:status', { connected: true, username: rs.username, roomId: rs.roomId });
     emitToRoom('tiktok:stats_sync', serializeRoomStats(rs));
     emitToRoom('tiktok:battle_update', serializeBattle(rs));
+
+    // Periodic 35s sync of roomInfo to keep real coins/shares/follows & battle host names up to date
+    const prevTimer = roomSyncTimers.get(cleanToken);
+    if (prevTimer) clearInterval(prevTimer);
+    roomSyncTimers.set(cleanToken, setInterval(async () => {
+      if (!rs.connected) return;
+      try {
+        const fresh = await tiktok.fetchRoomInfo();
+        hydrateFromRoomInfo(rs, fresh);
+        emitToRoom('tiktok:stats_sync', serializeRoomStats(rs));
+        if (rs.battle.active) emitToRoom('tiktok:battle_update', serializeBattle(rs));
+      } catch (_) {}
+    }, 35000));
   });
 
   tiktok.on(ControlEvent.DISCONNECTED, () => {
@@ -899,6 +1026,14 @@ async function startTikTokConnection(socket, cleanUser, cleanToken) {
       }
     });
   }
+
+  ['LINK_MESSAGE', 'LINK_LAYER', 'LINK_MIC_METHOD'].forEach((evName) => {
+    if (WebcastEvent[evName]) {
+      tiktok.on(WebcastEvent[evName], (d) => {
+        deepHarvestUsers(rs, d, 0);
+      });
+    }
+  });
 
   tiktok.on(WebcastEvent.LINK_MIC_BATTLE, (d) => {
     parseBattleStart(rs, d);
