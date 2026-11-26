@@ -401,62 +401,100 @@
         </div>
       </section>
 
-      <!-- TAB 3: 🔊 TTS CHAT & VOZ (CON VOZ ÚNICA POR USUARIO + COOLDOWN + 3 MOTORES) -->
+      <!-- TAB 3: 🔊 TTS CHAT & VOZ (OPTIMIZADO + VOCES GRATIS NEURALES + FISH AUDIO) -->
       <section id="tab-voz" class="tab-panel hidden space-y-4">
-        <div class="tp-card rounded-2xl p-4 sm:p-5 space-y-5">
+        <div class="tp-card rounded-2xl p-4 sm:p-5 space-y-4">
           <div class="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h2 class="font-display text-base font-bold text-white">🔊 TTS Chat &amp; Voz (Cola Única Anti-Spam)</h2>
-              <p class="text-xs text-slate-400">Navegador, Google TTS (12 acentos), ElevenLabs (proxy seguro en Render) y voz única por espectador.</p>
+              <h2 class="font-display text-base font-bold text-white">🔊 TTS Chat &amp; Voz</h2>
+              <p class="text-xs text-slate-400">Voces neuronales gratis (Microsoft Edge + Google TTS), voz clonada con Fish Audio y cola sin errores.</p>
             </div>
-            <div class="flex items-center gap-2.5">
+            <div class="flex items-center gap-2">
               <button id="btnTtsSkip" type="button" class="px-3 py-1.5 rounded-xl bg-amber-500/20 text-amber-200 text-xs font-bold">Saltar</button>
               <button id="btnTtsClear" type="button" class="px-3 py-1.5 rounded-xl bg-pinkNeon/20 text-pink-200 text-xs font-bold">Vaciar cola</button>
               <button id="toggleMasterTts" type="button" class="toggle-switch active" aria-label="Activar TTS"></button>
             </div>
           </div>
 
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
-            <button type="button" data-tts-engine="browser" class="tts-engine-btn subtab-btn active p-3.5 rounded-xl bg-bg border border-white/10 text-left"><div class="text-xs font-extrabold text-white">🔊 Navegador (Gratis)</div><div class="text-[11px] text-slate-400 mt-0.5">Web Speech API · 0.5x–2x</div></button>
-            <button type="button" data-tts-engine="google" class="tts-engine-btn subtab-btn p-3.5 rounded-xl bg-bg border border-white/10 text-left"><div class="text-xs font-extrabold text-white">🌐 Google TTS (16 acentos)</div><div class="text-[11px] text-slate-400 mt-0.5">es-PE, es-MX, es-CO, es-AR...</div></button>
-            <button type="button" data-tts-engine="fish" class="tts-engine-btn subtab-btn p-3.5 rounded-xl bg-bg border border-white/10 text-left"><div class="text-xs font-extrabold text-white">🐟 Fish Audio IA</div><div class="text-[11px] text-cyanNeon mt-0.5">Voz clonada · s2.1-pro-free</div></button>
-            <button type="button" data-tts-engine="elevenlabs" class="tts-engine-btn subtab-btn p-3.5 rounded-xl bg-bg border border-white/10 text-left"><div class="text-xs font-extrabold text-white">✨ ElevenLabs IA</div><div class="text-[11px] text-slate-400 mt-0.5">16 voces + voz clonada</div></button>
+          <div class="grid grid-cols-2 lg:grid-cols-5 gap-2">
+            <button type="button" data-tts-engine="edge" class="tts-engine-btn subtab-btn active p-3 rounded-xl bg-bg border border-white/10 text-left"><div class="text-xs font-extrabold text-cyanNeon">🎙️ Edge Neural</div><div class="text-[10px] text-emerald-300 mt-0.5 font-semibold">GRATIS · 20 voces IA</div></button>
+            <button type="button" data-tts-engine="google" class="tts-engine-btn subtab-btn p-3 rounded-xl bg-bg border border-white/10 text-left"><div class="text-xs font-extrabold text-white">🌐 Google TTS</div><div class="text-[10px] text-emerald-300 mt-0.5 font-semibold">GRATIS · 16 acentos</div></button>
+            <button type="button" data-tts-engine="fish" class="tts-engine-btn subtab-btn p-3 rounded-xl bg-bg border border-white/10 text-left"><div class="text-xs font-extrabold text-white">🐟 Fish Audio</div><div class="text-[10px] text-cyanNeon mt-0.5">Voz clonada IA</div></button>
+            <button type="button" data-tts-engine="browser" class="tts-engine-btn subtab-btn p-3 rounded-xl bg-bg border border-white/10 text-left"><div class="text-xs font-extrabold text-white">🔊 Navegador</div><div class="text-[10px] text-slate-400 mt-0.5">Local sin internet</div></button>
+            <button type="button" data-tts-engine="elevenlabs" class="tts-engine-btn subtab-btn p-3 rounded-xl bg-bg border border-white/10 text-left"><div class="text-xs font-extrabold text-white">✨ ElevenLabs</div><div class="text-[10px] text-slate-400 mt-0.5">API Key / Clonada</div></button>
           </div>
 
           <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
-            <div class="lg:col-span-7 space-y-4">
-              <div id="boxGoogleTts" class="hidden bg-cyanNeon/10 border border-cyanNeon/30 rounded-xl p-4 space-y-2">
-                <div class="text-xs font-bold text-cyanNeon">Idioma / Acento Google TTS</div>
-                <select id="googleAccentSelect" class="w-full bg-bg border border-white/15 rounded-xl px-3 py-2 text-xs text-white">
-                  <option value="es-US">Español (Latinoamérica / US)</option><option value="es-PE">Español (Perú)</option><option value="es-MX">Español (México)</option><option value="es-CO">Español (Colombia)</option><option value="es-AR">Español (Argentina)</option><option value="es-CL">Español (Chile)</option><option value="es-ES">Español (España)</option><option value="pt-BR">Portugués (Brasil)</option><option value="en-US">English (US)</option><option value="en-GB">English (UK)</option><option value="fr-FR">Français</option><option value="de-DE">Deutsch</option><option value="it-IT">Italiano</option><option value="ja-JP">日本語</option><option value="ko-KR">한국어</option><option value="ru-RU">Русский</option>
+            <div class="lg:col-span-7 space-y-3.5">
+              <!-- EDGE NEURAL (GRATIS) -->
+              <div id="boxEdgeTts" class="bg-emerald-500/10 border border-emerald-400/35 rounded-xl p-4 space-y-2.5">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-bold text-emerald-300">🎙️ Microsoft Edge Neural · 100% Gratis (sin API Key)</span>
+                  <span class="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-200 font-bold">Recomendado</span>
+                </div>
+                <select id="edgeVoiceSelect" class="w-full bg-bg border border-white/15 rounded-xl px-3 py-2 text-xs text-white">
+                  <optgroup label="🇵🇪 Perú">
+                    <option value="es-PE-CamilaNeural">Camila Neural (Perú · Femenina)</option>
+                    <option value="es-PE-AlexNeural">Alex Neural (Perú · Masculina)</option>
+                  </optgroup>
+                  <optgroup label="🇲🇽 México">
+                    <option value="es-MX-DaliaNeural">Dalia Neural (México · Femenina)</option>
+                    <option value="es-MX-JorgeNeural">Jorge Neural (México · Masculina)</option>
+                    <option value="es-MX-LarissaNeural">Larissa Neural (México · Juvenil)</option>
+                    <option value="es-MX-LibertoNeural">Liberto Neural (México · Locutor)</option>
+                  </optgroup>
+                  <optgroup label="🇨🇴 Colombia">
+                    <option value="es-CO-SalomeNeural">Salomé Neural (Colombia · Femenina)</option>
+                    <option value="es-CO-GonzaloNeural">Gonzalo Neural (Colombia · Masculina)</option>
+                  </optgroup>
+                  <optgroup label="🇦🇷 Argentina">
+                    <option value="es-AR-ElenaNeural">Elena Neural (Argentina · Femenina)</option>
+                    <option value="es-AR-TomasNeural">Tomás Neural (Argentina · Masculina)</option>
+                  </optgroup>
+                  <optgroup label="🇨🇱 Chile">
+                    <option value="es-CL-CatalinaNeural">Catalina Neural (Chile · Femenina)</option>
+                    <option value="es-CL-LorenzoNeural">Lorenzo Neural (Chile · Masculina)</option>
+                  </optgroup>
+                  <optgroup label="🇪🇸 España">
+                    <option value="es-ES-ElviraNeural">Elvira Neural (España · Femenina)</option>
+                    <option value="es-ES-AlvaroNeural">Álvaro Neural (España · Masculina)</option>
+                  </optgroup>
+                  <optgroup label="🇺🇸 Latino / Inglés / Brasil">
+                    <option value="es-US-PalomaNeural">Paloma Neural (LatAm · Femenina)</option>
+                    <option value="es-US-AlonsoNeural">Alonso Neural (LatAm · Masculina)</option>
+                    <option value="pt-BR-FranciscaNeural">Francisca Neural (Brasil · Femenina)</option>
+                    <option value="pt-BR-AntonioNeural">Antonio Neural (Brasil · Masculina)</option>
+                    <option value="en-US-EmmaMultilingualNeural">Emma Multilingual (Inglés/Español)</option>
+                    <option value="en-US-AndrewMultilingualNeural">Andrew Multilingual (Inglés/Español)</option>
+                  </optgroup>
                 </select>
               </div>
 
-              <div id="boxElevenLabs" class="hidden bg-pinkNeon/10 border border-pinkNeon/35 rounded-xl p-4 space-y-3">
-                <div class="flex items-center justify-between"><span class="text-xs font-bold text-pink-200">ElevenLabs IA · 16 Voces + Voz Clonada</span><span class="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold">Compatible con Railway</span></div>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  <div><label class="block text-[11px] text-slate-300 mb-1">API Key (o usa ELEVENLABS_API_KEY en Railway)</label><input id="elApiKey" type="password" autocomplete="off" placeholder="Pega tu API Key o déjalo vacío si está en Railway" class="w-full bg-bg border border-white/15 rounded-lg px-3 py-2 text-xs text-white" /></div>
-                  <div><label class="block text-[11px] text-slate-300 mb-1">Voz predefinida (Multilingüe v2)</label><select id="elVoiceSelect" class="w-full bg-bg border border-white/15 rounded-lg px-3 py-2 text-xs text-white"><option value="EXAVITQu4vr4xnSDxMaL">Bella (Femenina suave)</option><option value="21m00Tcm4TlvDq8ikWAM">Rachel (Narradora)</option><option value="AZnzlk1XvdvUeBnXmlld">Domi (Enérgica)</option><option value="MF3mGyEYCl7XYWbV9V6O">Elli (Juvenil)</option><option value="XB0fDUnXU5powFXDhCwa">Charlotte (Expresiva)</option><option value="oWAxZDx7w5VEj9dGsTzz">Grace (Cálida)</option><option value="ThT5KcBeYPX3keUQqHPh">Dorothy (Clara)</option><option value="ErXwobaYiN019PkySvjV">Antoni (Masculino natural)</option><option value="pNInz6obpgDQGcFmaJgB">Adam (Profunda)</option><option value="TxGEqnHWrfWFTfGW9XjX">Josh (Dinámica)</option><option value="VR6AewLTigWG4xSOukaG">Arnold (Grave)</option><option value="yoZ06aMxZJJ28mfd3POQ">Sam (Casual)</option><option value="onwK4e9ZLuTAKqWW03F9">Daniel (Locutor)</option><option value="2EiwWnXFnvU5JabPnv8n">Clyde (Personaje)</option><option value="IKne3meq5aSn9XLyUdCD">Charlie (Amigable)</option><option value="N2lVS1w4EtoT3dr4eOWO">Callum (Intensa)</option></select></div>
-                </div>
-                <div><label class="block text-[11px] text-slate-300 mb-1">Voice ID personalizado / Voz clonada</label><input id="elCustomVoiceId" type="text" placeholder="Pega aquí el Voice ID de tu voz clonada en ElevenLabs" class="w-full bg-bg border border-white/15 rounded-lg px-3 py-2 text-xs font-mono text-cyanNeon" /></div>
+              <!-- GOOGLE TTS (GRATIS) -->
+              <div id="boxGoogleTts" class="hidden bg-cyanNeon/10 border border-cyanNeon/30 rounded-xl p-4 space-y-2">
+                <div class="text-xs font-bold text-cyanNeon">🌐 Google TTS · 100% Gratis (Proxy estable en Railway)</div>
+                <select id="googleAccentSelect" class="w-full bg-bg border border-white/15 rounded-xl px-3 py-2 text-xs text-white">
+                  <option value="es-PE">Español (Perú)</option><option value="es-US">Español (Latinoamérica / US)</option><option value="es-MX">Español (México)</option><option value="es-CO">Español (Colombia)</option><option value="es-AR">Español (Argentina)</option><option value="es-CL">Español (Chile)</option><option value="es-ES">Español (España)</option><option value="pt-BR">Portugués (Brasil)</option><option value="en-US">English (US)</option><option value="en-GB">English (UK)</option><option value="fr-FR">Français</option><option value="de-DE">Deutsch</option><option value="it-IT">Italiano</option><option value="ja-JP">日本語</option><option value="ko-KR">한국어</option><option value="ru-RU">Русский</option>
+                </select>
               </div>
 
+              <!-- FISH AUDIO (VOZ CLONADA) -->
               <div id="boxFishAudio" class="hidden bg-cyanNeon/10 border border-cyanNeon/35 rounded-xl p-4 space-y-3">
                 <div class="flex flex-wrap items-center justify-between gap-2">
-                  <span class="text-xs font-bold text-cyanNeon">🐟 Fish Audio IA · Voz Clonada (Proxy Railway sin CORS)</span>
+                  <span class="text-xs font-bold text-cyanNeon">🐟 Fish Audio IA · Voz Clonada</span>
                   <a href="https://fish.audio/" target="_blank" rel="noopener noreferrer" class="text-[10px] px-2 py-0.5 rounded bg-cyanNeon/20 text-cyanNeon font-bold hover:underline">Abrir Fish Audio ↗</a>
                 </div>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   <div>
-                    <label class="block text-[11px] text-slate-300 mb-1">Fish API Key (o usa FISH_API_KEY en Railway)</label>
-                    <input id="fishApiKey" type="password" autocomplete="off" placeholder="Pega tu API Key o déjalo vacío si está en Railway" class="w-full bg-bg border border-white/15 rounded-lg px-3 py-2 text-xs text-white" />
+                    <label class="block text-[11px] text-slate-300 mb-1">Fish API Key (o FISH_API_KEY en Railway)</label>
+                    <input id="fishApiKey" type="password" autocomplete="off" placeholder="Pega tu API Key" class="w-full bg-bg border border-white/15 rounded-lg px-3 py-2 text-xs text-white" />
                   </div>
                   <div>
-                    <label class="block text-[11px] text-slate-300 mb-1">Modelo Fish Audio</label>
+                    <label class="block text-[11px] text-slate-300 mb-1">Modelo</label>
                     <select id="fishModelSelect" class="w-full bg-bg border border-white/15 rounded-lg px-3 py-2 text-xs text-white">
                       <option value="s2.1-pro-free">s2.1-pro-free (Gratis cuenta nueva)</option>
-                      <option value="s2.1-pro">s2.1-pro (Pro · Ultra baja latencia)</option>
-                      <option value="s2-pro">s2-pro (Clonación instantánea)</option>
+                      <option value="s2.1-pro">s2.1-pro (Pro)</option>
+                      <option value="s2-pro">s2-pro (Clonación)</option>
                     </select>
                   </div>
                 </div>
@@ -466,83 +504,70 @@
                     <input id="fishRefId" type="text" placeholder="Ej: 933563129e564b19a115bedd57b7406a" class="w-full bg-bg border border-white/15 rounded-lg px-3 py-2 text-xs font-mono text-cyanNeon" />
                   </div>
                   <div class="sm:col-span-4">
-                    <button id="btnTestFishVoice" type="button" class="w-full px-3 py-2 rounded-lg bg-cyanNeon/20 hover:bg-cyanNeon/30 border border-cyanNeon/40 text-xs font-extrabold text-cyanNeon transition">▶ Probar voz Fish</button>
+                    <button id="btnTestFishVoice" type="button" class="w-full px-3 py-2 rounded-lg bg-cyanNeon/20 hover:bg-cyanNeon/30 border border-cyanNeon/40 text-xs font-extrabold text-cyanNeon transition">▶ Probar voz</button>
                   </div>
                 </div>
-                <div class="text-[11px] text-slate-400">En Fish Audio crea o elige tu voz clonada, copia el <strong class="text-slate-200">Model ID</strong> (sale en la URL de la voz) y pégalo arriba en Reference ID.</div>
               </div>
 
-              <div id="boxVoiceClone" class="bg-gradient-to-br from-violet-500/10 to-cyanNeon/10 border border-violet-400/30 rounded-xl p-4 space-y-3">
-                <div class="flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <div class="text-xs font-extrabold text-white">🧬 Clonar tu propia voz para el TTS</div>
-                    <div class="text-[11px] text-slate-300 mt-0.5">Graba 30–60 s limpios aquí, súbelo a ElevenLabs Voice Cloning y pega el Voice ID arriba.</div>
-                  </div>
-                  <div class="flex items-center gap-1.5"><a href="https://fish.audio/" target="_blank" rel="noopener noreferrer" class="px-3 py-1.5 rounded-lg bg-cyanNeon/20 hover:bg-cyanNeon/30 border border-cyanNeon/40 text-[11px] font-bold text-cyanNeon transition">Fish Audio ↗</a><a href="https://elevenlabs.io/voice-cloning" target="_blank" rel="noopener noreferrer" class="px-3 py-1.5 rounded-lg bg-violet-500/25 hover:bg-violet-500/35 border border-violet-400/40 text-[11px] font-bold text-violet-200 transition">ElevenLabs ↗</a></div>
+              <!-- ELEVENLABS -->
+              <div id="boxElevenLabs" class="hidden bg-pinkNeon/10 border border-pinkNeon/35 rounded-xl p-4 space-y-3">
+                <div class="flex items-center justify-between"><span class="text-xs font-bold text-pink-200">✨ ElevenLabs IA</span><span class="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold">Compatible Railway</span></div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <div><label class="block text-[11px] text-slate-300 mb-1">API Key (o ELEVENLABS_API_KEY)</label><input id="elApiKey" type="password" autocomplete="off" placeholder="API Key" class="w-full bg-bg border border-white/15 rounded-lg px-3 py-2 text-xs text-white" /></div>
+                  <div><label class="block text-[11px] text-slate-300 mb-1">Voz</label><select id="elVoiceSelect" class="w-full bg-bg border border-white/15 rounded-lg px-3 py-2 text-xs text-white"><option value="EXAVITQu4vr4xnSDxMaL">Bella</option><option value="21m00Tcm4TlvDq8ikWAM">Rachel</option><option value="AZnzlk1XvdvUeBnXmlld">Domi</option><option value="MF3mGyEYCl7XYWbV9V6O">Elli</option><option value="ErXwobaYiN019PkySvjV">Antoni</option><option value="pNInz6obpgDQGcFmaJgB">Adam</option><option value="TxGEqnHWrfWFTfGW9XjX">Josh</option><option value="onwK4e9ZLuTAKqWW03F9">Daniel</option></select></div>
                 </div>
-                <div class="flex flex-wrap items-center gap-2">
-                  <button id="btnRecVoiceStart" type="button" class="px-3 py-1.5 rounded-lg bg-pinkNeon/20 hover:bg-pinkNeon/30 border border-pinkNeon/40 text-xs font-bold text-pink-200">🎙️ Grabar muestra</button>
-                  <button id="btnRecVoiceStop" type="button" disabled class="px-3 py-1.5 rounded-lg bg-white/10 text-xs font-bold text-slate-300 disabled:opacity-40">⏹️ Detener</button>
-                  <a id="btnRecVoiceDownload" download="mi-voz-tikpulse.webm" class="hidden px-3 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-400/40 text-xs font-bold text-emerald-200">⬇️ Descargar muestra</a>
-                  <span id="recVoiceStatus" class="text-[11px] text-slate-400">Listo para grabar (30–60 s sin ruido de fondo).</span>
-                </div>
-                <audio id="recVoicePreview" controls class="hidden w-full h-8"></audio>
+                <div><label class="block text-[11px] text-slate-300 mb-1">Voice ID clonada (opcional)</label><input id="elCustomVoiceId" type="text" placeholder="Pega tu Voice ID" class="w-full bg-bg border border-white/15 rounded-lg px-3 py-2 text-xs font-mono text-cyanNeon" /></div>
               </div>
 
+              <!-- QUÉ LEER Y QUÉ SILENCIAR (LIMPIO) -->
               <div class="bg-bg/90 rounded-xl p-4 border border-white/10 space-y-3">
-                <div class="text-xs font-bold text-white uppercase tracking-wider">Permisos, Cooldown y Voz por Usuario</div>
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                  <div><label class="block text-[11px] text-slate-400 mb-1">Audiencia</label><select id="ttsAudience" class="w-full bg-card border border-white/10 rounded-lg px-2 py-2 text-xs text-white"><option value="all">Todos</option><option value="filtered">Filtrados</option></select></div>
-                  <div><label class="block text-[11px] text-slate-400 mb-1">Cooldown (s)</label><input id="ttsCooldownSec" type="number" min="0" max="120" value="4" class="w-full bg-card border border-white/10 rounded-lg px-2.5 py-2 text-xs text-cyanNeon font-bold" /></div>
-                  <div><label class="block text-[11px] text-slate-400 mb-1">Máx. letras</label><input id="ttsMaxChars" type="number" min="20" max="300" value="140" class="w-full bg-card border border-white/10 rounded-lg px-2.5 py-2 text-xs text-white" /></div>
-                  <div><label class="block text-[11px] text-slate-400 mb-1">Mín. monedas</label><input id="ttsMinCoins" type="number" min="0" value="1" class="w-full bg-card border border-white/10 rounded-lg px-2.5 py-2 text-xs text-amber-300 font-bold" /></div>
+                <div class="text-xs font-bold text-cyanNeon uppercase tracking-wider">¿Qué leer y qué silenciar?</div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-200">
+                  <label class="flex items-center gap-2 p-2 rounded-lg bg-card border border-white/5 cursor-pointer"><input id="chkTtsReadChat" type="checkbox" checked class="accent-cyanNeon" /> 💬 Leer mensajes del chat</label>
+                  <label class="flex items-center gap-2 p-2 rounded-lg bg-card border border-white/5 cursor-pointer"><input id="chkTtsReadGift" type="checkbox" checked class="accent-pinkNeon" /> 🎁 Leer "envió un regalo"</label>
+                  <label class="flex items-center gap-2 p-2 rounded-lg bg-card border border-white/5 cursor-pointer"><input id="chkGiftDefaultSfx" type="checkbox" checked class="accent-amber-400" /> 🔊 Sonido beep en regalos</label>
+                  <label class="flex items-center gap-2 p-2 rounded-lg bg-card border border-white/5 cursor-pointer"><input id="chkTtsReadFollow" type="checkbox" class="accent-cyanNeon" /> ⭐ Leer nuevos seguidores</label>
+                  <label class="flex items-center gap-2 p-2 rounded-lg bg-card border border-white/5 cursor-pointer"><input id="chkTtsReadSub" type="checkbox" checked class="accent-emerald-400" /> 👑 Leer suscripciones</label>
+                  <label class="flex items-center gap-2 p-2 rounded-lg bg-card border border-white/5 cursor-pointer"><input id="chkTtsReadShare" type="checkbox" class="accent-purple-400" /> 📢 Leer compartidos</label>
+                  <label class="flex items-center gap-2 p-2 rounded-lg bg-card border border-white/5 cursor-pointer"><input id="chkTtsReadJoin" type="checkbox" class="accent-slate-400" /> 👋 Leer entradas al LIVE</label>
+                  <label class="flex items-center gap-2 p-2 rounded-lg bg-card border border-white/5 cursor-pointer"><input id="chkStripEmojis" type="checkbox" checked class="accent-cyanNeon" /> ✨ Limpiar emojis</label>
                 </div>
-                <div class="pt-1 border-t border-white/10 space-y-2">
-                  <div class="text-[11px] font-bold text-cyanNeon uppercase tracking-wider">¿Qué leer y qué silenciar?</div>
-                  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 text-xs text-slate-200">
-                    <label class="flex items-center gap-2 p-2 rounded-lg bg-card border border-white/5 cursor-pointer"><input id="chkTtsReadChat" type="checkbox" checked class="accent-cyanNeon" /> 💬 Leer mensajes del chat</label>
-                    <label class="flex items-center gap-2 p-2 rounded-lg bg-card border border-white/5 cursor-pointer"><input id="chkTtsReadGift" type="checkbox" checked class="accent-pinkNeon" /> 🎁 Leer "envió un regalo"</label>
-                    <label class="flex items-center gap-2 p-2 rounded-lg bg-card border border-white/5 cursor-pointer"><input id="chkGiftDefaultSfx" type="checkbox" checked class="accent-amber-400" /> 🔊 Sonido beep en regalos</label>
-                    <label class="flex items-center gap-2 p-2 rounded-lg bg-card border border-white/5 cursor-pointer"><input id="chkTtsReadFollow" type="checkbox" class="accent-cyanNeon" /> ⭐ Leer nuevos seguidores</label>
-                    <label class="flex items-center gap-2 p-2 rounded-lg bg-card border border-white/5 cursor-pointer"><input id="chkTtsReadSub" type="checkbox" checked class="accent-emerald-400" /> 👑 Leer suscripciones</label>
-                    <label class="flex items-center gap-2 p-2 rounded-lg bg-card border border-white/5 cursor-pointer"><input id="chkTtsReadShare" type="checkbox" class="accent-purple-400" /> 📢 Leer compartidos</label>
-                    <label class="flex items-center gap-2 p-2 rounded-lg bg-card border border-white/5 cursor-pointer"><input id="chkTtsReadJoin" type="checkbox" class="accent-slate-400" /> 👋 Leer entradas al LIVE</label>
-                    <label class="flex items-center gap-2 p-2 rounded-lg bg-card border border-white/5 cursor-pointer"><input id="chkUniqueVoice" type="checkbox" checked class="accent-cyanNeon" /> 🎭 Voz distinta por usuario</label>
-                    <label class="flex items-center gap-2 p-2 rounded-lg bg-card border border-white/5 cursor-pointer"><input id="chkStripEmojis" type="checkbox" checked class="accent-cyanNeon" /> ✨ Limpiar emojis</label>
-                  </div>
-                  <div>
-                    <label class="block text-[11px] text-slate-400 mb-1">Solo leer chat si empieza con comando (déjalo vacío para leer todo)</label>
-                    <input id="ttsCommandPrefix" type="text" placeholder="Ej: !tts o !voz (opcional)" class="w-full bg-card border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white" />
-                  </div>
-                </div>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  <div><label class="block text-[11px] text-slate-400 mb-1">Lista blanca VIP</label><input id="ttsWhitelist" type="text" placeholder="@vip1, @mod_juan" class="w-full bg-card border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white" /></div>
-                  <div><label class="block text-[11px] text-slate-400 mb-1">Palabras bloqueadas (→ ***)</label><input id="ttsBlockedWords" type="text" value="spam,groseria,http" class="w-full bg-card border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white" /></div>
+                <div class="grid grid-cols-3 gap-2.5 pt-1">
+                  <div><label class="block text-[11px] text-slate-400 mb-1">Cooldown (s)</label><input id="ttsCooldownSec" type="number" min="0" max="60" value="3" class="w-full bg-card border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-cyanNeon font-bold" /></div>
+                  <div><label class="block text-[11px] text-slate-400 mb-1">Mín. monedas</label><input id="ttsMinCoins" type="number" min="0" value="1" class="w-full bg-card border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-amber-300 font-bold" /></div>
+                  <div><label class="block text-[11px] text-slate-400 mb-1">Palabras bloqueadas</label><input id="ttsBlockedWords" type="text" value="spam,http" class="w-full bg-card border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white" /></div>
                 </div>
               </div>
 
-              <div class="bg-bg/90 rounded-xl p-4 border border-white/10 space-y-2.5">
-                <div class="text-xs font-bold text-white uppercase tracking-wider">Plantillas de lectura</div>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  <div><label class="block text-[10px] text-slate-400 mb-1">Chat</label><input id="tplTtsChat" type="text" value="{nickname} dice {message}" class="w-full bg-card border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white" /></div>
-                  <div><label class="block text-[10px] text-slate-400 mb-1">Regalos</label><input id="tplTtsGift" type="text" value="{nickname} envió {repeatCount} {giftName}" class="w-full bg-card border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white" /></div>
-                  <div><label class="block text-[10px] text-slate-400 mb-1">Seguidores</label><input id="tplTtsFollow" type="text" value="Gracias {nickname} por seguir" class="w-full bg-card border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white" /></div>
-                  <div><label class="block text-[10px] text-slate-400 mb-1">Compartidos</label><input id="tplTtsShare" type="text" value="{nickname} compartió el directo" class="w-full bg-card border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white" /></div>
+              <!-- GRABADOR DE MUESTRA PARA CLONAR VOZ (PLEGABLE) -->
+              <details id="boxVoiceClone" class="bg-bg/80 border border-violet-400/25 rounded-xl p-3.5">
+                <summary class="text-xs font-extrabold text-violet-200 cursor-pointer select-none">🧬 Grabar muestra de voz para clonar (Fish Audio / ElevenLabs)</summary>
+                <div class="mt-3 space-y-2.5">
+                  <div class="flex flex-wrap items-center gap-2">
+                    <button id="btnRecVoiceStart" type="button" class="px-3 py-1.5 rounded-lg bg-pinkNeon/20 hover:bg-pinkNeon/30 border border-pinkNeon/40 text-xs font-bold text-pink-200">🎙️ Grabar 30–60s</button>
+                    <button id="btnRecVoiceStop" type="button" disabled class="px-3 py-1.5 rounded-lg bg-white/10 text-xs font-bold text-slate-300 disabled:opacity-40">⏹️ Detener</button>
+                    <a id="btnRecVoiceDownload" download="mi-voz-tikpulse.webm" class="hidden px-3 py-1.5 rounded-lg bg-emerald-500/20 border border-emerald-400/40 text-xs font-bold text-emerald-200">⬇️ Descargar</a>
+                    <a href="https://fish.audio/" target="_blank" rel="noopener noreferrer" class="px-2.5 py-1.5 rounded-lg bg-cyanNeon/20 text-[11px] font-bold text-cyanNeon">Subir a Fish Audio ↗</a>
+                  </div>
+                  <div id="recVoiceStatus" class="text-[11px] text-slate-400">Graba 30–60 s sin ruido de fondo, descárgalo y súbelo a Fish Audio para obtener tu Reference ID.</div>
+                  <audio id="recVoicePreview" controls class="hidden w-full h-8"></audio>
                 </div>
-              </div>
+              </details>
             </div>
 
-            <div class="lg:col-span-5 space-y-4">
+            <div class="lg:col-span-5 space-y-3.5">
               <div class="bg-bg/90 rounded-xl p-4 border border-white/10 space-y-3">
-                <div><label class="block text-xs text-slate-400 mb-1">Voz del navegador</label><select id="browserVoiceSelect" class="w-full bg-card border border-white/10 rounded-lg px-3 py-2 text-xs text-white"><option value="">Automática (Español)</option></select></div>
-                <div><div class="flex justify-between text-xs mb-1"><span>Volumen global</span><span id="lblVol" class="text-cyanNeon font-bold">85%</span></div><input id="rngVol" type="range" min="0" max="100" value="85" class="w-full accent-pinkNeon" /></div>
+                <div id="boxBrowserVoiceWrap" class="hidden"><label class="block text-xs text-slate-400 mb-1">Voz del navegador</label><select id="browserVoiceSelect" class="w-full bg-card border border-white/10 rounded-lg px-3 py-2 text-xs text-white"><option value="">Automática (Español)</option></select></div>
+                <div><div class="flex justify-between text-xs mb-1"><span>Volumen</span><span id="lblVol" class="text-cyanNeon font-bold">85%</span></div><input id="rngVol" type="range" min="0" max="100" value="85" class="w-full accent-pinkNeon" /></div>
                 <div><div class="flex justify-between text-xs mb-1"><span>Velocidad</span><span id="lblRate" class="text-cyanNeon font-bold">1.05x</span></div><input id="rngRate" type="range" min="0.5" max="2" step="0.05" value="1.05" class="w-full accent-cyanNeon" /></div>
-                <div><div class="flex justify-between text-xs mb-1"><span>Tono</span><span id="lblPitch" class="text-cyanNeon font-bold">1.0</span></div><input id="rngPitch" type="range" min="0.5" max="2" step="0.1" value="1.0" class="w-full accent-cyanNeon" /></div>
-                <div class="pt-1"><label class="block text-xs text-slate-400 mb-1">Probar voz ahora</label><div class="flex gap-2"><input id="ttsTestText" type="text" value="¡Gracias Sofía por la Galaxia en la batalla! 🔥" class="flex-1 bg-card border border-white/10 rounded-lg px-3 py-2 text-xs text-white" /><button id="btnRunTtsTest" type="button" class="tp-btn-primary px-3.5 py-2 rounded-lg text-xs">Hablar</button></div></div>
+                <div class="pt-1 border-t border-white/10 space-y-2">
+                  <input id="ttsTestText" type="text" value="¡Hola! Bienvenidos al LIVE, gracias por las rosas" class="w-full bg-card border border-white/10 rounded-lg px-3 py-2 text-xs text-white" />
+                  <button id="btnRunTtsTest" type="button" class="w-full tp-btn-primary py-2.5 rounded-xl text-xs">▶ Probar Voz Ahora</button>
+                </div>
               </div>
-              <div class="bg-bg/90 rounded-xl p-4 border border-white/10">
-                <div class="flex items-center justify-between mb-2"><span class="text-xs font-bold text-white">Cola de reproducción TTS</span><span id="ttsQueueBadge" class="text-[11px] font-bold text-cyanNeon">0 en cola</span></div>
-                <div id="ttsQueueBox" class="space-y-1.5 max-h-40 overflow-y-auto text-xs text-slate-400"><div class="italic text-slate-500">Cola vacía</div></div>
+              <div class="bg-bg/90 rounded-xl p-4 border border-white/10 space-y-2">
+                <div class="flex items-center justify-between"><span class="text-xs font-bold text-white">Cola en vivo</span><span id="ttsQueueCountBadge" class="text-[11px] text-cyanNeon font-bold">0 en espera</span></div>
+                <div id="ttsQueueList" class="space-y-1.5 max-h-48 overflow-y-auto text-xs"></div>
               </div>
             </div>
           </div>
@@ -811,7 +836,9 @@
         pendingAudioName: '',
         actions: loadSavedActions(),
         ttsEnabled: true,
-        ttsEngine: 'browser',
+        ttsEngine: 'edge',
+        edgeVoice: 'es-PE-CamilaNeural',
+        currentTtsAudio: null,
         googleAccent: 'es-US',
         elApiKey: '',
         elVoiceId: 'EXAVITQu4vr4xnSDxMaL',
@@ -948,35 +975,53 @@
         });
       }
 
-      async function playElevenLabs(text) {
-        const key = state.elApiKey.trim();
-        const vid = (state.elCustomVoiceId.trim() || state.elVoiceId);
+      function playAudioBlob(blob) {
+        const url = URL.createObjectURL(blob);
+        return new Promise((resolve) => {
+          let settled = false;
+          const finish = (ok) => {
+            if (settled) return;
+            settled = true;
+            clearTimeout(guard);
+            try { URL.revokeObjectURL(url); } catch (_) {}
+            if (state.currentTtsAudio === a) state.currentTtsAudio = null;
+            resolve(ok);
+          };
+          const a = new Audio(url);
+          state.currentTtsAudio = a;
+          a.volume = state.ttsVolume;
+          a.playbackRate = Math.min(2, Math.max(0.5, state.ttsRate || 1));
+          const guard = setTimeout(() => { try { a.pause(); } catch (_) {} finish(true); }, 18000);
+          a.onended = () => finish(true);
+          a.onerror = () => finish(false);
+          a.play().catch(() => finish(false));
+        });
+      }
+
+      async function playEdgeTts(text) {
         try {
-          let res;
-          if (key) {
-            res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(vid)}`, {
-              method: 'POST',
-              headers: { 'xi-api-key': key, 'Content-Type': 'application/json', Accept: 'audio/mpeg' },
-              body: JSON.stringify({ text, model_id: 'eleven_multilingual_v2' })
-            });
-          } else {
-            res = await fetch('/api/tts/elevenlabs', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ text, voiceId: vid })
-            });
-          }
-          if (!res.ok) throw new Error('EL ' + res.status);
-          const url = URL.createObjectURL(await res.blob());
-          return await new Promise((resolve) => {
-            const a = new Audio(url);
-            a.volume = state.ttsVolume;
-            a.onended = () => { URL.revokeObjectURL(url); resolve(true); };
-            a.onerror = () => { URL.revokeObjectURL(url); resolve(false); };
-            a.play().catch(() => resolve(false));
+          const res = await fetch('/api/tts/edge', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text, voice: state.edgeVoice || 'es-PE-CamilaNeural', rate: state.ttsRate || 1.05 })
           });
+          if (!res.ok) throw new Error('Edge ' + res.status);
+          return await playAudioBlob(await res.blob());
         } catch (_) {
-          toast('ElevenLabs no disponible; usando voz local', 'pink');
+          return false;
+        }
+      }
+
+      async function playGoogleTts(text) {
+        try {
+          const res = await fetch('/api/tts/google', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text, lang: state.googleAccent || 'es-PE' })
+          });
+          if (!res.ok) throw new Error('Google ' + res.status);
+          return await playAudioBlob(await res.blob());
+        } catch (_) {
           return false;
         }
       }
@@ -997,17 +1042,35 @@
             const errObj = await res.json().catch(() => ({}));
             throw new Error(errObj.error || ('Fish ' + res.status));
           }
-          const url = URL.createObjectURL(await res.blob());
-          return await new Promise((resolve) => {
-            const a = new Audio(url);
-            a.volume = state.ttsVolume;
-            a.playbackRate = Math.min(2, Math.max(0.5, state.ttsRate || 1));
-            a.onended = () => { URL.revokeObjectURL(url); resolve(true); };
-            a.onerror = () => { URL.revokeObjectURL(url); resolve(false); };
-            a.play().catch(() => resolve(false));
-          });
+          return await playAudioBlob(await res.blob());
         } catch (err) {
-          toast(err?.message || 'Fish Audio no disponible; usando voz local', 'pink');
+          toast(err?.message || 'Fish Audio no disponible; usando voz gratuita', 'pink');
+          return false;
+        }
+      }
+
+      async function playElevenLabs(text) {
+        const key = state.elApiKey.trim();
+        const vid = (state.elCustomVoiceId.trim() || state.elVoiceId);
+        try {
+          let res;
+          if (key) {
+            res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(vid)}`, {
+              method: 'POST',
+              headers: { 'xi-api-key': key, 'Content-Type': 'application/json', Accept: 'audio/mpeg' },
+              body: JSON.stringify({ text, model_id: 'eleven_multilingual_v2' })
+            });
+          } else {
+            res = await fetch('/api/tts/elevenlabs', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ text, voiceId: vid })
+            });
+          }
+          if (!res.ok) throw new Error('EL ' + res.status);
+          return await playAudioBlob(await res.blob());
+        } catch (_) {
+          toast('ElevenLabs no disponible; usando voz gratuita', 'pink');
           return false;
         }
       }
@@ -1018,26 +1081,37 @@
         state.ttsSpeaking = true;
         renderTtsQueue();
         const done = () => { state.ttsQueue.shift(); state.ttsSpeaking = false; pumpTts(); };
+        if (state.ttsEngine === 'edge') {
+          if (await playEdgeTts(item.text)) return done();
+        }
+        if (state.ttsEngine === 'google') {
+          if (await playGoogleTts(item.text)) return done();
+        }
         if (state.ttsEngine === 'fish') {
           if (await playFishAudio(item.text)) return done();
+          if (await playEdgeTts(item.text)) return done();
         }
         if (state.ttsEngine === 'elevenlabs') {
           if (await playElevenLabs(item.text)) return done();
+          if (await playEdgeTts(item.text)) return done();
         }
-        if (!('speechSynthesis' in window)) return done();
-        try {
+        if ('speechSynthesis' in window) {
           const u = new SpeechSynthesisUtterance(item.text);
-          u.lang = state.ttsEngine === 'google' ? state.googleAccent : 'es-ES';
-          if (state.ttsEngine === 'browser' && state.browserVoiceUri) {
-            const f = voices.find((v) => v.voiceURI === state.browserVoiceUri);
-            if (f) u.voice = f;
-          }
-          u.rate = state.ttsRate;
-          u.pitch = userPitchOffset(item.userKey);
+          const v = pickVoiceForUser(item.user);
+          if (v) u.voice = v;
+          u.lang = v?.lang || 'es-ES';
           u.volume = state.ttsVolume;
-          u.onend = done; u.onerror = done;
+          u.rate = state.ttsRate;
+          u.pitch = state.ttsPitch;
+          let finished = false;
+          const fin = () => { if (!finished) { finished = true; clearTimeout(t); done(); } };
+          const t = setTimeout(fin, 15000);
+          u.onend = fin;
+          u.onerror = fin;
           window.speechSynthesis.speak(u);
-        } catch (_) { done(); }
+        } else {
+          setTimeout(done, 400);
+        }
       }
 
       function enqueueTts(raw, userKey = null) {
@@ -1455,7 +1529,7 @@
             duration: total >= 1000 ? 6 : 4
           });
           if (total >= state.ttsMinCoins) {
-            enqueueTts((document.getElementById('tplTtsGift').value || '{nickname} envió {repeatCount} {giftName}').replace('{nickname}', user.replace('@', '')).replace('{repeatCount}', String(repeatCount)).replace('{giftName}', gObj.name), user);
+            enqueueTts(((document.getElementById('tplTtsGift')?.value || '{nickname} envió {repeatCount} {giftName}') || '{nickname} envió {repeatCount} {giftName}').replace('{nickname}', user.replace('@', '')).replace('{repeatCount}', String(repeatCount)).replace('{giftName}', gObj.name), user);
           }
         }
         renderCountersAndFeeds();
@@ -1491,7 +1565,7 @@
           const pref = (state.ttsCommandPrefix || '').trim().toLowerCase();
           if (!pref || text.trim().toLowerCase().startsWith(pref)) {
             const cleanTxt = pref ? text.trim().slice(pref.length).trim() : text;
-            if (cleanTxt) enqueueTts((document.getElementById('tplTtsChat').value || '{nickname} dice {message}').replace('{nickname}', user.replace('@', '')).replace('{message}', cleanTxt), user);
+            if (cleanTxt) enqueueTts(((document.getElementById('tplTtsChat')?.value || '{nickname} dice {message}') || '{nickname} dice {message}').replace('{nickname}', user.replace('@', '')).replace('{message}', cleanTxt), user);
           }
         }
         renderCountersAndFeeds();
@@ -1794,12 +1868,12 @@
           if (!syncData) return;
           this.realMode = true;
           const s = syncData.stats || {};
-          state.likes = Number(s.likes || 0);
+          state.likes = Math.max(state.likes, Number(s.likes || 0));
           state.viewers = Number(s.viewers || 0);
-          state.follows = Number(s.follows || 0);
-          state.diamonds = Number(s.coins ?? s.diamonds ?? 0);
-          state.shares = Number(s.shares || 0);
-          state.subs = Number(s.subs || 0);
+          state.follows = Math.max(state.follows, Number(s.follows || 0));
+          state.diamonds = Math.max(state.diamonds, Number(s.coins ?? s.diamonds ?? 0));
+          state.shares = Math.max(state.shares, Number(s.shares || 0));
+          state.subs = Math.max(state.subs, Number(s.subs || 0));
           if (Array.isArray(syncData.topLikes)) state.topLikes = syncData.topLikes;
           if (Array.isArray(syncData.topCoins)) state.topDiamonds = syncData.topCoins;
           if (Array.isArray(syncData.topViewers)) state.topViewers = syncData.topViewers;
@@ -1838,7 +1912,7 @@
             if (state.giftDefaultSfx) playSound(total >= 500 ? 'fanfare' : 'coin', null);
             queueAlert({ screen: total >= 1000 ? 'screen2' : 'screen1', badgeLabel: 'GIFT ALERT', emoji: gObj.emoji || '🎁', img: gObj.img || '', title: `¡${user} envió ${repeatCount}x ${gObj.name}! (+${total.toLocaleString('es-ES')} 🪙)`, duration: total >= 1000 ? 6 : 4 });
             if (state.ttsReadGift && total >= state.ttsMinCoins) {
-              enqueueTts((document.getElementById('tplTtsGift').value || '{nickname} envió {repeatCount} {giftName}').replace('{nickname}', user.replace('@', '')).replace('{repeatCount}', String(repeatCount)).replace('{giftName}', gObj.name), user);
+              enqueueTts(((document.getElementById('tplTtsGift')?.value || '{nickname} envió {repeatCount} {giftName}') || '{nickname} envió {repeatCount} {giftName}').replace('{nickname}', user.replace('@', '')).replace('{repeatCount}', String(repeatCount)).replace('{giftName}', gObj.name), user);
             }
           }
           renderCountersAndFeeds();
@@ -2050,13 +2124,26 @@
         b.addEventListener('click', () => {
           state.ttsEngine = b.getAttribute('data-tts-engine');
           document.querySelectorAll('[data-tts-engine]').forEach((x) => x.classList.toggle('active', x === b));
-          document.getElementById('boxGoogleTts').classList.toggle('hidden', state.ttsEngine !== 'google');
-          document.getElementById('boxFishAudio').classList.toggle('hidden', state.ttsEngine !== 'fish');
-          document.getElementById('boxElevenLabs').classList.toggle('hidden', state.ttsEngine !== 'elevenlabs');
+          document.getElementById('boxEdgeTts')?.classList.toggle('hidden', state.ttsEngine !== 'edge');
+          document.getElementById('boxGoogleTts')?.classList.toggle('hidden', state.ttsEngine !== 'google');
+          document.getElementById('boxFishAudio')?.classList.toggle('hidden', state.ttsEngine !== 'fish');
+          document.getElementById('boxElevenLabs')?.classList.toggle('hidden', state.ttsEngine !== 'elevenlabs');
+          document.getElementById('boxBrowserVoiceWrap')?.classList.toggle('hidden', state.ttsEngine !== 'browser');
           try { localStorage.setItem('tikpulse_tts_engine', state.ttsEngine); } catch (_) {}
         });
       });
       document.getElementById('googleAccentSelect').addEventListener('change', (e) => { state.googleAccent = e.target.value; });
+      const edgeSel = document.getElementById('edgeVoiceSelect');
+      if (edgeSel) {
+        edgeSel.addEventListener('change', (e) => {
+          state.edgeVoice = e.target.value;
+          try { localStorage.setItem('tikpulse_edge_voice', state.edgeVoice); } catch (_) {}
+        });
+        try {
+          const savedEdge = localStorage.getItem('tikpulse_edge_voice');
+          if (savedEdge) { state.edgeVoice = savedEdge; edgeSel.value = savedEdge; }
+        } catch (_) {}
+      }
       document.getElementById('elApiKey').addEventListener('input', (e) => { state.elApiKey = e.target.value; });
       document.getElementById('fishApiKey').addEventListener('input', (e) => { state.fishApiKey = e.target.value; });
       document.getElementById('fishRefId').addEventListener('input', (e) => {
@@ -2070,7 +2157,8 @@
       document.getElementById('btnTestFishVoice').addEventListener('click', () => {
         state.ttsEngine = 'fish';
         document.querySelectorAll('[data-tts-engine]').forEach((x) => x.classList.toggle('active', x.getAttribute('data-tts-engine') === 'fish'));
-        document.getElementById('boxGoogleTts').classList.add('hidden');
+        document.getElementById('boxEdgeTts')?.classList.add('hidden');
+        document.getElementById('boxGoogleTts')?.classList.add('hidden');
         document.getElementById('boxElevenLabs').classList.add('hidden');
         document.getElementById('boxFishAudio').classList.remove('hidden');
         enqueueTts('¡Hola! Esta es tu voz clonada con Fish Audio en TikPulse LIVE.', 'Prueba Fish');
@@ -2155,9 +2243,9 @@
       })();
       document.getElementById('browserVoiceSelect').addEventListener('change', (e) => { state.browserVoiceUri = e.target.value; });
       document.getElementById('ttsCooldownSec').addEventListener('input', (e) => { state.ttsCooldownSec = Math.max(0, Number(e.target.value) || 0); });
-      document.getElementById('ttsMaxChars').addEventListener('input', (e) => { state.ttsMaxChars = Math.max(20, Number(e.target.value) || 140); });
+      document.getElementById('ttsMaxChars')?.addEventListener('input', (e) => { state.ttsMaxChars = Math.max(20, Number(e.target.value) || 140); });
       document.getElementById('ttsMinCoins').addEventListener('input', (e) => { state.ttsMinCoins = Math.max(0, Number(e.target.value) || 0); });
-      document.getElementById('chkUniqueVoice').addEventListener('change', (e) => { state.ttsUniqueVoice = e.target.checked; });
+      document.getElementById('chkUniqueVoice')?.addEventListener('change', (e) => { state.ttsUniqueVoice = e.target.checked; });
       document.getElementById('chkStripEmojis').addEventListener('change', (e) => { state.stripEmojis = e.target.checked; });
       function saveTtsPrefs() {
         try {
@@ -2203,7 +2291,7 @@
       document.getElementById('ttsBlockedWords').addEventListener('input', (e) => { state.blockedWords = e.target.value; });
       document.getElementById('rngVol').addEventListener('input', (e) => { state.ttsVolume = Number(e.target.value) / 100; document.getElementById('lblVol').textContent = `${e.target.value}%`; });
       document.getElementById('rngRate').addEventListener('input', (e) => { state.ttsRate = Number(e.target.value); document.getElementById('lblRate').textContent = `${state.ttsRate.toFixed(2)}x`; });
-      document.getElementById('rngPitch').addEventListener('input', (e) => { state.ttsPitch = Number(e.target.value); document.getElementById('lblPitch').textContent = state.ttsPitch.toFixed(1); });
+      document.getElementById('rngPitch')?.addEventListener('input', (e) => { state.ttsPitch = Number(e.target.value); document.getElementById('lblPitch').textContent = state.ttsPitch.toFixed(1); });
       document.getElementById('btnRunTtsTest').addEventListener('click', () => enqueueTts(document.getElementById('ttsTestText').value));
       document.getElementById('toggleMasterTts').addEventListener('click', (e) => {
         state.ttsEnabled = !state.ttsEnabled;
@@ -2211,8 +2299,8 @@
         document.getElementById('sidebarTtsState').textContent = state.ttsEnabled ? 'ON' : 'OFF';
         if (!state.ttsEnabled && 'speechSynthesis' in window) { window.speechSynthesis.cancel(); state.ttsSpeaking = false; }
       });
-      document.getElementById('btnTtsSkip').addEventListener('click', () => { if ('speechSynthesis' in window) window.speechSynthesis.cancel(); state.ttsQueue.shift(); state.ttsSpeaking = false; pumpTts(); });
-      document.getElementById('btnTtsClear').addEventListener('click', () => { if ('speechSynthesis' in window) window.speechSynthesis.cancel(); state.ttsQueue = []; state.ttsSpeaking = false; renderTtsQueue(); });
+      document.getElementById('btnTtsSkip').addEventListener('click', () => { if (state.currentTtsAudio) { try { state.currentTtsAudio.pause(); } catch (_) {} state.currentTtsAudio = null; } if ('speechSynthesis' in window) window.speechSynthesis.cancel(); state.ttsQueue.shift(); state.ttsSpeaking = false; pumpTts(); });
+      document.getElementById('btnTtsClear').addEventListener('click', () => { if (state.currentTtsAudio) { try { state.currentTtsAudio.pause(); } catch (_) {} state.currentTtsAudio = null; } if ('speechSynthesis' in window) window.speechSynthesis.cancel(); state.ttsQueue = []; state.ttsSpeaking = false; renderTtsQueue(); });
 
       // Chat & Bot
       document.getElementById('chatSearchInput').addEventListener('input', renderCountersAndFeeds);
