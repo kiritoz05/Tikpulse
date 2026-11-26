@@ -368,6 +368,8 @@ function createInitialRoomState(username) {
     roomId: '',
     ownerUserId: '',
     knownUsers: new Map(),
+    discoveredCoHosts: new Map(), // uid -> { uid, uniqueId, name }
+    autoCoHostConns: new Map(),   // cleanUniqueId -> { tiktok, uid }
     giftPriceById: new Map(),
     giftPriceByName: new Map(),
     giftStreaks: new Map(), // streakKey -> { count, ts }
@@ -426,8 +428,14 @@ function deepHarvestUsers(rs, obj, depth = 0) {
   }
   const uid = safeId(obj.userId || obj.UserId || obj.user_id || obj.id_str || obj.id || obj.Id || obj.uid || obj.hostUserId || obj.HostUserId || obj.host_user_id || obj.anchorId || obj.anchor_id);
   const label = parseUserLabel(obj, '');
+  const rawUnique = String(obj.uniqueId || obj.UniqueId || obj.displayId || obj.DisplayId || obj.display_id || obj.unique_id || obj.user?.uniqueId || obj.user?.displayId || '').replace(/^@/, '').trim();
   if (uid && label && !label.startsWith('Anfitrión #') && !label.startsWith('Equipo #')) {
     rs.knownUsers.set(uid, label);
+    if (rawUnique && USERNAME_RE.test(rawUnique) && rawUnique.toLowerCase() !== rs.username.replace(/^@/, '').toLowerCase()) {
+      if (rs.discoveredCoHosts && rs.discoveredCoHosts.size < 12) {
+        rs.discoveredCoHosts.set(uid, { uid, uniqueId: rawUnique, name: label });
+      }
+    }
     if (rs.battle.hostMap[uid] && (rs.battle.hostMap[uid].name.startsWith('Anfitrión #') || rs.battle.hostMap[uid].name.startsWith('Equipo #'))) {
       rs.battle.hostMap[uid].name = label;
     }
@@ -647,6 +655,7 @@ function disconnectRoom(token) {
   }
   const rs = roomStates.get(token);
   if (rs) {
+    stopAutoCoHostListeners(rs);
     rs.connected = false;
     archiveRoomState(rs);
   }
@@ -990,6 +999,110 @@ function recordSocialOnce(rs, kind, user) {
   return true;
 }
 
+function stopAutoCoHostListeners(rs) {
+  if (!rs || !rs.autoCoHostConns) return;
+  for (const entry of rs.autoCoHostConns.values()) {
+    if (entry && entry.tiktok) {
+      try { entry.tiktok.disconnect(); } catch (_) {}
+    }
+  }
+  rs.autoCoHostConns.clear();
+}
+
+function ensureAutoCoHostListeners(rs, emitToRoom) {
+  if (!rs || !rs.connected || !rs.battle?.active) return;
+  if (!rs.discoveredCoHosts || !rs.discoveredCoHosts.size) return;
+
+  // Candidate co-hosts: prioritize those already in battle.individualHosts or battle.hostMap, max 3 background listeners (4 hosts total!)
+  const candidates = [];
+  for (const co of rs.discoveredCoHosts.values()) {
+    if (!co.uniqueId || !USERNAME_RE.test(co.uniqueId)) continue;
+    const low = co.uniqueId.toLowerCase();
+    if (low === rs.username.replace(/^@/, '').toLowerCase()) continue;
+    if (rs.autoCoHostConns.has(low)) continue;
+    const inBattle = rs.battle.individualHosts?.has(co.uid) || Boolean(rs.battle.hostMap?.[co.uid]);
+    if (inBattle || rs.discoveredCoHosts.size <= 3) {
+      candidates.push(co);
+    }
+  }
+
+  for (const co of candidates) {
+    if (rs.autoCoHostConns.size >= 3) break;
+    const low = co.uniqueId.toLowerCase();
+    const options = { enableExtendedGiftInfo: true, fetchRoomInfoOnConnect: true };
+    if (process.env.EULER_API_KEY) options.signApiKey = process.env.EULER_API_KEY.trim();
+    const conn = new TikTokLiveConnection(co.uniqueId, options);
+    const giftPriceById = new Map();
+    const giftPriceByName = new Map();
+    const giftStreaks = new Map();
+    rs.autoCoHostConns.set(low, { tiktok: conn, uid: co.uid });
+
+    conn.on(WebcastEvent.GIFT, (d) => {
+      if (!rs.connected || !rs.battle.active) return;
+      const sender = parseUserLabel(d.user || d, '@user');
+      const giftId = safeId(d.giftId || d.gift?.id || d.giftDetails?.id || '');
+      const giftName = d.giftDetails?.giftName || d.gift?.name || d.giftName || d.extendedGiftInfo?.name || 'Regalo';
+      let unitCoins = Number(d.giftDetails?.diamondCount ?? d.gift?.diamond_count ?? d.diamondCount ?? d.extendedGiftInfo?.diamond_count ?? 0);
+      if (!unitCoins && giftId && giftPriceById.has(giftId)) unitCoins = giftPriceById.get(giftId);
+      if (!unitCoins && giftPriceByName.has(giftName.toLowerCase())) unitCoins = giftPriceByName.get(giftName.toLowerCase());
+      if (!unitCoins) unitCoins = 1;
+
+      const repeatCount = Math.max(1, Number(d.repeatCount || 1));
+      const repeatEnd = Boolean(d.repeatEnd);
+      const giftType = Number(d.giftDetails?.giftType ?? d.giftType ?? 0);
+      const groupId = safeId(d.groupId || d.common?.msgId || '');
+      const streakKey = `${sender}:${giftId || giftName}:${groupId || 's'}`;
+      const prevStreak = giftStreaks.get(streakKey);
+      let deltaCount = repeatCount;
+      if (prevStreak && repeatCount >= prevStreak.count && (Date.now() - prevStreak.ts) < 20000) {
+        deltaCount = repeatCount - prevStreak.count;
+      }
+      giftStreaks.set(streakKey, { count: repeatCount, ts: Date.now() });
+      if (repeatEnd || giftType !== 1) giftStreaks.delete(streakKey);
+
+      if (deltaCount > 0) {
+        const deltaCoins = unitCoins * deltaCount;
+        const targetUid = co.uid || low;
+        const prevH = rs.battle.individualHosts.get(targetUid) || { id: targetUid, name: co.name || ('@' + co.uniqueId), score: 0, rank: 0 };
+        prevH.score = Number(prevH.score || 0) + deltaCoins;
+        if (co.name && (!prevH.name || prevH.name.startsWith('Anfitrión #') || prevH.name.startsWith('Rival'))) {
+          prevH.name = co.name;
+        }
+        rs.battle.individualHosts.set(targetUid, prevH);
+        emitToRoom('tiktok:battle_update', serializeBattle(rs));
+      }
+    });
+
+    conn.connect().then(async (st) => {
+      const rInfo = st?.roomInfo?.data || st?.roomInfo || conn.roomInfo?.data || conn.roomInfo;
+      if (rInfo?.owner) {
+        const realUid = safeId(rInfo.owner_user_id || rInfo.owner.id_str || rInfo.owner.id) || co.uid;
+        const realName = rInfo.owner.nickname || rInfo.owner.nickName || co.name;
+        if (realUid && realName) {
+          co.uid = realUid;
+          co.name = realName;
+          rs.knownUsers.set(realUid, realName);
+          const prevH = rs.battle.individualHosts.get(realUid) || { id: realUid, name: realName, score: 0, rank: 0 };
+          prevH.name = realName;
+          rs.battle.individualHosts.set(realUid, prevH);
+          emitToRoom('tiktok:battle_update', serializeBattle(rs));
+        }
+      }
+      try {
+        const rawGifts = await conn.fetchAvailableGifts();
+        (Array.isArray(rawGifts) ? rawGifts : []).forEach((g) => {
+          const c = Number(g.diamond_count || 1);
+          if (g.id) giftPriceById.set(safeId(g.id), c);
+          if (g.name) giftPriceByName.set(String(g.name).toLowerCase(), c);
+        });
+      } catch (_) {}
+    }).catch(() => {
+      // Silent fallback if co-host room is private or rate-limited
+      rs.autoCoHostConns.delete(low);
+    });
+  }
+}
+
 async function startTikTokConnection(socket, cleanUser, cleanToken) {
   socket.join(cleanToken);
   disconnectRoom(cleanToken);
@@ -1058,6 +1171,7 @@ async function startTikTokConnection(socket, cleanUser, cleanToken) {
     tiktok.on(WebcastEvent.STREAM_END, () => {
       const key = rs.username.replace(/^@/, '').toLowerCase();
       liveSessionArchive.delete(key);
+      stopAutoCoHostListeners(rs);
       rs.connected = false;
       rs.roomId = '';
       rs.stats = { likes: 0, viewers: 0, follows: 0, coins: 0, shares: 0, subs: 0 };
@@ -1365,6 +1479,7 @@ async function startTikTokConnection(socket, cleanUser, cleanToken) {
 
   tiktok.on(WebcastEvent.LINK_MIC_BATTLE, (d) => {
     parseBattleStart(rs, d);
+    ensureAutoCoHostListeners(rs, emitToRoom);
     emitToRoom('tiktok:battle_update', serializeBattle(rs));
   });
 
@@ -1378,6 +1493,7 @@ async function startTikTokConnection(socket, cleanUser, cleanToken) {
           hydrateFromRoomInfo(rs, fresh);
         } catch (_) {}
       }
+      ensureAutoCoHostListeners(rs, emitToRoom);
       emitToRoom('tiktok:battle_update', serializeBattle(rs));
     }
   });
@@ -1386,6 +1502,7 @@ async function startTikTokConnection(socket, cleanUser, cleanToken) {
     tiktok.on(WebcastEvent.LINK_MIC_BATTLE_PUNISH_FINISH, () => {
       rs.battle.active = false;
       rs.battle.status = 2;
+      stopAutoCoHostListeners(rs);
       emitToRoom('tiktok:battle_update', serializeBattle(rs));
     });
   }
