@@ -101,32 +101,73 @@ const roomStates = new Map();
 function createInitialRoomState(username) {
   return {
     username: '@' + username,
+    ownerDisplayName: '@' + username,
     connected: false,
     roomId: '',
     ownerUserId: '',
+    knownUsers: new Map(), // userId -> display label
     stats: { likes: 0, viewers: 0, follows: 0, coins: 0, shares: 0, subs: 0 },
     topLikes: new Map(),
     topCoins: new Map(),
+    activeViewers: new Map(), // user -> role
     giftsCatalog: [],
     battle: {
       active: false,
       status: 0,
-      hostMap: {},        // hostUserId -> { id, name, score, contributors: [{ user, points }] }
+      hostMap: {},
       players: [],
-      matchGifters: new Map(), // user -> { user, coins, giftsCount, lastGift }
+      matchGifters: new Map(),
       throws: []
     }
   };
 }
 
+function safeId(val) {
+  if (val === null || val === undefined) return '';
+  return String(val).trim();
+}
+
+function parseUserLabel(u, fallback = 'Usuario') {
+  if (!u) return fallback;
+  const src = u.user || u;
+  const nick = src.nickname || src.nickName || '';
+  const uid = src.uniqueId || src.displayId || src.display_id || '';
+  if (nick && uid && nick.toLowerCase() !== String(uid).toLowerCase()) {
+    return `${nick} (@${String(uid).replace(/^@/, '')})`;
+  }
+  if (nick) return String(nick);
+  if (uid) return '@' + String(uid).replace(/^@/, '');
+  return fallback;
+}
+
+function rememberUser(rs, u, explicitId = '') {
+  if (!u || typeof u !== 'object') return;
+  const src = u.user || u;
+  const uid = safeId(explicitId || src.userId || src.id_str || src.id || src.uid);
+  const label = parseUserLabel(src, '');
+  if (uid && label) rs.knownUsers.set(uid, label);
+}
+
+function trackActiveViewer(rs, label, role = 'Espectador') {
+  if (!label) return;
+  const prev = rs.activeViewers.get(label);
+  if (!prev || role !== 'Espectador') rs.activeViewers.set(label, role);
+  if (rs.activeViewers.size > 60) {
+    const firstKey = rs.activeViewers.keys().next().value;
+    if (firstKey) rs.activeViewers.delete(firstKey);
+  }
+}
+
 function serializeRoomStats(rs) {
   return {
     username: rs.username,
+    ownerDisplayName: rs.ownerDisplayName,
     connected: rs.connected,
     roomId: rs.roomId,
     stats: rs.stats,
     topLikes: Array.from(rs.topLikes.entries()).map(([user, val]) => ({ user, val })).sort((a, b) => b.val - a.val).slice(0, 15),
-    topCoins: Array.from(rs.topCoins.entries()).map(([user, val]) => ({ user, val })).sort((a, b) => b.val - a.val).slice(0, 15)
+    topCoins: Array.from(rs.topCoins.entries()).map(([user, val]) => ({ user, val })).sort((a, b) => b.val - a.val).slice(0, 15),
+    activeViewers: Array.from(rs.activeViewers.entries()).slice(-25).reverse().map(([user, role]) => ({ user, role }))
   };
 }
 
@@ -139,7 +180,7 @@ function serializeBattle(rs) {
     status: rs.battle.status,
     players: rs.battle.players,
     matchTopUsers,
-    throws: rs.battle.throws.slice(0, 30)
+    throws: rs.battle.throws.slice(0, 35)
   };
 }
 
@@ -153,46 +194,76 @@ function disconnectRoom(token) {
   if (rs) rs.connected = false;
 }
 
-function safeId(val) {
-  if (val === null || val === undefined) return '';
-  return String(val).trim();
-}
-
-function parseUserLabel(u, fallback = 'Usuario') {
-  if (!u) return fallback;
-  const nick = u.nickname || u.nickName || u.user?.nickname || u.user?.nickName;
-  const uid = u.uniqueId || u.displayId || u.user?.uniqueId || u.user?.displayId;
-  if (nick && uid) return `${nick} (@${String(uid).replace(/^@/, '')})`;
-  if (uid) return '@' + String(uid).replace(/^@/, '');
-  if (nick) return String(nick);
-  return fallback;
+function resolveHostName(rs, hid, fallbackObj, idx) {
+  const cleanId = safeId(hid);
+  if (cleanId && rs.ownerUserId && cleanId === rs.ownerUserId) {
+    return rs.ownerDisplayName || rs.username;
+  }
+  if (cleanId && rs.knownUsers.has(cleanId)) {
+    return rs.knownUsers.get(cleanId);
+  }
+  const parsed = parseUserLabel(fallbackObj, '');
+  if (parsed) {
+    if (cleanId) rs.knownUsers.set(cleanId, parsed);
+    return parsed;
+  }
+  const existing = rs.battle.hostMap[cleanId];
+  if (existing && existing.name && !existing.name.startsWith('Anfitrión #')) {
+    return existing.name;
+  }
+  return `Anfitrión #${idx + 1}`;
 }
 
 function hydrateFromRoomInfo(rs, rInfo) {
   if (!rInfo || typeof rInfo !== 'object') return;
-  const ownerId = safeId(rInfo.owner_user_id || rInfo.owner?.id_str || rInfo.owner?.id);
-  if (ownerId) rs.ownerUserId = ownerId;
+  const owner = rInfo.owner || {};
+  const ownerId = safeId(rInfo.owner_user_id || owner.id_str || owner.id);
+  if (ownerId) {
+    rs.ownerUserId = ownerId;
+    rememberUser(rs, owner, ownerId);
+    rs.ownerDisplayName = parseUserLabel(owner, rs.username);
+  }
 
+  // Remember all linked / co-host / rival users from roomInfo so battle bars show REAL names!
+  const lm = rInfo.link_mic || {};
+  const candidateLists = [
+    lm.linked_user_list,
+    lm.user_list,
+    lm.rival_anchor_list,
+    lm.audience_list,
+    lm.multi_live_user_list,
+    rInfo.top_fans,
+    rInfo.battle_info?.battle_users,
+    rInfo.battle_info?.anchor_info
+  ];
+  candidateLists.forEach((list) => {
+    if (Array.isArray(list)) list.forEach((u) => rememberUser(rs, u));
+    else if (list && typeof list === 'object') Object.entries(list).forEach(([k, u]) => rememberUser(rs, u, k));
+  });
+
+  // Hydrate initial REAL stats (likes, viewers, shares, coins/diamonds)
   const likes = Number(rInfo.like_count || rInfo.stats?.like_count || 0);
   const viewers = Number(rInfo.user_count || 0);
   const shares = Number(rInfo.stats?.share_count || rInfo.share_count || 0);
-  if (likes > 0) rs.stats.likes = likes;
-  if (viewers > 0) rs.stats.viewers = viewers;
-  if (shares > 0) rs.stats.shares = shares;
+  const initCoins = Number(rInfo.stats?.fan_ticket || rInfo.stats?.diamond_count || rInfo.room_ticket || 0);
 
-  // Hydrate mid-battle state if user joined while a battle is already live!
-  const lm = rInfo.link_mic || {};
+  if (likes > rs.stats.likes) rs.stats.likes = likes;
+  if (viewers > 0) rs.stats.viewers = viewers;
+  if (shares > rs.stats.shares) rs.stats.shares = shares;
+  if (initCoins > rs.stats.coins) rs.stats.coins = initCoins;
+
+  // Hydrate mid-battle scores if user joined while a battle is already live
   const bScores = lm.battle_scores || rInfo.battle_info?.battle_scores || [];
   if (Array.isArray(bScores) && bScores.length) {
     rs.battle.active = true;
     rs.battle.status = 1;
     bScores.forEach((bs, idx) => {
       const hid = safeId(bs.user_id || bs.host_user_id || idx);
-      const isOwner = ownerId && hid === ownerId;
+      rememberUser(rs, bs, hid);
       const existing = rs.battle.hostMap[hid];
       rs.battle.hostMap[hid] = {
         id: hid,
-        name: existing?.name || (isOwner ? rs.username : (bs.nickname || `Oponente #${idx + 1}`)),
+        name: resolveHostName(rs, hid, bs, idx),
         score: Number(bs.score || bs.points || 0),
         contributors: existing?.contributors || []
       };
@@ -203,13 +274,14 @@ function hydrateFromRoomInfo(rs, rInfo) {
 
 function parseBattleStart(rs, d) {
   const hostMap = {};
-  const anchors = d?.anchorInfo;
+  const anchors = d?.anchorInfo || d?.anchors;
   if (Array.isArray(anchors)) {
     anchors.forEach((info, idx) => {
       const hid = safeId(info?.user?.userId || info?.userId || idx);
+      rememberUser(rs, info?.user || info, hid);
       hostMap[hid] = {
         id: hid,
-        name: parseUserLabel(info?.user || info, `Oponente ${idx + 1}`),
+        name: resolveHostName(rs, hid, info?.user || info, idx),
         score: 0,
         contributors: []
       };
@@ -217,9 +289,10 @@ function parseBattleStart(rs, d) {
   } else if (anchors && typeof anchors === 'object') {
     Object.entries(anchors).forEach(([k, info], idx) => {
       const hid = safeId(info?.user?.userId || info?.userId || k || idx);
+      rememberUser(rs, info?.user || info, hid);
       hostMap[hid] = {
         id: hid,
-        name: parseUserLabel(info?.user || info, `Oponente ${idx + 1}`),
+        name: resolveHostName(rs, hid, info?.user || info, idx),
         score: 0,
         contributors: []
       };
@@ -227,10 +300,11 @@ function parseBattleStart(rs, d) {
   }
   if (!Object.keys(hostMap).length && Array.isArray(d?.battleUsers)) {
     d.battleUsers.forEach((u, idx) => {
-      const hid = safeId(u?.userId || idx);
+      const hid = safeId(u?.userId || u?.id || idx);
+      rememberUser(rs, u, hid);
       hostMap[hid] = {
         id: hid,
-        name: parseUserLabel(u, `Oponente ${idx + 1}`),
+        name: resolveHostName(rs, hid, u, idx),
         score: 0,
         contributors: []
       };
@@ -248,8 +322,13 @@ function parseBattleStart(rs, d) {
 
 function parseBattleArmies(rs, d) {
   const status = Number(d?.battleStatus ?? 1);
-  let rawEntries = [];
+  // Also harvest any host names present on the event itself
+  if (d?.anchorInfo && typeof d.anchorInfo === 'object') {
+    const entries = Array.isArray(d.anchorInfo) ? d.anchorInfo.map((v, i) => [safeId(v?.user?.userId || v?.userId || i), v]) : Object.entries(d.anchorInfo);
+    entries.forEach(([k, v]) => rememberUser(rs, v?.user || v, k));
+  }
 
+  let rawEntries = [];
   if (Array.isArray(d?.battleItems) && d.battleItems.length) {
     rawEntries = d.battleItems.map((it, i) => [safeId(it?.hostUserId || it?.userId || i), it]);
   } else if (d?.battleItems && typeof d.battleItems === 'object' && Object.keys(d.battleItems).length) {
@@ -266,14 +345,12 @@ function parseBattleArmies(rs, d) {
   rs.battle.status = status;
 
   rawEntries.forEach(([hid, item], idx) => {
-    const existing = rs.battle.hostMap[hid];
-    const isOwner = rs.ownerUserId && hid === rs.ownerUserId;
-    const hostName = existing?.name || (isOwner ? rs.username : parseUserLabel(item?.hostUser || item?.user, `Oponente #${idx + 1}`));
+    rememberUser(rs, item?.hostUser || item?.user || item?.anchorInfo, hid);
+    const hostName = resolveHostName(rs, hid, item?.hostUser || item?.user || item?.anchorInfo, idx);
 
     let score = Number(item?.hostScore ?? item?.points ?? item?.score ?? 0);
     const contributors = [];
 
-    // v2 protobuf: battleGroups = [{ points, users: [{ nickname, uniqueId, score }] }]
     if (Array.isArray(item?.battleGroups) && item.battleGroups.length) {
       let groupMax = 0;
       item.battleGroups.forEach((grp) => {
@@ -281,10 +358,16 @@ function parseBattleArmies(rs, d) {
         if (gPts > groupMax) groupMax = gPts;
         if (Array.isArray(grp?.users)) {
           grp.users.forEach((u) => {
-            contributors.push({
-              user: parseUserLabel(u, 'Espectador'),
-              points: Number(u?.score || u?.points || gPts || 0)
-            });
+            rememberUser(rs, u);
+            const uname = parseUserLabel(u, 'Espectador');
+            const pts = Number(u?.score || u?.points || gPts || 0);
+            contributors.push({ user: uname, points: pts });
+            // Feed into overall battle matchGifters so Top Usuarios always has real TikTok points!
+            if (pts > 0) {
+              const prev = rs.battle.matchGifters.get(uname) || { user: uname, coins: 0, giftsCount: 0, lastGift: 'Batalla PK' };
+              if (pts > prev.coins) prev.coins = pts;
+              rs.battle.matchGifters.set(uname, prev);
+            }
           });
         }
       });
@@ -295,10 +378,16 @@ function parseBattleArmies(rs, d) {
     extraLists.forEach((arr) => {
       if (Array.isArray(arr)) {
         arr.forEach((u) => {
+          rememberUser(rs, u);
           const uname = parseUserLabel(u, 'Espectador');
           const pts = Number(u?.score || u?.points || u?.giftCount || 0);
           if (!contributors.some((c) => c.user === uname)) {
             contributors.push({ user: uname, points: pts });
+          }
+          if (pts > 0) {
+            const prev = rs.battle.matchGifters.get(uname) || { user: uname, coins: 0, giftsCount: 0, lastGift: 'Batalla PK' };
+            if (pts > prev.coins) prev.coins = pts;
+            rs.battle.matchGifters.set(uname, prev);
           }
         });
       }
@@ -352,27 +441,35 @@ async function startTikTokConnection(socket, cleanUser, cleanToken) {
   });
 
   tiktok.on(WebcastEvent.CHAT, (d) => {
-    emitToRoom('tiktok:chat', {
-      user: parseUserLabel(d.user || d, '@user'),
-      text: String(d.comment || '').slice(0, 240)
-    });
+    rememberUser(rs, d.user || d);
+    const user = parseUserLabel(d.user || d, '@user');
+    trackActiveViewer(rs, user, d.user?.isModerator ? 'Moderador' : (d.user?.isSubscriber ? 'Suscriptor' : 'Espectador'));
+    emitToRoom('tiktok:chat', { user, text: String(d.comment || '').slice(0, 240) });
   });
 
   tiktok.on(WebcastEvent.GIFT, (d) => {
+    rememberUser(rs, d.user || d);
     const user = parseUserLabel(d.user || d, '@user');
-    const giftName = d.giftName || d.extendedGiftInfo?.name || 'Regalo';
-    const coins = Number(d.diamondCount || d.extendedGiftInfo?.diamond_count || 1);
+    trackActiveViewer(rs, user, 'Donador 🎁');
+
+    const giftName = d.giftDetails?.giftName || d.gift?.name || d.giftName || d.extendedGiftInfo?.name || 'Regalo';
+    const unitCoins = Number(
+      d.giftDetails?.diamondCount ??
+      d.gift?.diamond_count ??
+      d.diamondCount ??
+      d.extendedGiftInfo?.diamond_count ??
+      1
+    );
     const repeatCount = Math.max(1, Number(d.repeatCount || 1));
     const repeatEnd = Boolean(d.repeatEnd);
-    const giftType = d.giftType;
+    const giftType = Number(d.giftDetails?.giftType ?? d.giftType ?? 0);
 
     // Count exact real coins when combo completes (or non-streak gift)
     if (giftType !== 1 || repeatEnd) {
-      const total = Math.max(1, coins) * repeatCount;
+      const total = Math.max(1, unitCoins) * repeatCount;
       rs.stats.coins += total;
       rs.topCoins.set(user, (rs.topCoins.get(user) || 0) + total);
 
-      // Track who threw in the current match
       const prev = rs.battle.matchGifters.get(user) || { user, coins: 0, giftsCount: 0, lastGift: '' };
       prev.coins += total;
       prev.giftsCount += repeatCount;
@@ -382,7 +479,7 @@ async function startTikTokConnection(socket, cleanUser, cleanToken) {
       rs.battle.throws.unshift({
         user,
         giftName,
-        coins,
+        coins: unitCoins,
         repeatCount,
         total,
         time: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
@@ -393,10 +490,11 @@ async function startTikTokConnection(socket, cleanUser, cleanToken) {
       emitToRoom('tiktok:battle_update', serializeBattle(rs));
     }
 
-    emitToRoom('tiktok:gift', { user, giftName, coins, repeatCount, repeatEnd, giftType });
+    emitToRoom('tiktok:gift', { user, giftName, coins: unitCoins, repeatCount, repeatEnd, giftType });
   });
 
   tiktok.on(WebcastEvent.LIKE, (d) => {
+    rememberUser(rs, d.user || d);
     const user = parseUserLabel(d.user || d, '@user');
     const likeCount = Number(d.likeCount || 1);
     const totalLikeCount = Number(d.totalLikeCount || 0);
@@ -407,41 +505,67 @@ async function startTikTokConnection(socket, cleanUser, cleanToken) {
   });
 
   tiktok.on(WebcastEvent.FOLLOW, (d) => {
+    rememberUser(rs, d.user || d);
     const user = parseUserLabel(d.user || d, '@user');
+    trackActiveViewer(rs, user, 'Seguidor ⭐');
     rs.stats.follows += 1;
     emitToRoom('tiktok:follow', { user });
+    emitToRoom('tiktok:stats_sync', serializeRoomStats(rs));
   });
 
   tiktok.on(WebcastEvent.SHARE, (d) => {
+    rememberUser(rs, d.user || d);
     const user = parseUserLabel(d.user || d, '@user');
-    const totalShare = Number(d.totalShareCount || d.shareCount || 0);
+    const totalShare = Number(d.totalShareCount || d.shareCount || d.common?.shareCount || 0);
     if (totalShare > rs.stats.shares) rs.stats.shares = totalShare;
     else rs.stats.shares += 1;
     emitToRoom('tiktok:share', { user, totalShares: rs.stats.shares });
+    emitToRoom('tiktok:stats_sync', serializeRoomStats(rs));
   });
 
   tiktok.on(WebcastEvent.MEMBER, (d) => {
-    emitToRoom('tiktok:join', { user: parseUserLabel(d.user || d, '@user') });
+    rememberUser(rs, d.user || d);
+    const user = parseUserLabel(d.user || d, '@user');
+    trackActiveViewer(rs, user, 'Espectador');
+    emitToRoom('tiktok:join', { user });
   });
 
   tiktok.on(WebcastEvent.SUBSCRIBE, (d) => {
+    rememberUser(rs, d.user || d);
+    const user = parseUserLabel(d.user || d, '@user');
+    trackActiveViewer(rs, user, 'Suscriptor 👑');
     rs.stats.subs += 1;
-    emitToRoom('tiktok:sub', { user: parseUserLabel(d.user || d, '@user') });
+    emitToRoom('tiktok:sub', { user });
+    emitToRoom('tiktok:stats_sync', serializeRoomStats(rs));
   });
 
   tiktok.on(WebcastEvent.ROOM_USER, (d) => {
     rs.stats.viewers = Number(d.viewerCount || 0);
+    if (Array.isArray(d.ranksList)) {
+      d.ranksList.forEach((r) => {
+        rememberUser(rs, r.user);
+        const u = parseUserLabel(r.user, '');
+        if (u) trackActiveViewer(rs, u, 'Top Espectador');
+      });
+    }
     emitToRoom('tiktok:viewers', { viewerCount: rs.stats.viewers });
   });
 
+  // Also capture host names from LINK_MIC_FAN_TICKET_METHOD if available
+  if (WebcastEvent.LINK_MIC_FAN_TICKET_METHOD) {
+    tiktok.on(WebcastEvent.LINK_MIC_FAN_TICKET_METHOD, (d) => {
+      if (Array.isArray(d?.fanTicketRoomNotice?.userFanTicket)) {
+        d.fanTicketRoomNotice.userFanTicket.forEach((u) => rememberUser(rs, u));
+      }
+    });
+  }
+
   tiktok.on(WebcastEvent.LINK_MIC_BATTLE, (d) => {
-    console.log('[TikPulse] LINK_MIC_BATTLE:', JSON.stringify(d).slice(0, 400));
     parseBattleStart(rs, d);
     emitToRoom('tiktok:battle_update', serializeBattle(rs));
   });
 
   tiktok.on(WebcastEvent.LINK_MIC_ARMIES, (d) => {
-    console.log('[TikPulse] LINK_MIC_ARMIES:', JSON.stringify(d).slice(0, 400));
     if (parseBattleArmies(rs, d)) {
       emitToRoom('tiktok:battle_update', serializeBattle(rs));
     }
