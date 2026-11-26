@@ -503,6 +503,7 @@
             <button type="button" data-pk-mode="ffa" class="pk-mode-btn subtab-btn py-2.5 px-3 rounded-xl bg-bg border border-white/10 text-xs font-bold text-white">👑 Grupal (FFA)</button>
           </div>
           <div id="pkBoardRender" class="bg-bg rounded-2xl p-4 sm:p-5 border border-white/10 space-y-4"></div>
+          <div id="pkRealContributors" class="hidden grid grid-cols-1 md:grid-cols-2 gap-3"></div>
           <div class="flex flex-wrap items-center gap-2">
             <span class="text-xs font-bold text-slate-400 mr-1">Potenciadores:</span>
             <button type="button" data-boost="2" class="px-3 py-1.5 rounded-lg bg-amber-500/20 text-amber-200 text-xs font-bold">⚡ ×2 (30s)</button>
@@ -792,7 +793,7 @@
         activeViewers: [{ user: '@sofia_live', role: 'Suscriptor · Nv.12' }, { user: '@carlos_pe', role: 'Moderador' }, { user: '@luna_gamer', role: 'Fan Club · Nv.6' }, { user: '@camila_tk', role: 'Seguidor' }, { user: '@alex_stream', role: 'Espectador' }],
         memberJoins: [{ user: '@mateo_x', time: 'Ahora' }, { user: '@valeria_99', time: 'Hace 15s' }],
         ovChroma: false,
-        token: 'tp_' + Math.random().toString(36).slice(2, 11)
+        token: (localStorage.getItem('tikpulse_room_token') || (() => { const t = 'tp_' + Math.random().toString(36).slice(2, 11); localStorage.setItem('tikpulse_room_token', t); return t; })())
       };
 
       const sampleUsers = ['@sofia_live', '@carlos_pe', '@luna_gamer', '@camila_tk', '@alex_stream', '@mateo_x'];
@@ -1451,16 +1452,130 @@
         renderVisualGiftGrid();
         toast(`Catálogo en vivo cargado: ${state.gifts.length} regalos de TikTok`);
       };
+      function renderRealBattlePanel(battleData) {
+        const board = document.getElementById('pkBoardRender');
+        const contribBox = document.getElementById('pkRealContributors');
+        const simControls = document.getElementById('pkControlsGrid');
+        if (!board || !contribBox) return;
+
+        // Hide fake simulator buttons when connected to real LIVE
+        if (simControls) simControls.classList.add('hidden');
+        contribBox.classList.remove('hidden');
+
+        const players = Array.isArray(battleData?.players) ? battleData.players : [];
+        const throws = Array.isArray(battleData?.throws) ? battleData.throws : [];
+
+        if (!players.length) {
+          board.innerHTML = `
+            <div class="text-center py-6 space-y-1.5">
+              <div class="text-sm font-extrabold text-cyanNeon">⚔️ Esperando Batalla PK real en TikTok LIVE</div>
+              <div class="text-xs text-slate-400">Cuando inicie una batalla 1v1, 2v2 o grupal en el directo, los puntos reales y quién lanzó aparecerán aquí automáticamente (0 puntos ficticios).</div>
+            </div>
+          `;
+          contribBox.innerHTML = '';
+          return;
+        }
+
+        const colors = ['#ff2d55', '#00f2ea', '#a855f7', '#fbbf24'];
+        const tot = Math.max(1, players.reduce((s, p) => s + Number(p.score || 0), 0));
+        const ranked = [...players].sort((a, b) => Number(b.score || 0) - Number(a.score || 0));
+        const badge = battleData.active ? '<span class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-extrabold">● EN BATALLA REAL</span>' : '<span class="px-2 py-0.5 rounded-full bg-slate-700 text-slate-300 text-[10px] font-extrabold">PARTIDA FINALIZADA</span>';
+
+        board.innerHTML = `
+          <div class="flex items-center justify-between flex-wrap gap-2">
+            <span class="text-xs font-extrabold text-white">⚔️ Puntaje Real de Batalla TikTok (${players.length} participantes)</span>
+            ${badge}
+          </div>
+          <div class="w-full h-5 rounded-full bg-slate-800 overflow-hidden flex border border-white/10">
+            ${players.map((p, i) => {
+              const pct = Math.max(4, Math.round((Number(p.score || 0) / tot) * 100));
+              return `<div class="h-full transition-all duration-300" style="width:${pct}%; background:${colors[i % colors.length]}"></div>`;
+            }).join('')}
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            ${ranked.map((p, i) => `
+              <div class="p-3 rounded-xl bg-card border border-white/10 flex items-center justify-between">
+                <div class="min-w-0">
+                  <div class="text-xs font-extrabold text-white truncate">#${i + 1} ${esc(p.name)}</div>
+                  <div class="text-[11px] text-slate-400">${(p.contributors && p.contributors.length) ? `Top: ${esc(p.contributors[0].user)} (${Number(p.contributors[0].points || 0).toLocaleString('es-ES')} pts)` : 'Sin contribuyentes aún'}</div>
+                </div>
+                <div class="font-display text-lg font-extrabold" style="color:${colors[i % colors.length]}">${Number(p.score || 0).toLocaleString('es-ES')} <span class="text-[10px] text-slate-400">pts</span></div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+
+        const hostCards = players.map((p, i) => `
+          <div class="p-3.5 rounded-xl bg-bg border border-white/10 space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-extrabold" style="color:${colors[i % colors.length]}">🏆 Top en ${esc(p.name)}</span>
+              <span class="text-xs font-bold text-white">${Number(p.score || 0).toLocaleString('es-ES')} pts</span>
+            </div>
+            ${(p.contributors && p.contributors.length)
+              ? p.contributors.map((c, idx) => `<div class="flex items-center justify-between text-xs py-1 border-b border-white/5 last:border-0"><span class="text-slate-200 truncate">${idx + 1}. ${esc(c.user)}</span><span class="font-bold text-amber-300">${Number(c.points || 0).toLocaleString('es-ES')} pts</span></div>`).join('')
+              : '<div class="text-xs text-slate-500">Esperando donadores en esta partida...</div>'
+            }
+          </div>
+        `).join('');
+
+        const throwsCard = `
+          <div class="p-3.5 rounded-xl bg-bg border border-white/10 space-y-2 md:col-span-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-extrabold text-cyanNeon">🎁 Quién lanzó en esta partida (tiempo real)</span>
+              <span class="text-[11px] text-slate-400">${throws.length} envíos</span>
+            </div>
+            <div class="max-h-44 overflow-y-auto space-y-1.5">
+              ${throws.length
+                ? throws.map((t) => `<div class="flex items-center justify-between text-xs px-2.5 py-1.5 rounded-lg bg-card border border-white/5"><span class="truncate"><b class="text-white">${esc(t.user)}</b> lanzó <span class="text-pinkNeon">${esc(t.giftName)} ×${t.repeatCount}</span></span><span class="font-bold text-amber-300 shrink-0 ml-2">+${Number(t.total || 0).toLocaleString('es-ES')} 💎 · <span class="text-slate-500">${esc(t.time || '')}</span></span></div>`).join('')
+                : '<div class="text-xs text-slate-500">Aún no se registran regalos durante esta batalla.</div>'
+              }
+            </div>
+          </div>
+        `;
+        contribBox.innerHTML = hostCards + throwsCard;
+      }
+
       window.__tikpulseLive = {
+        realMode: false,
+        lastBattle: null,
         setStatus(connected, username, infoMsg) {
           state.connected = Boolean(connected);
-          if (username) state.username = String(username).replace(/^@/, '');
-          document.getElementById('connectBtnText').textContent = state.connected ? 'Conectado' : 'Conectar';
+          this.realMode = Boolean(connected);
+          if (username) {
+            state.username = String(username).replace(/^@/, '');
+            const inp = document.getElementById('connectUserInput');
+            if (inp && document.activeElement !== inp) inp.value = state.username;
+          }
+          document.getElementById('connectBtnText').textContent = state.connected ? 'Desconectar' : 'Conectar';
           document.getElementById('sidebarConnText').textContent = state.connected ? 'Conectado EN VIVO' : 'Sin conexión';
           document.getElementById('sidebarConnDot').className = state.connected ? 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse' : 'w-2 h-2 rounded-full bg-slate-500';
           document.getElementById('topLivePill').classList.toggle('opacity-40', !state.connected);
           renderCountersAndFeeds();
           if (infoMsg) toast(infoMsg, state.connected ? 'cyan' : 'pink');
+        },
+        syncStats(syncData) {
+          if (!syncData) return;
+          this.realMode = true;
+          const s = syncData.stats || {};
+          state.likes = Number(s.likes || 0);
+          state.viewers = Number(s.viewers || 0);
+          state.follows = Number(s.follows || 0);
+          state.diamonds = Number(s.diamonds || 0);
+          state.shares = Number(s.shares || 0);
+          state.subs = Number(s.subs || 0);
+          state.topLikes = Array.isArray(syncData.topLikes) ? syncData.topLikes : [];
+          state.topDiamonds = Array.isArray(syncData.topDiamonds) ? syncData.topDiamonds : [];
+          if (!state.activity.length || state.activity.some((a) => a.user === '@sofia_live' || a.user === '@carlos_pe')) {
+            state.activity = [];
+            state.chats = [];
+            state.memberJoins = [];
+          }
+          renderCountersAndFeeds();
+        },
+        onBattleUpdate(battleData) {
+          this.realMode = true;
+          this.lastBattle = battleData;
+          renderRealBattlePanel(battleData);
         },
         onError(msg) {
           state.connected = false;
@@ -1480,7 +1595,6 @@
           const gObj = state.gifts.find((g) => g.name.toLowerCase() === giftName.toLowerCase()) || { name: giftName, coins: Number(d.coins || 1), emoji: '🎁', img: '' };
           const total = Math.max(1, Number(d.coins || gObj.coins || 1)) * repeatCount;
           state.diamonds += total;
-          state.pkPlayers[0].score += total * state.pkBoost;
           const dRow = state.topDiamonds.find((x) => x.user === user);
           if (dRow) dRow.val += total; else state.topDiamonds.push({ user, val: total });
           state.activity.unshift({ kind: 'gift', user, text: `envió ${gObj.name} ×${repeatCount} ${gObj.emoji || '🎁'} (+${total.toLocaleString('es-ES')} 💎)` });
@@ -1491,12 +1605,14 @@
             queueAlert({ screen: total >= 1000 ? 'screen2' : 'screen1', badgeLabel: 'GIFT ALERT', emoji: gObj.emoji || '🎁', img: gObj.img || '', title: `¡${user} envió ${repeatCount}x ${gObj.name}! (+${total.toLocaleString('es-ES')} 🪙)`, duration: total >= 1000 ? 6 : 4 });
             if (total >= state.ttsMinCoins) enqueueTts((document.getElementById('tplTtsGift').value || '{nickname} envió {repeatCount} {giftName}').replace('{nickname}', user.replace('@', '')).replace('{repeatCount}', String(repeatCount)).replace('{giftName}', gObj.name), user);
           }
-          renderCountersAndFeeds(); renderBattleBoard();
+          renderCountersAndFeeds();
         },
         onLike(d) {
           if (!d) return;
           const add = Number(d.likeCount || 1);
-          state.likes = d.totalLikeCount ? Math.max(state.likes + add, Number(d.totalLikeCount)) : state.likes + add;
+          const realTotal = Number(d.totalLikeCount || 0);
+          if (realTotal > 0) state.likes = realTotal;
+          else state.likes += add;
           const u = d.user || '@user';
           const row = state.topLikes.find((x) => x.user === u);
           if (row) row.val += add; else state.topLikes.push({ user: u, val: add });
@@ -1550,6 +1666,7 @@
 
       // ---------- TIMERS ----------
       setInterval(() => {
+        if (window.__tikpulseLive && window.__tikpulseLive.realMode) return;
         if (state.pkRunning && state.pkSeconds > 0) state.pkSeconds -= 1;
         if (state.pkBoostSec > 0) { state.pkBoostSec -= 1; if (state.pkBoostSec === 0) { state.pkBoost = 1; state.pkBoostLabel = ''; } }
         renderBattleBoard();
@@ -1749,7 +1866,7 @@
       // Viewers & Overlay
       document.getElementById('btnSimJoin').addEventListener('click', () => { const u = sampleUsers[Math.floor(Math.random() * sampleUsers.length)]; state.viewers += 1; state.memberJoins.unshift({ user: u, time: 'Ahora' }); state.activity.unshift({ kind: 'join', user: u, text: 'entró al LIVE 👋' }); renderCountersAndFeeds(); });
       document.querySelectorAll('[data-copy-ov]').forEach((b) => { b.addEventListener('click', () => { const k = b.getAttribute('data-copy-ov'); copyStr(document.getElementById(k === 'likes' ? 'urlOverlayLikes' : 'urlOverlayMaster').value); }); });
-      document.getElementById('btnRegenToken').addEventListener('click', () => { state.token = 'tp_' + Math.random().toString(36).slice(2, 11); renderCountersAndFeeds(); toast('Token regenerado'); });
+      document.getElementById('btnRegenToken').addEventListener('click', () => { state.token = 'tp_' + Math.random().toString(36).slice(2, 11); localStorage.setItem('tikpulse_room_token', state.token); renderCountersAndFeeds(); toast('Token regenerado'); });
       document.getElementById('btnToggleOvChroma').addEventListener('click', () => { state.ovChroma = !state.ovChroma; document.getElementById('overlayLikesPreview').classList.toggle('overlay-chroma', state.ovChroma); });
 
       // Auto-simulator
@@ -1790,15 +1907,17 @@
     (function () {
       if (typeof io !== 'function') return;
       window.__tikpulseSocketActive = true;
-      const socket = io();
+      const socket = io({ reconnection: true, reconnectionDelay: 1000 });
       const inp = document.getElementById('connectUserInput');
       const btn = document.getElementById('btnConnectLive');
       const btnText = document.getElementById('connectBtnText');
       const ovField = document.getElementById('urlOverlayMaster');
 
-      // Show optional PANEL_SECRET input automatically if the server requires it
+      const savedUser = localStorage.getItem('tikpulse_live_user') || '';
+      if (savedUser && inp) inp.value = savedUser;
+
       let secretInput = null;
-      let statusBanner = document.createElement('div');
+      const statusBanner = document.createElement('div');
       statusBanner.id = 'liveConnBanner';
       statusBanner.className = 'hidden mt-2 text-xs px-3 py-2 rounded-lg border border-rose-500/40 bg-rose-500/10 text-rose-200';
       if (btn && btn.parentElement && btn.parentElement.parentElement) {
@@ -1813,6 +1932,24 @@
           : 'mt-2 text-xs px-3 py-2 rounded-lg border border-rose-500/40 bg-rose-500/10 text-rose-200';
       }
 
+      function getToken() {
+        const stored = localStorage.getItem('tikpulse_room_token');
+        if (stored) return stored;
+        try { return new URL(ovField.value).searchParams.get('token') || 'tp_default'; } catch (_) { return 'tp_default'; }
+      }
+
+      function tryResume() {
+        const token = getToken();
+        const username = (localStorage.getItem('tikpulse_live_user') || '').trim();
+        const secret = secretInput ? secretInput.value.trim() : (sessionStorage.getItem('tikpulse_secret') || '');
+        if (username) {
+          showBanner(`Reconectando automáticamente con @${username}...`, true);
+          socket.emit('room:resume', { token, username, secret });
+        } else {
+          socket.emit('room:join', { token });
+        }
+      }
+
       fetch('/api/config').then((r) => r.json()).then((cfg) => {
         if (cfg && cfg.requiresSecret && btn && btn.parentElement) {
           secretInput = document.createElement('input');
@@ -1823,12 +1960,15 @@
           secretInput.addEventListener('input', () => sessionStorage.setItem('tikpulse_secret', secretInput.value));
           btn.parentElement.insertBefore(secretInput, btn);
         }
-        if (window.__tikpulseLive) window.__tikpulseLive.setStatus(false, null, '');
-      }).catch(() => {});
+        if (window.__tikpulseLive && !localStorage.getItem('tikpulse_live_user')) {
+          window.__tikpulseLive.setStatus(false, null, '');
+        }
+        tryResume();
+      }).catch(() => tryResume());
 
-      function getToken() {
-        try { return new URL(ovField.value).searchParams.get('token') || 'tp_default'; } catch (_) { return 'tp_default'; }
-      }
+      socket.on('connect', () => {
+        if (localStorage.getItem('tikpulse_live_user')) tryResume();
+      });
 
       let liveConnected = false;
       if (btn) {
@@ -1837,6 +1977,7 @@
           const token = getToken();
           const secret = secretInput ? secretInput.value.trim() : '';
           if (liveConnected) {
+            localStorage.removeItem('tikpulse_live_user');
             socket.emit('tiktok:disconnect', { token, secret });
             liveConnected = false;
             showBanner('Desconectado del LIVE.', false);
@@ -1847,6 +1988,7 @@
             showBanner('Escribe tu @usuario real de TikTok (debe estar EN VIVO ahora).', false);
             return;
           }
+          localStorage.setItem('tikpulse_live_user', username);
           if (btnText) btnText.textContent = 'Conectando...';
           showBanner(`Conectando con @${username} en TikTok LIVE...`, true);
           socket.emit('tiktok:connect', { username, token, secret });
@@ -1855,9 +1997,11 @@
 
       socket.on('tiktok:status', (d) => {
         liveConnected = Boolean(d && d.connected);
-        showBanner(liveConnected ? `✅ Conectado EN VIVO a ${d.username}` : `Desconectado de ${d.username || ''}`, liveConnected);
+        if (liveConnected && d.username) localStorage.setItem('tikpulse_live_user', String(d.username).replace(/^@/, ''));
+        showBanner(liveConnected ? `✅ Conectado EN VIVO a ${d.username} (la sesión se mantiene al actualizar)` : `Desconectado de ${d.username || ''}`, liveConnected);
         if (window.__tikpulseLive) window.__tikpulseLive.setStatus(liveConnected, d && d.username, liveConnected ? `Conectado a ${d.username}` : 'LIVE desconectado');
       });
+      socket.on('tiktok:stats_sync', (d) => window.__tikpulseLive && window.__tikpulseLive.syncStats(d));
       socket.on('tiktok:error', (d) => {
         liveConnected = false;
         const msg = (d && d.message) || 'No se pudo conectar con TikTok LIVE.';
@@ -1873,7 +2017,7 @@
       socket.on('tiktok:sub', (d) => window.__tikpulseLive && window.__tikpulseLive.onSub(d));
       socket.on('tiktok:viewers', (d) => window.__tikpulseLive && window.__tikpulseLive.onViewers(d));
       socket.on('tiktok:gifts_catalog', (list) => window.__tikpulseApplyLiveGifts && window.__tikpulseApplyLiveGifts(list));
-      socket.on('tiktok:battle_update', (players) => window.__tikpulseApplyBattleUpdate && window.__tikpulseApplyBattleUpdate(players));
+      socket.on('tiktok:battle_update', (battleData) => window.__tikpulseLive && window.__tikpulseLive.onBattleUpdate(battleData));
     })();
   </script>
 </body>
