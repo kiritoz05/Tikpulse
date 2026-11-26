@@ -146,7 +146,8 @@ app.post('/api/tts/streamelements', async (req, res) => {
   try {
     const url = `https://api.streamelements.com/kappa/v2/speech?voice=${encodeURIComponent(voice)}&text=${encodeURIComponent(text)}`;
     const upstream = await fetch(url, {
-      headers: { 'User-Agent': 'Mozilla/5.0' }
+      headers: { 'User-Agent': 'Mozilla/5.0' },
+      signal: AbortSignal.timeout(4500)
     });
     if (!upstream.ok) return res.status(upstream.status).json({ error: 'StreamElements TTS no disponible' });
     const buf = Buffer.from(await upstream.arrayBuffer());
@@ -169,7 +170,8 @@ app.post('/api/tts/google', async (req, res) => {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
         Referer: 'https://translate.google.com/'
-      }
+      },
+      signal: AbortSignal.timeout(4500)
     });
     if (!upstream.ok) return res.status(upstream.status).json({ error: 'Google TTS no disponible' });
     const buf = Buffer.from(await upstream.arrayBuffer());
@@ -194,7 +196,7 @@ app.post('/api/tts/edge', async (req, res) => {
     const edgeMod = await import('edge-tts-universal');
     const EdgeTTS = edgeMod.EdgeTTS || edgeMod.UniversalEdgeTTS || edgeMod.default?.EdgeTTS;
     const tts = new EdgeTTS(text, voice, { rate: rateStr });
-    const result = await tts.synthesize();
+    const result = await Promise.race([tts.synthesize(), new Promise((_, rej) => setTimeout(() => rej(new Error('Edge timeout')), 4500))]);
     const arrBuf = await result.audio.arrayBuffer();
     const buf = Buffer.from(arrBuf);
     if (!buf.length) throw new Error('Audio vacío');
@@ -730,7 +732,11 @@ function parseBattleArmies(rs, d) {
   // If a new battle started, reset stale gifters & hosts cleanly
   if (incomingBattleId && rs.battle.battleId && incomingBattleId !== rs.battle.battleId) {
     rs.battle.hostMap = {};
-    rs.battle.individualHosts = new Map();
+    if (rs.battle.individualHosts) {
+      for (const [k, h] of rs.battle.individualHosts.entries()) {
+        rs.battle.individualHosts.set(k, { ...h, score: 0 });
+      }
+    }
     rs.battle.fanTicketBaselines = new Map();
     rs.battle.matchGifters = new Map();
     rs.battle.throws = [];
@@ -963,6 +969,10 @@ async function startTikTokConnection(socket, cleanUser, cleanToken) {
       rs.stats.coins += deltaCoins;
       rs.topCoins.set(user, (rs.topCoins.get(user) || 0) + deltaCoins);
 
+      if (rs.battle.active && rs.ownerUserId && rs.battle.individualHosts.has(rs.ownerUserId)) {
+        const oh = rs.battle.individualHosts.get(rs.ownerUserId);
+        oh.score = Number(oh.score || 0) + deltaCoins;
+      }
       const prev = rs.battle.matchGifters.get(user) || { user, coins: 0, giftsCount: 0, lastGift: '' };
       prev.coins += deltaCoins;
       prev.giftsCount += deltaCount;
@@ -1077,20 +1087,33 @@ async function startTikTokConnection(socket, cleanUser, cleanToken) {
     });
   });
 
+  function harvestFanTicketEntries(obj, out, depth = 0) {
+    if (!obj || typeof obj !== 'object' || depth > 5) return;
+    if (Array.isArray(obj)) {
+      obj.forEach((el) => harvestFanTicketEntries(el, out, depth + 1));
+      return;
+    }
+    const uid = safeId(obj.UserId || obj.userId || obj.user_id || obj.anchorId || obj.anchor_id || obj.user?.userId || obj.user?.id || obj.User?.UserId);
+    const hasScoreKey = ('MatchTotalScore' in obj) || ('matchTotalScore' in obj) || ('FanTicket' in obj) || ('fanTicket' in obj) || ('fan_ticket' in obj) || ('battleScore' in obj);
+    if (uid && hasScoreKey) {
+      out.push({ uid, obj });
+    }
+    Object.values(obj).forEach((v) => {
+      if (v && typeof v === 'object') harvestFanTicketEntries(v, out, depth + 1);
+    });
+  }
+
   if (WebcastEvent.LINK_MIC_FAN_TICKET_METHOD) {
     tiktok.on(WebcastEvent.LINK_MIC_FAN_TICKET_METHOD, async (d) => {
       deepHarvestUsers(rs, d, 0);
-      const notice = d?.FanTicketRoomNotice || d?.fanTicketRoomNotice || d;
-      const list = notice?.UserFanTicketList || notice?.userFanTicketList || notice?.userFanTicket || [];
-      if (Array.isArray(list) && list.length) {
+      const found = [];
+      harvestFanTicketEntries(d, found, 0);
+      if (found.length) {
         let missingName = false;
-        list.forEach((item, idx) => {
-          const uid = safeId(item?.UserId || item?.userId || item?.user_id || item?.user?.userId || item?.user?.id);
-          if (!uid) return;
+        found.forEach(({ uid, obj: item }, idx) => {
           rememberUser(rs, item?.user || item?.User || item, uid);
-
           const matchScore = Number(item?.MatchTotalScore ?? item?.matchTotalScore ?? item?.battleScore ?? 0);
-          const rawFanTicket = Number(item?.FanTicket ?? item?.fanTicket ?? item?.score ?? 0);
+          const rawFanTicket = Number(item?.FanTicket ?? item?.fanTicket ?? item?.fan_ticket ?? item?.score ?? 0);
           let score = matchScore;
           if (score <= 0 && rawFanTicket > 0) {
             if (!rs.battle.fanTicketBaselines) rs.battle.fanTicketBaselines = new Map();
@@ -1098,9 +1121,8 @@ async function startTikTokConnection(socket, cleanUser, cleanToken) {
               rs.battle.fanTicketBaselines.set(uid, rawFanTicket);
             }
             const delta = rawFanTicket - (rs.battle.fanTicketBaselines.get(uid) || 0);
-            score = delta > 0 ? delta : rawFanTicket;
+            score = delta >= 0 ? delta : rawFanTicket;
           }
-
           const rank = Number(item?.MatchRank ?? item?.matchRank ?? 0);
           const name = resolveHostName(rs, uid, item?.user || item?.User || item, idx);
           if (name.startsWith('Anfitrión #')) missingName = true;
@@ -1124,10 +1146,26 @@ async function startTikTokConnection(socket, cleanUser, cleanToken) {
     });
   }
 
-  ['LINK_MESSAGE', 'LINK_LAYER', 'LINK_MIC_METHOD'].forEach((evName) => {
+  ['LINK_MESSAGE', 'LINK_LAYER', 'LINK_MIC_METHOD', 'LINK_STATE'].forEach((evName) => {
     if (WebcastEvent[evName]) {
       tiktok.on(WebcastEvent[evName], (d) => {
         deepHarvestUsers(rs, d, 0);
+        const found = [];
+        harvestFanTicketEntries(d, found, 0);
+        if (found.length >= 2) {
+          found.forEach(({ uid, obj: item }, idx) => {
+            const name = resolveHostName(rs, uid, item?.user || item?.User || item, idx);
+            const prev = rs.battle.individualHosts.get(uid);
+            const sc = Number(item?.MatchTotalScore ?? item?.matchTotalScore ?? item?.battleScore ?? prev?.score ?? 0);
+            rs.battle.individualHosts.set(uid, {
+              id: uid,
+              name: (!name.startsWith('Anfitrión #')) ? name : (prev?.name || name),
+              score: Math.max(sc, prev?.score || 0),
+              rank: prev?.rank || 0
+            });
+          });
+          if (rs.battle.active) emitToRoom('tiktok:battle_update', serializeBattle(rs));
+        }
       });
     }
   });
