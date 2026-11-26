@@ -566,8 +566,8 @@
                 </div>
               </div>
               <div class="bg-bg/90 rounded-xl p-4 border border-white/10 space-y-2">
-                <div class="flex items-center justify-between"><span class="text-xs font-bold text-white">Cola en vivo</span><span id="ttsQueueCountBadge" class="text-[11px] text-cyanNeon font-bold">0 en espera</span></div>
-                <div id="ttsQueueList" class="space-y-1.5 max-h-48 overflow-y-auto text-xs"></div>
+                <div class="flex items-center justify-between"><span class="text-xs font-bold text-white">Cola en vivo</span><span id="ttsQueueBadge" class="text-[11px] text-cyanNeon font-bold">0 en espera</span></div>
+                <div id="ttsQueueBox" class="space-y-1.5 max-h-48 overflow-y-auto text-xs"></div>
               </div>
             </div>
           </div>
@@ -1529,7 +1529,7 @@
             duration: total >= 1000 ? 6 : 4
           });
           if (total >= state.ttsMinCoins) {
-            enqueueTts(((document.getElementById('tplTtsGift')?.value || '{nickname} envió {repeatCount} {giftName}') || '{nickname} envió {repeatCount} {giftName}').replace('{nickname}', user.replace('@', '')).replace('{repeatCount}', String(repeatCount)).replace('{giftName}', gObj.name), user);
+            enqueueTts('{nickname} envió {repeatCount} {giftName}'.replace('{nickname}', user.replace('@', '')).replace('{repeatCount}', String(repeatCount)).replace('{giftName}', gObj.name), user);
           }
         }
         renderCountersAndFeeds();
@@ -1565,7 +1565,7 @@
           const pref = (state.ttsCommandPrefix || '').trim().toLowerCase();
           if (!pref || text.trim().toLowerCase().startsWith(pref)) {
             const cleanTxt = pref ? text.trim().slice(pref.length).trim() : text;
-            if (cleanTxt) enqueueTts(((document.getElementById('tplTtsChat')?.value || '{nickname} dice {message}') || '{nickname} dice {message}').replace('{nickname}', user.replace('@', '')).replace('{message}', cleanTxt), user);
+            if (cleanTxt) enqueueTts('{nickname} dice {message}'.replace('{nickname}', user.replace('@', '')).replace('{message}', cleanTxt), user);
           }
         }
         renderCountersAndFeeds();
@@ -1668,131 +1668,89 @@
           `;
         } else {
           const palette = [
-            { bg: 'linear-gradient(90deg,#00f2ea,#0ea5e9)', text: '#00f2ea', border: 'rgba(0,242,234,0.35)', soft: 'rgba(0,242,234,0.12)' },
-            { bg: 'linear-gradient(90deg,#fe2c55,#ec4899)', text: '#ff5277', border: 'rgba(254,44,85,0.35)', soft: 'rgba(254,44,85,0.12)' },
-            { bg: 'linear-gradient(90deg,#f59e0b,#fbbf24)', text: '#fbbf24', border: 'rgba(245,158,11,0.35)', soft: 'rgba(245,158,11,0.12)' },
-            { bg: 'linear-gradient(90deg,#a855f7,#6366f1)', text: '#c084fc', border: 'rgba(168,85,247,0.35)', soft: 'rgba(168,85,247,0.12)' },
-            { bg: 'linear-gradient(90deg,#10b981,#14b8a6)', text: '#34d399', border: 'rgba(16,185,129,0.35)', soft: 'rgba(16,185,129,0.12)' },
-            { bg: 'linear-gradient(90deg,#3b82f6,#60a5fa)', text: '#60a5fa', border: 'rgba(59,130,246,0.35)', soft: 'rgba(59,130,246,0.12)' }
+            { bg: 'linear-gradient(90deg,#00f2ea,#0ea5e9)', text: '#00f2ea', border: 'rgba(0,242,234,0.38)' },
+            { bg: 'linear-gradient(90deg,#fe2c55,#ec4899)', text: '#ff5277', border: 'rgba(254,44,85,0.38)' },
+            { bg: 'linear-gradient(90deg,#f59e0b,#fbbf24)', text: '#fbbf24', border: 'rgba(245,158,11,0.38)' },
+            { bg: 'linear-gradient(90deg,#a855f7,#6366f1)', text: '#c084fc', border: 'rgba(168,85,247,0.38)' }
           ];
-          const ranked = [...players].sort((a, b) => Number(b.score || 0) - Number(a.score || 0));
-          const tot = Math.max(1, ranked.reduce((s, p) => s + Number(p.score || 0), 0));
-          const leaderScore = Math.max(1, Number(ranked[0]?.score || 0));
-          const isHeadToHead = ranked.length === 2;
-          const modeLabel = isHeadToHead ? '⚔️ Duelo 1v1 / 2v2' : `👑 Batalla Grupal · ${ranked.length} anfitriones`;
+          const customNames = (() => {
+            try { return JSON.parse(localStorage.getItem('tikpulse_host_aliases') || '{}'); } catch (_) { return {}; }
+          })();
 
-          let topBarHtml = '';
-          if (isHeadToHead) {
-            const left = ranked[0];
-            const right = ranked[1];
-            const lScore = Number(left.score || 0);
-            const rScore = Number(right.score || 0);
-            const lPct = Math.max(12, Math.min(88, Math.round((lScore / tot) * 100)));
-            const rPct = 100 - lPct;
-            const gap = lScore - rScore;
-            topBarHtml = `
-              <div class="rounded-2xl bg-bg/90 border border-white/10 p-4 space-y-3">
-                <div class="flex items-center justify-between gap-2 text-xs">
-                  <div class="min-w-0">
-                    <div class="font-extrabold text-cyanNeon truncate">🥇 ${esc(left.name)}</div>
-                    <div class="font-display text-xl font-extrabold text-white">${lScore.toLocaleString('es-ES')} <span class="text-[11px] font-semibold text-slate-400">pts</span></div>
-                  </div>
-                  <div class="px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-[11px] font-extrabold text-amber-300 shrink-0">VS</div>
-                  <div class="min-w-0 text-right">
-                    <div class="font-extrabold text-pink-400 truncate">${esc(right.name)} 🥈</div>
-                    <div class="font-display text-xl font-extrabold text-white">${rScore.toLocaleString('es-ES')} <span class="text-[11px] font-semibold text-slate-400">pts</span></div>
-                  </div>
-                </div>
-                <div class="w-full h-7 rounded-full bg-slate-900 overflow-hidden flex border border-white/15 shadow-inner">
-                  <div class="h-full flex items-center justify-start pl-3 text-[11px] font-extrabold text-slate-950 transition-all duration-300" style="width:${lPct}%; background:${palette[0].bg}">${lPct}%</div>
-                  <div class="h-full flex items-center justify-end pr-3 text-[11px] font-extrabold text-white transition-all duration-300" style="width:${rPct}%; background:${palette[1].bg}">${rPct}%</div>
-                </div>
-                <div class="text-center text-[11px] font-semibold text-slate-300">
-                  ${gap === 0 ? '🤝 Empate técnico en este momento' : `Diferencia actual: <span class="text-cyanNeon font-extrabold">+${gap.toLocaleString('es-ES')} pts</span> a favor de ${esc(left.name)}`}
-                </div>
+          // Keep FIXED order from server (Index 0 = Connected Streamer, Index 1+ = Rivals) — NEVER swap positions!
+          const hosts = players.map((p, idx) => {
+            const rawName = String(p.name || '');
+            const isPlaceholder = rawName.startsWith('Rival') || rawName.startsWith('Anfitrión');
+            const displayName = (isPlaceholder && customNames[p.id]) ? customNames[p.id] : rawName;
+            return { ...p, displayName, isPlaceholder, slot: idx + 1 };
+          });
+
+          const maxScore = Math.max(1, ...hosts.map((h) => Number(h.score || 0)));
+          const sortedByScore = [...hosts].sort((a, b) => Number(b.score || 0) - Number(a.score || 0));
+          const leader = sortedByScore[0];
+          const runnerUp = sortedByScore[1];
+          const gap = runnerUp ? (Number(leader.score || 0) - Number(runnerUp.score || 0)) : 0;
+          const modeLabel = battleData.mode || (hosts.length === 2 ? '1 vs 1' : `${hosts.length} anfitriones`);
+
+          board.innerHTML = `
+            <div class="space-y-3.5">
+              <div class="flex items-center justify-between gap-2">
+                <span class="text-xs font-extrabold text-cyanNeon uppercase tracking-wider">👥 Puntos en Batalla (${hosts.length}) · ${esc(modeLabel)}</span>
+                <span class="text-[11px] text-slate-400 font-semibold">Orden fijo · En vivo</span>
               </div>
-            `;
-          } else {
-            topBarHtml = `
-              <div class="rounded-2xl bg-bg/90 border border-white/10 p-3.5 space-y-2.5">
-                ${ranked.map((p, i) => {
-                  const score = Number(p.score || 0);
-                  const relPct = Math.max(4, Math.round((score / leaderScore) * 100));
-                  const sharePct = Math.round((score / tot) * 100);
-                  const diff = Number(ranked[0]?.score || 0) - score;
+
+              <div class="space-y-2.5">
+                ${hosts.map((h, i) => {
+                  const sc = Number(h.score || 0);
+                  const pct = Math.max(3, Math.round((sc / maxScore) * 100));
                   const pal = palette[i % palette.length];
-                  const medal = i === 0 ? '🥇' : (i === 1 ? '🥈' : (i === 2 ? '🥉' : `#${i + 1}`));
+                  const isWinning = leader && h.id === leader.id && sc > 0 && gap > 0;
+                  const slotTag = i === 0
+                    ? '<span class="text-[10px] px-1.5 py-0.5 rounded bg-cyanNeon/15 text-cyanNeon font-extrabold shrink-0">TU LIVE</span>'
+                    : `<span class="text-[10px] px-1.5 py-0.5 rounded bg-pinkNeon/15 text-pink-300 font-bold shrink-0">#${i + 1}</span>`;
+                  const editBtn = h.isPlaceholder
+                    ? `<button type="button" data-rename-host="${esc(h.id)}" title="Escribir nombre del rival" class="text-[11px] px-1.5 py-0.5 rounded bg-white/10 hover:bg-white/20 text-slate-300 shrink-0">✏️</button>`
+                    : '';
                   return `
-                    <div class="p-3 rounded-xl bg-card/90 space-y-2" style="border:1px solid ${pal.border}">
+                    <div class="p-3.5 rounded-2xl bg-card/95 space-y-2 shadow" style="border:1px solid ${pal.border}">
                       <div class="flex items-center justify-between gap-2">
                         <div class="flex items-center gap-2 min-w-0">
-                          <span class="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-extrabold shrink-0" style="background:${pal.soft}; color:${pal.text}">${medal}</span>
-                          <div class="min-w-0">
-                            <div class="text-xs sm:text-sm font-extrabold text-white truncate">${esc(p.name)}</div>
-                            <div class="text-[11px] text-slate-400">${i === 0 ? '👑 Liderando la batalla' : `A ${(diff + 1).toLocaleString('es-ES')} pts del 1º · ${sharePct}% del total`}</div>
-                          </div>
+                          ${slotTag}
+                          <span class="text-sm font-extrabold text-white truncate">${isWinning ? '👑 ' : ''}${esc(h.displayName)}</span>
+                          ${editBtn}
                         </div>
-                        <div class="text-right shrink-0">
-                          <div class="font-display text-lg font-extrabold leading-tight" style="color:${pal.text}">${score.toLocaleString('es-ES')}</div>
-                          <div class="text-[10px] text-slate-400">pts</div>
-                        </div>
+                        <span class="font-display text-xl sm:text-2xl font-extrabold shrink-0" style="color:${pal.text}">${sc.toLocaleString('es-ES')} <span class="text-xs font-bold opacity-80">pts</span></span>
                       </div>
                       <div class="w-full h-2.5 rounded-full bg-slate-900 overflow-hidden">
-                        <div class="h-full rounded-full transition-all duration-300" style="width:${relPct}%; background:${pal.bg}"></div>
+                        <div class="h-full rounded-full transition-all duration-300" style="width:${pct}%; background:${pal.bg}"></div>
                       </div>
                     </div>
                   `;
                 }).join('')}
               </div>
-            `;
-          }
 
-          const indivList = Array.isArray(battleData?.individualHosts) ? battleData.individualHosts : [];
-          let indivHtml = '';
-          if (indivList.length > 0 && (isHeadToHead || indivList.length > ranked.length)) {
-            const maxIndiv = Math.max(1, Number(indivList[0]?.score || 1));
-            indivHtml = `
-              <div class="rounded-2xl bg-bg/80 border border-white/10 p-3.5 space-y-2.5">
-                <div class="flex items-center justify-between">
-                  <span class="text-[11px] font-extrabold text-cyanNeon uppercase tracking-wider">👥 Puntos individuales por anfitrión (${indivList.length})</span>
-                  <span class="text-[10px] text-slate-400">En tiempo real</span>
-                </div>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  ${indivList.map((h, i) => {
-                    const sc = Number(h.score || 0);
-                    const pct = Math.max(4, Math.round((sc / maxIndiv) * 100));
-                    const pal = palette[i % palette.length];
-                    const medal = i === 0 ? '🥇' : (i === 1 ? '🥈' : (i === 2 ? '🥉' : `#${i + 1}`));
-                    return `
-                      <div class="p-2.5 rounded-xl bg-card/90 space-y-1.5" style="border:1px solid ${pal.border}">
-                        <div class="flex items-center justify-between gap-2">
-                          <span class="text-xs font-extrabold text-white truncate">${medal} ${esc(h.name)}</span>
-                          <span class="font-display text-sm font-extrabold shrink-0" style="color:${pal.text}">${sc.toLocaleString('es-ES')} pts</span>
-                        </div>
-                        <div class="w-full h-1.5 rounded-full bg-slate-900 overflow-hidden">
-                          <div class="h-full rounded-full transition-all duration-300" style="width:${pct}%; background:${pal.bg}"></div>
-                        </div>
-                      </div>
-                    `;
-                  }).join('')}
-                </div>
+              <div class="rounded-2xl bg-bg/95 border border-white/15 p-3.5 text-center space-y-1">
+                <div class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Diferencia de puntos</div>
+                ${gap === 0
+                  ? '<div class="font-display text-2xl font-extrabold text-amber-300">🤝 Empate · 0 pts</div>'
+                  : `<div class="font-display text-2xl sm:text-3xl font-extrabold ${leader.isOwner ? 'text-cyanNeon' : 'text-pink-400'}">${leader.isOwner ? '+' : '-'}${gap.toLocaleString('es-ES')} pts</div>
+                     <div class="text-xs font-semibold text-slate-300">${leader.isOwner ? `🔥 Vas ganando a ${esc(runnerUp.displayName)}` : `⚡ ${esc(leader.displayName)} va arriba por ${gap.toLocaleString('es-ES')} pts`}</div>`
+                }
               </div>
-            `;
-          }
-
-          board.innerHTML = `
-            <div class="space-y-3.5">
-              <div class="flex flex-wrap items-center justify-between gap-2">
-                <div class="flex items-center gap-2">
-                  <span class="px-2.5 py-1 rounded-lg bg-amber-500/20 text-amber-300 text-xs font-extrabold">👑 ${esc(ranked[0].name)}</span>
-                  <span class="font-display text-sm font-extrabold text-white">${Number(ranked[0].score || 0).toLocaleString('es-ES')} pts</span>
-                </div>
-                <span class="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-[11px] text-slate-300 font-bold">${modeLabel} · Total ${tot.toLocaleString('es-ES')} pts</span>
-              </div>
-              ${topBarHtml}
-              ${indivHtml}
             </div>
           `;
+
+          board.querySelectorAll('[data-rename-host]').forEach((btn) => {
+            btn.addEventListener('click', () => {
+              const hid = btn.getAttribute('data-rename-host');
+              const val = prompt('Escribe el nombre de TikTok de este anfitrión (ej: LUMIAN MG🐸🛡️):', customNames[hid] || '');
+              if (val && val.trim()) {
+                customNames[hid] = val.trim().slice(0, 48);
+                try { localStorage.setItem('tikpulse_host_aliases', JSON.stringify(customNames)); } catch (_) {}
+                renderRealBattlePanel(battleData);
+              }
+            });
+          });
         }
 
         const maxUserPts = Math.max(1, Number(matchTopUsers[0]?.coins || 1));
@@ -1912,7 +1870,7 @@
             if (state.giftDefaultSfx) playSound(total >= 500 ? 'fanfare' : 'coin', null);
             queueAlert({ screen: total >= 1000 ? 'screen2' : 'screen1', badgeLabel: 'GIFT ALERT', emoji: gObj.emoji || '🎁', img: gObj.img || '', title: `¡${user} envió ${repeatCount}x ${gObj.name}! (+${total.toLocaleString('es-ES')} 🪙)`, duration: total >= 1000 ? 6 : 4 });
             if (state.ttsReadGift && total >= state.ttsMinCoins) {
-              enqueueTts(((document.getElementById('tplTtsGift')?.value || '{nickname} envió {repeatCount} {giftName}') || '{nickname} envió {repeatCount} {giftName}').replace('{nickname}', user.replace('@', '')).replace('{repeatCount}', String(repeatCount)).replace('{giftName}', gObj.name), user);
+              enqueueTts('{nickname} envió {repeatCount} {giftName}'.replace('{nickname}', user.replace('@', '')).replace('{repeatCount}', String(repeatCount)).replace('{giftName}', gObj.name), user);
             }
           }
           renderCountersAndFeeds();
@@ -2243,9 +2201,7 @@
       })();
       document.getElementById('browserVoiceSelect').addEventListener('change', (e) => { state.browserVoiceUri = e.target.value; });
       document.getElementById('ttsCooldownSec').addEventListener('input', (e) => { state.ttsCooldownSec = Math.max(0, Number(e.target.value) || 0); });
-      document.getElementById('ttsMaxChars')?.addEventListener('input', (e) => { state.ttsMaxChars = Math.max(20, Number(e.target.value) || 140); });
       document.getElementById('ttsMinCoins').addEventListener('input', (e) => { state.ttsMinCoins = Math.max(0, Number(e.target.value) || 0); });
-      document.getElementById('chkUniqueVoice')?.addEventListener('change', (e) => { state.ttsUniqueVoice = e.target.checked; });
       document.getElementById('chkStripEmojis').addEventListener('change', (e) => { state.stripEmojis = e.target.checked; });
       function saveTtsPrefs() {
         try {
@@ -2274,8 +2230,7 @@
             chkTtsReadJoin: 'ttsReadJoin', chkUniqueVoice: 'ttsUniqueVoice', chkStripEmojis: 'stripEmojis'
           };
           Object.entries(map).forEach(([id, key]) => { const el = document.getElementById(id); if (el) el.checked = Boolean(state[key]); });
-          const prefEl = document.getElementById('ttsCommandPrefix');
-          if (prefEl) prefEl.value = state.ttsCommandPrefix || '';
+                    if (prefEl) prefEl.value = state.ttsCommandPrefix || '';
         } catch (_) {}
       })();
       [
@@ -2286,12 +2241,10 @@
         const el = document.getElementById(id);
         if (el) el.addEventListener('change', (e) => { state[key] = e.target.checked; saveTtsPrefs(); });
       });
-      const prefInp = document.getElementById('ttsCommandPrefix');
-      if (prefInp) prefInp.addEventListener('input', (e) => { state.ttsCommandPrefix = e.target.value; saveTtsPrefs(); });
+            if (prefInp) prefInp.addEventListener('input', (e) => { state.ttsCommandPrefix = e.target.value; saveTtsPrefs(); });
       document.getElementById('ttsBlockedWords').addEventListener('input', (e) => { state.blockedWords = e.target.value; });
       document.getElementById('rngVol').addEventListener('input', (e) => { state.ttsVolume = Number(e.target.value) / 100; document.getElementById('lblVol').textContent = `${e.target.value}%`; });
       document.getElementById('rngRate').addEventListener('input', (e) => { state.ttsRate = Number(e.target.value); document.getElementById('lblRate').textContent = `${state.ttsRate.toFixed(2)}x`; });
-      document.getElementById('rngPitch')?.addEventListener('input', (e) => { state.ttsPitch = Number(e.target.value); document.getElementById('lblPitch').textContent = state.ttsPitch.toFixed(1); });
       document.getElementById('btnRunTtsTest').addEventListener('click', () => enqueueTts(document.getElementById('ttsTestText').value));
       document.getElementById('toggleMasterTts').addEventListener('click', (e) => {
         state.ttsEnabled = !state.ttsEnabled;
