@@ -38,7 +38,7 @@ app.use(express.json({ limit: '100kb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 const rateBuckets = new Map();
-function allowRequest(ip, maxPerMin = 30) {
+function allowRequest(ip, maxPerMin = 40) {
   const now = Date.now();
   const bucket = rateBuckets.get(ip) || [];
   const fresh = bucket.filter((ts) => now - ts < 60000);
@@ -48,7 +48,11 @@ function allowRequest(ip, maxPerMin = 30) {
   return true;
 }
 
-app.get('/api/health', (_req, res) => res.json({ ok: true, hasEulerKey: Boolean(process.env.EULER_API_KEY) }));
+app.get('/api/health', (_req, res) => res.json({
+  ok: true,
+  hasEulerKey: Boolean(process.env.EULER_API_KEY),
+  activeRooms: activeConnections.size
+}));
 app.get('/api/config', (_req, res) => res.json({
   requiresSecret: Boolean(PANEL_SECRET),
   hasEulerKey: Boolean(process.env.EULER_API_KEY)
@@ -92,11 +96,346 @@ const io = new Server(server, {
 });
 
 const activeConnections = new Map();
+const roomStates = new Map();
+
+function createInitialRoomState(username) {
+  return {
+    username: '@' + username,
+    connected: false,
+    roomId: '',
+    stats: { likes: 0, viewers: 0, follows: 0, diamonds: 0, shares: 0, subs: 0 },
+    topLikes: new Map(),
+    topDiamonds: new Map(),
+    giftsCatalog: [],
+    battle: {
+      active: false,
+      status: 0,
+      duration: 300,
+      hostMap: {}, // hostUserId -> { id, name, score, contributors: [{ user, points }] }
+      players: [],
+      throws: []   // { user, giftName, coins, repeatCount, total, time }
+    }
+  };
+}
+
+function serializeRoomStats(rs) {
+  return {
+    username: rs.username,
+    connected: rs.connected,
+    roomId: rs.roomId,
+    stats: rs.stats,
+    topLikes: Array.from(rs.topLikes.entries()).map(([user, val]) => ({ user, val })).sort((a, b) => b.val - a.val).slice(0, 15),
+    topDiamonds: Array.from(rs.topDiamonds.entries()).map(([user, val]) => ({ user, val })).sort((a, b) => b.val - a.val).slice(0, 15)
+  };
+}
+
+function serializeBattle(rs) {
+  return {
+    active: rs.battle.active,
+    status: rs.battle.status,
+    duration: rs.battle.duration,
+    players: rs.battle.players,
+    throws: rs.battle.throws.slice(0, 25)
+  };
+}
+
 function disconnectRoom(token) {
   const existing = activeConnections.get(token);
   if (existing) {
     try { existing.disconnect(); } catch (_) {}
     activeConnections.delete(token);
+  }
+  const rs = roomStates.get(token);
+  if (rs) rs.connected = false;
+}
+
+function parseUserLabel(u, fallback = 'Usuario') {
+  if (!u) return fallback;
+  const uid = u.uniqueId || u.displayId || u.user?.uniqueId || u.user?.displayId;
+  const nick = u.nickname || u.nickName || u.user?.nickname || u.user?.nickName;
+  if (uid) return '@' + String(uid).replace(/^@/, '');
+  if (nick) return String(nick);
+  return fallback;
+}
+
+function parseBattleStart(rs, d) {
+  const hostMap = {};
+  // v2 protobuf: d.anchorInfo (Array or Map/Object)
+  const anchors = d?.anchorInfo;
+  if (Array.isArray(anchors)) {
+    anchors.forEach((info, idx) => {
+      const hid = String(info?.user?.userId || info?.userId || idx);
+      hostMap[hid] = {
+        id: hid,
+        name: parseUserLabel(info?.user || info, `Host ${idx + 1}`),
+        score: 0,
+        contributors: []
+      };
+    });
+  } else if (anchors && typeof anchors === 'object') {
+    Object.entries(anchors).forEach(([k, info], idx) => {
+      const hid = String(info?.user?.userId || info?.userId || k || idx);
+      hostMap[hid] = {
+        id: hid,
+        name: parseUserLabel(info?.user || info, `Host ${idx + 1}`),
+        score: 0,
+        contributors: []
+      };
+    });
+  }
+  // v1 compat: d.battleUsers
+  if (!Object.keys(hostMap).length && Array.isArray(d?.battleUsers)) {
+    d.battleUsers.forEach((u, idx) => {
+      const hid = String(u?.userId || idx);
+      hostMap[hid] = {
+        id: hid,
+        name: parseUserLabel(u, `Host ${idx + 1}`),
+        score: 0,
+        contributors: []
+      };
+    });
+  }
+  const dur = Number(d?.battleSetting?.duration || 300);
+  rs.battle = {
+    active: true,
+    status: 1,
+    duration: dur > 0 ? dur : 300,
+    hostMap,
+    players: Object.values(hostMap),
+    throws: []
+  };
+}
+
+function parseBattleArmies(rs, d) {
+  const status = Number(d?.battleStatus ?? 1);
+  // Collect entries from d.battleItems (Array or Map/Object) or d.battleArmies (Array)
+  let rawEntries = [];
+  if (Array.isArray(d?.battleItems) && d.battleItems.length) {
+    rawEntries = d.battleItems.map((it, i) => [String(it?.hostUserId || i), it]);
+  } else if (d?.battleItems && typeof d.battleItems === 'object' && Object.keys(d.battleItems).length) {
+    rawEntries = Object.entries(d.battleItems).map(([k, it]) => [String(it?.hostUserId || k), it]);
+  } else if (Array.isArray(d?.battleArmies) && d.battleArmies.length) {
+    rawEntries = d.battleArmies.map((it, i) => [String(it?.hostUserId || i), it]);
+  }
+
+  if (!rawEntries.length) return false;
+
+  rs.battle.active = status !== 2; // status 1 = active, 2 = ended/punishment
+  rs.battle.status = status;
+
+  rawEntries.forEach(([hid, item], idx) => {
+    const existing = rs.battle.hostMap[hid];
+    const hostName = existing?.name || parseUserLabel(item?.hostUser || item?.user, `@host_${hid.slice(-4)}`);
+
+    // Extract real score (prefer explicit hostScore/points, else battleGroups points)
+    let score = Number(item?.hostScore ?? item?.points ?? 0);
+    const contributors = [];
+
+    if (Array.isArray(item?.battleGroups) && item.battleGroups.length) {
+      let groupMax = 0;
+      item.battleGroups.forEach((grp) => {
+        const gPts = Number(grp?.points || 0);
+        if (gPts > groupMax) groupMax = gPts;
+        if (Array.isArray(grp?.users)) {
+          grp.users.forEach((u) => {
+            contributors.push({
+              user: parseUserLabel(u, 'Espectador'),
+              points: Number(u?.score || u?.points || gPts || 0)
+            });
+          });
+        }
+      });
+      if (score === 0 && groupMax > 0) score = groupMax;
+    }
+
+    const extraLists = [item?.participants, item?.userArmies, item?.users];
+    extraLists.forEach((arr) => {
+      if (Array.isArray(arr)) {
+        arr.forEach((u) => {
+          const uname = parseUserLabel(u, 'Espectador');
+          const pts = Number(u?.score || u?.points || u?.giftCount || 0);
+          if (!contributors.some((c) => c.user === uname)) {
+            contributors.push({ user: uname, points: pts });
+          }
+        });
+      }
+    });
+
+    contributors.sort((a, b) => b.points - a.points);
+
+    rs.battle.hostMap[hid] = {
+      id: hid,
+      name: hostName,
+      score,
+      contributors: contributors.slice(0, 8)
+    };
+  });
+
+  rs.battle.players = Object.values(rs.battle.hostMap);
+  return true;
+}
+
+async function startTikTokConnection(socket, cleanUser, cleanToken) {
+  socket.join(cleanToken);
+  disconnectRoom(cleanToken);
+
+  const rs = createInitialRoomState(cleanUser);
+  roomStates.set(cleanToken, rs);
+
+  const options = { enableExtendedGiftInfo: true, fetchRoomInfoOnConnect: true };
+  if (process.env.EULER_API_KEY) options.signApiKey = process.env.EULER_API_KEY.trim();
+
+  console.log(`[TikPulse] Conectando a @${cleanUser} (token: ${cleanToken})`);
+  const tiktok = new TikTokLiveConnection(cleanUser, options);
+  activeConnections.set(cleanToken, tiktok);
+  const emitToRoom = (ev, data) => io.to(cleanToken).emit(ev, data);
+
+  tiktok.on(ControlEvent.CONNECTED, (st) => {
+    rs.connected = true;
+    rs.roomId = st?.roomId || '';
+    const rInfo = st?.roomInfo || tiktok.roomInfo || {};
+    const initLikes = Number(rInfo?.like_count || rInfo?.stats?.like_count || 0);
+    const initViewers = Number(rInfo?.user_count || 0);
+    if (initLikes > 0) rs.stats.likes = initLikes;
+    if (initViewers > 0) rs.stats.viewers = initViewers;
+    console.log(`[TikPulse] Conectado a @${cleanUser} (roomId: ${rs.roomId}, likes: ${rs.stats.likes})`);
+    emitToRoom('tiktok:status', { connected: true, username: rs.username, roomId: rs.roomId });
+    emitToRoom('tiktok:stats_sync', serializeRoomStats(rs));
+    emitToRoom('tiktok:battle_update', serializeBattle(rs));
+  });
+
+  tiktok.on(ControlEvent.DISCONNECTED, () => {
+    rs.connected = false;
+    emitToRoom('tiktok:status', { connected: false, username: rs.username });
+  });
+
+  tiktok.on(ControlEvent.ERROR, (err) => {
+    console.error(`[TikPulse] Error en @${cleanUser}:`, err?.info || err?.message || err);
+  });
+
+  tiktok.on(WebcastEvent.CHAT, (d) => {
+    emitToRoom('tiktok:chat', {
+      user: parseUserLabel(d.user || d, '@user'),
+      text: String(d.comment || '').slice(0, 240)
+    });
+  });
+
+  tiktok.on(WebcastEvent.GIFT, (d) => {
+    const user = parseUserLabel(d.user || d, '@user');
+    const giftName = d.giftName || d.extendedGiftInfo?.name || 'Regalo';
+    const coins = Number(d.diamondCount || d.extendedGiftInfo?.diamond_count || 1);
+    const repeatCount = Number(d.repeatCount || 1);
+    const repeatEnd = Boolean(d.repeatEnd);
+    const giftType = d.giftType;
+
+    // Count finished combos (or non-streakable gifts)
+    if (giftType !== 1 || repeatEnd) {
+      const total = Math.max(1, coins) * Math.max(1, repeatCount);
+      rs.stats.diamonds += total;
+      rs.topDiamonds.set(user, (rs.topDiamonds.get(user) || 0) + total);
+
+      // Record who threw in the current real battle!
+      if (rs.battle.active) {
+        rs.battle.throws.unshift({
+          user,
+          giftName,
+          coins,
+          repeatCount,
+          total,
+          time: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+        });
+        if (rs.battle.throws.length > 30) rs.battle.throws.pop();
+        emitToRoom('tiktok:battle_update', serializeBattle(rs));
+      }
+    }
+
+    emitToRoom('tiktok:gift', { user, giftName, coins, repeatCount, repeatEnd, giftType });
+  });
+
+  tiktok.on(WebcastEvent.LIKE, (d) => {
+    const user = parseUserLabel(d.user || d, '@user');
+    const likeCount = Number(d.likeCount || 1);
+    const totalLikeCount = Number(d.totalLikeCount || 0);
+    if (totalLikeCount > 0) rs.stats.likes = totalLikeCount;
+    else rs.stats.likes += likeCount;
+    rs.topLikes.set(user, (rs.topLikes.get(user) || 0) + likeCount);
+    emitToRoom('tiktok:like', { user, likeCount, totalLikeCount: rs.stats.likes });
+  });
+
+  tiktok.on(WebcastEvent.FOLLOW, (d) => {
+    const user = parseUserLabel(d.user || d, '@user');
+    rs.stats.follows += 1;
+    emitToRoom('tiktok:follow', { user });
+  });
+
+  tiktok.on(WebcastEvent.SHARE, (d) => {
+    const user = parseUserLabel(d.user || d, '@user');
+    rs.stats.shares += 1;
+    emitToRoom('tiktok:share', { user });
+  });
+
+  tiktok.on(WebcastEvent.MEMBER, (d) => {
+    emitToRoom('tiktok:join', { user: parseUserLabel(d.user || d, '@user') });
+  });
+
+  tiktok.on(WebcastEvent.SUBSCRIBE, (d) => {
+    rs.stats.subs += 1;
+    emitToRoom('tiktok:sub', { user: parseUserLabel(d.user || d, '@user') });
+  });
+
+  tiktok.on(WebcastEvent.ROOM_USER, (d) => {
+    rs.stats.viewers = Number(d.viewerCount || 0);
+    emitToRoom('tiktok:viewers', { viewerCount: rs.stats.viewers });
+  });
+
+  tiktok.on(WebcastEvent.LINK_MIC_BATTLE, (d) => {
+    parseBattleStart(rs, d);
+    emitToRoom('tiktok:battle_update', serializeBattle(rs));
+  });
+
+  tiktok.on(WebcastEvent.LINK_MIC_ARMIES, (d) => {
+    if (parseBattleArmies(rs, d)) {
+      emitToRoom('tiktok:battle_update', serializeBattle(rs));
+    }
+  });
+
+  try {
+    const st = await tiktok.connect();
+    rs.connected = true;
+    rs.roomId = st?.roomId || rs.roomId;
+    const rInfo = st?.roomInfo || tiktok.roomInfo || {};
+    const initLikes = Number(rInfo?.like_count || rInfo?.stats?.like_count || 0);
+    const initViewers = Number(rInfo?.user_count || 0);
+    if (initLikes > 0) rs.stats.likes = initLikes;
+    if (initViewers > 0) rs.stats.viewers = initViewers;
+    emitToRoom('tiktok:status', { connected: true, username: rs.username, roomId: rs.roomId });
+    emitToRoom('tiktok:stats_sync', serializeRoomStats(rs));
+    emitToRoom('tiktok:battle_update', serializeBattle(rs));
+
+    try {
+      const rawGifts = await tiktok.fetchAvailableGifts();
+      const catalog = (Array.isArray(rawGifts) ? rawGifts : []).map((g) => ({
+        id: g.id,
+        name: g.name,
+        coins: Number(g.diamond_count || 1),
+        img: g.image?.url_list?.[0] || ''
+      }));
+      if (catalog.length) {
+        rs.giftsCatalog = catalog;
+        emitToRoom('tiktok:gifts_catalog', catalog);
+      }
+    } catch (_) {}
+  } catch (err) {
+    const rawMsg = err?.message || String(err || '');
+    console.error(`[TikPulse] Falló conexión a @${cleanUser}:`, rawMsg);
+    let friendly = rawMsg || 'No se pudo conectar. Verifica que el usuario esté EN VIVO ahora mismo.';
+    if (/offline|not live|roomId/i.test(rawMsg)) {
+      friendly = `El usuario @${cleanUser} no está EN VIVO en este momento (o su cuenta es privada).`;
+    } else if (/sign|euler|401|403|api key/i.test(rawMsg)) {
+      friendly = `Error de conexión con TikTok (${rawMsg}).`;
+    }
+    socket.emit('tiktok:error', { message: friendly });
+    disconnectRoom(cleanToken);
   }
 }
 
@@ -104,7 +443,29 @@ io.on('connection', (socket) => {
   const ip = socket.handshake.address || 'unknown';
 
   socket.on('room:join', ({ token }) => {
-    if (TOKEN_RE.test(String(token || ''))) socket.join(token);
+    if (TOKEN_RE.test(String(token || ''))) socket.join(String(token));
+  });
+
+  // Seamless resume after page refresh (F5) without disconnecting TikTok LIVE!
+  socket.on('room:resume', async ({ token, username, secret }) => {
+    const cleanToken = TOKEN_RE.test(String(token || '')) ? String(token) : '';
+    if (!cleanToken) return;
+    if (PANEL_SECRET && String(secret || '').trim() !== PANEL_SECRET) return;
+
+    socket.join(cleanToken);
+    const rs = roomStates.get(cleanToken);
+    if (activeConnections.has(cleanToken) && rs && rs.connected) {
+      socket.emit('tiktok:status', { connected: true, username: rs.username, roomId: rs.roomId });
+      socket.emit('tiktok:stats_sync', serializeRoomStats(rs));
+      socket.emit('tiktok:battle_update', serializeBattle(rs));
+      if (rs.giftsCatalog.length) socket.emit('tiktok:gifts_catalog', rs.giftsCatalog);
+      return;
+    }
+    // If server restarted or dropped while browser had a saved user, reconnect cleanly
+    const cleanUser = String(username || '').replace(/^@/, '').trim();
+    if (USERNAME_RE.test(cleanUser) && allowRequest(ip, 20)) {
+      await startTikTokConnection(socket, cleanUser, cleanToken);
+    }
   });
 
   socket.on('overlay:emit', ({ token, secret, payload }) => {
@@ -114,11 +475,11 @@ io.on('connection', (socket) => {
   });
 
   socket.on('tiktok:connect', async ({ username, token, secret }) => {
-    if (!allowRequest(ip, 20)) {
+    if (!allowRequest(ip, 25)) {
       return socket.emit('tiktok:error', { message: 'Límite de intentos alcanzado. Espera 1 minuto.' });
     }
     if (PANEL_SECRET && String(secret || '').trim() !== PANEL_SECRET) {
-      return socket.emit('tiktok:error', { message: 'Clave del panel (PANEL_SECRET) incorrecta. Ingrésala junto al usuario o quita PANEL_SECRET en Render.' });
+      return socket.emit('tiktok:error', { message: 'Clave del panel (PANEL_SECRET) incorrecta.' });
     }
     const cleanUser = String(username || '').replace(/^@/, '').trim();
     const cleanToken = TOKEN_RE.test(String(token || '')) ? String(token) : 'tp_default';
@@ -128,86 +489,16 @@ io.on('connection', (socket) => {
     if (!activeConnections.has(cleanToken) && activeConnections.size >= MAX_ACTIVE_ROOMS) {
       return socket.emit('tiktok:error', { message: 'Límite máximo de salas activas alcanzado.' });
     }
-
-    socket.join(cleanToken);
-    disconnectRoom(cleanToken);
-
-    const options = { enableExtendedGiftInfo: true };
-    if (process.env.EULER_API_KEY) options.signApiKey = process.env.EULER_API_KEY.trim();
-
-    console.log(`[TikPulse] Conectando a @${cleanUser} (EulerKey: ${Boolean(options.signApiKey)})`);
-    const tiktok = new TikTokLiveConnection(cleanUser, options);
-    activeConnections.set(cleanToken, tiktok);
-    const emitToRoom = (ev, data) => io.to(cleanToken).emit(ev, data);
-
-    tiktok.on(ControlEvent.CONNECTED, (st) => {
-      console.log(`[TikPulse] Conectado a @${cleanUser} (roomId: ${st?.roomId || ''})`);
-      emitToRoom('tiktok:status', { connected: true, username: '@' + cleanUser, roomId: st?.roomId || '' });
-    });
-    tiktok.on(ControlEvent.DISCONNECTED, () => {
-      emitToRoom('tiktok:status', { connected: false, username: '@' + cleanUser });
-    });
-    tiktok.on(ControlEvent.ERROR, (err) => {
-      console.error(`[TikPulse] Error en @${cleanUser}:`, err?.info || err?.message || err);
-    });
-    tiktok.on(WebcastEvent.CHAT, (d) => emitToRoom('tiktok:chat', { user: '@' + (d.user?.uniqueId || d.uniqueId || 'user'), text: String(d.comment || '').slice(0, 240) }));
-    tiktok.on(WebcastEvent.GIFT, (d) => emitToRoom('tiktok:gift', {
-      user: '@' + (d.user?.uniqueId || d.uniqueId || 'user'),
-      giftName: d.giftName || d.extendedGiftInfo?.name || 'Regalo',
-      coins: Number(d.diamondCount || d.extendedGiftInfo?.diamond_count || 1),
-      repeatCount: Number(d.repeatCount || 1),
-      repeatEnd: Boolean(d.repeatEnd),
-      giftType: d.giftType
-    }));
-    tiktok.on(WebcastEvent.LIKE, (d) => emitToRoom('tiktok:like', { user: '@' + (d.user?.uniqueId || d.uniqueId || 'user'), likeCount: Number(d.likeCount || 1), totalLikeCount: Number(d.totalLikeCount || 0) }));
-    tiktok.on(WebcastEvent.FOLLOW, (d) => emitToRoom('tiktok:follow', { user: '@' + (d.user?.uniqueId || d.uniqueId || 'user') }));
-    tiktok.on(WebcastEvent.SHARE, (d) => emitToRoom('tiktok:share', { user: '@' + (d.user?.uniqueId || d.uniqueId || 'user') }));
-    tiktok.on(WebcastEvent.MEMBER, (d) => emitToRoom('tiktok:join', { user: '@' + (d.user?.uniqueId || d.uniqueId || 'user') }));
-    tiktok.on(WebcastEvent.SUBSCRIBE, (d) => emitToRoom('tiktok:sub', { user: '@' + (d.user?.uniqueId || d.uniqueId || 'user') }));
-    tiktok.on(WebcastEvent.ROOM_USER, (d) => emitToRoom('tiktok:viewers', { viewerCount: Number(d.viewerCount || 0) }));
-    tiktok.on(WebcastEvent.LINK_MIC_BATTLE, (d) => emitToRoom('tiktok:pk_start', d));
-    tiktok.on(WebcastEvent.LINK_MIC_ARMIES, (d) => {
-      emitToRoom('tiktok:pk_armies', d);
-      const items = d?.battleItems || d?.battleArmies || [];
-      if (Array.isArray(items) && items.length) {
-        const players = items.map((it, i) => ({
-          name: it?.hostUserId ? `@host_${String(it.hostUserId).slice(-4)}` : `@jugador_${i + 1}`,
-          score: Number(it?.points || it?.hostScore || 0)
-        }));
-        emitToRoom('tiktok:battle_update', players);
-      }
-    });
-
-    try {
-      const st = await tiktok.connect();
-      emitToRoom('tiktok:status', { connected: true, username: '@' + cleanUser, roomId: st?.roomId || '' });
-      try {
-        const rawGifts = await tiktok.fetchAvailableGifts();
-        const catalog = (Array.isArray(rawGifts) ? rawGifts : []).map((g) => ({
-          id: g.id,
-          name: g.name,
-          coins: Number(g.diamond_count || 1),
-          img: g.image?.url_list?.[0] || ''
-        }));
-        if (catalog.length) emitToRoom('tiktok:gifts_catalog', catalog);
-      } catch (_) {}
-    } catch (err) {
-      const rawMsg = err?.message || String(err || '');
-      console.error(`[TikPulse] Falló conexión a @${cleanUser}:`, rawMsg);
-      let friendly = rawMsg || 'No se pudo conectar. Verifica que el usuario esté EN VIVO ahora mismo.';
-      if (/offline|not live|roomId/i.test(rawMsg)) {
-        friendly = `El usuario @${cleanUser} no está EN VIVO en este momento (o su cuenta es privada).`;
-      } else if (/sign|euler|401|403|api key/i.test(rawMsg)) {
-        friendly = `Error de API Key de EulerStream (${rawMsg}). Revisa tu variable EULER_API_KEY.`;
-      }
-      socket.emit('tiktok:error', { message: friendly });
-      disconnectRoom(cleanToken);
-    }
+    await startTikTokConnection(socket, cleanUser, cleanToken);
   });
 
   socket.on('tiktok:disconnect', ({ token, secret }) => {
     if (PANEL_SECRET && String(secret || '').trim() !== PANEL_SECRET) return;
-    if (TOKEN_RE.test(String(token || ''))) disconnectRoom(String(token));
+    const cleanToken = String(token || '');
+    if (TOKEN_RE.test(cleanToken)) {
+      disconnectRoom(cleanToken);
+      roomStates.delete(cleanToken);
+    }
   });
 });
 
