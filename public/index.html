@@ -243,6 +243,7 @@
         <span class="text-[9px] px-1.5 py-0.5 rounded bg-pinkNeon/20 text-pink-300 font-bold">LIVE</span>
       </button>
       <button type="button" data-tab="ranking" class="nav-item w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:bg-white/5 transition"><span>🏆</span> Ranking</button>
+      <button type="button" data-tab="liga" class="nav-item w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:bg-white/5 transition"><span class="flex items-center gap-2.5"><span>💎</span> Liga y Diario</span><span class="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold">A1–D5</span></button>
       <button type="button" data-tab="chat" class="nav-item w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:bg-white/5 transition"><span>💬</span> Chat y Bot</button>
       <button type="button" data-tab="espectadores" class="nav-item w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:bg-white/5 transition">
         <span class="flex items-center gap-2.5"><span>👁️</span> Espectadores</span>
@@ -335,76 +336,7 @@
           </div>
         </div>
       
-        <!-- 🏆 RANKING DIARIO & TOP DE LIGA (FRAGMENTOS A1–D5) -->
-        <div class="tp-card rounded-2xl p-4 sm:p-5 space-y-4 border border-amber-400/25">
-          <div class="flex flex-wrap items-center justify-between gap-2.5">
-            <div>
-              <h2 class="font-display text-sm sm:text-base font-extrabold text-amber-300">🏆 Ranking Diario &amp; Liga de Fragmentos (A1–D5)</h2>
-              <p class="text-[11px] text-slate-400">Monedas acumuladas de hoy y cuánto falta en tiempo real para mantener o ganar fragmentos en tu liga.</p>
-            </div>
-            <div class="flex items-center gap-2">
-              <span id="liveRankBadge" class="hidden text-[11px] px-2.5 py-1 rounded-full bg-amber-500/20 border border-amber-400/40 text-amber-200 font-extrabold">🏅 Top #--</span>
-              <button id="btnResetDailyCoins" type="button" class="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/15 text-[11px] font-bold text-slate-300">🔄 Reiniciar día</button>
-            </div>
-          </div>
-
-          <div class="grid grid-cols-1 lg:grid-cols-12 gap-3.5 items-stretch">
-            <div class="lg:col-span-4 rounded-xl bg-bg/90 border border-amber-400/30 p-3.5 flex flex-col justify-between space-y-2.5">
-              <div>
-                <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Monedas acumuladas hoy</div>
-                <div id="dailyCoinsTotal" class="font-display text-2xl sm:text-3xl font-extrabold text-amber-300 mt-0.5">0 <span class="text-sm">🪙</span></div>
-              </div>
-              <div class="grid grid-cols-3 gap-2 pt-1 border-t border-white/10">
-                <div>
-                  <label class="block text-[10px] text-slate-400 mb-1">Tu Liga</label>
-                  <select id="leagueTierSelect" class="w-full bg-card border border-white/15 rounded-lg px-2 py-1.5 text-xs font-extrabold text-cyanNeon">
-                    <option value="A1">A1</option><option value="A2">A2</option><option value="A3">A3</option>
-                    <option value="B1">B1</option><option value="B2">B2</option><option value="B3">B3</option><option value="B4">B4</option><option value="B5">B5</option>
-                    <option value="C1" selected>C1</option><option value="C2">C2</option><option value="C3">C3</option><option value="C4">C4</option><option value="C5">C5</option>
-                    <option value="D1">D1</option><option value="D2">D2</option><option value="D3">D3</option><option value="D4">D4</option><option value="D5">D5</option>
-                  </select>
-                </div>
-                <div>
-                  <label class="block text-[10px] text-slate-400 mb-1">Mantener</label>
-                  <input id="leagueKeepGoal" type="number" min="0" value="3000" class="w-full bg-card border border-white/15 rounded-lg px-2 py-1.5 text-xs font-bold text-emerald-300" />
-                </div>
-                <div>
-                  <label class="block text-[10px] text-slate-400 mb-1">+1 Frag.</label>
-                  <input id="leagueWinGoal" type="number" min="1" value="10000" class="w-full bg-card border border-white/15 rounded-lg px-2 py-1.5 text-xs font-bold text-amber-300" />
-                </div>
-              </div>
-            </div>
-
-            <div class="lg:col-span-8 grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <!-- NO PERDER FRAGMENTO -->
-              <div class="rounded-xl bg-bg/90 border border-emerald-400/30 p-3.5 flex flex-col justify-between space-y-2.5">
-                <div class="flex items-center justify-between gap-2">
-                  <span class="text-xs font-extrabold text-emerald-300">🛡️ No perder fragmento</span>
-                  <span id="leagueKeepPct" class="text-[11px] font-bold text-emerald-200">0%</span>
-                </div>
-                <div id="leagueKeepText" class="font-display text-lg font-extrabold text-white">Faltan 3.000 🪙</div>
-                <div class="w-full h-2.5 rounded-full bg-slate-900 overflow-hidden">
-                  <div id="leagueKeepBar" class="h-full rounded-full transition-all duration-300" style="width:0%; background:linear-gradient(90deg,#10b981,#00f2ea)"></div>
-                </div>
-                <div class="text-[10px] text-slate-400">Zona segura para conservar tus fragmentos actuales de liga.</div>
-              </div>
-
-              <!-- GANAR +1 FRAGMENTO -->
-              <div class="rounded-xl bg-bg/90 border border-amber-400/35 p-3.5 flex flex-col justify-between space-y-2.5">
-                <div class="flex items-center justify-between gap-2">
-                  <span class="text-xs font-extrabold text-amber-300">⬆️ Ganar +1 fragmento</span>
-                  <span id="leagueWinPct" class="text-[11px] font-bold text-amber-200">0%</span>
-                </div>
-                <div id="leagueWinText" class="font-display text-lg font-extrabold text-white">Faltan 10.000 🪙</div>
-                <div class="w-full h-2.5 rounded-full bg-slate-900 overflow-hidden">
-                  <div id="leagueWinBar" class="h-full rounded-full transition-all duration-300" style="width:0%; background:linear-gradient(90deg,#f59e0b,#fe2c55)"></div>
-                </div>
-                <div class="text-[10px] text-slate-400">4 fragmentos te suben de división en TikTok LIVE (ajustable a tu grupo del día).</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+</section>
 
       <!-- TAB 2: 🎁 REGALOS CON IMAGEN Y ALERTAS CON MÚSICA (ESTILO TIKFINITY) -->
       <section id="tab-acciones" class="tab-panel hidden space-y-4">
@@ -714,6 +646,87 @@
         </div>
       </section>
 
+      <!-- TAB 5B: 💎 LIGA Y RANKING DIARIO (DATOS REALES DE TIKTOK) -->
+      <section id="tab-liga" class="tab-panel hidden space-y-4">
+        <div class="tp-card rounded-2xl p-4 sm:p-5 space-y-4 border border-amber-400/30">
+          <div class="flex flex-wrap items-center justify-between gap-2.5">
+            <div>
+              <h2 class="font-display text-base sm:text-lg font-extrabold text-amber-300">💎 Liga TikTok LIVE &amp; Ranking Diario</h2>
+              <p class="text-xs text-slate-400">Monedas reales de hoy conectadas a TikTok LIVE, puesto en vivo y metas de fragmentos (A1–D5).</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <span id="liveRankBadge" class="hidden text-xs px-3 py-1 rounded-full bg-amber-500/20 border border-amber-400/40 text-amber-200 font-extrabold">🏅 Puesto #--</span>
+              <button id="btnResetDailyCoins" type="button" class="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-xs font-bold text-slate-200">🔄 Reiniciar día</button>
+            </div>
+          </div>
+
+          <!-- RESUMEN MONEDAS HOY + MONEDAS ESTE LIVE -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div class="rounded-xl bg-bg/95 border border-amber-400/35 p-4">
+              <div class="text-[11px] font-bold text-slate-400 uppercase">Ranking Diario (Hoy)</div>
+              <div id="dailyCoinsTotal" class="font-display text-2xl sm:text-3xl font-extrabold text-amber-300 mt-1">0 <span class="text-sm">🪙</span></div>
+              <div class="text-[10px] text-slate-400 mt-1">Total acumulado en tus LIVEs de hoy</div>
+            </div>
+            <div class="rounded-xl bg-bg/95 border border-cyanNeon/30 p-4">
+              <div class="text-[11px] font-bold text-slate-400 uppercase">Este LIVE ahora</div>
+              <div id="ligaCurrentLiveCoins" class="font-display text-2xl sm:text-3xl font-extrabold text-cyanNeon mt-1">0 <span class="text-sm">🪙</span></div>
+              <div class="text-[10px] text-slate-400 mt-1">Monedas reales de la sala conectada</div>
+            </div>
+            <div class="rounded-xl bg-bg/95 border border-white/10 p-4">
+              <label class="block text-[11px] font-bold text-slate-400 uppercase mb-1.5">Tu Liga TikTok (18 niveles)</label>
+              <select id="leagueTierSelect" class="w-full bg-card border border-white/15 rounded-lg px-2.5 py-2 text-sm font-extrabold text-cyanNeon">
+                <option value="A1">🏆 Liga A1 (Élite)</option><option value="A2">🏆 Liga A2</option><option value="A3">🏆 Liga A3</option>
+                <option value="B1">💎 Liga B1</option><option value="B2">💎 Liga B2</option><option value="B3">💎 Liga B3</option><option value="B4">💎 Liga B4</option><option value="B5">💎 Liga B5</option>
+                <option value="C1" selected>⚡ Liga C1</option><option value="C2">⚡ Liga C2</option><option value="C3">⚡ Liga C3</option><option value="C4">⚡ Liga C4</option><option value="C5">⚡ Liga C5</option>
+                <option value="D1">🌱 Liga D1</option><option value="D2">🌱 Liga D2</option><option value="D3">🌱 Liga D3</option><option value="D4">🌱 Liga D4</option><option value="D5">🌱 Liga D5</option>
+              </select>
+            </div>
+            <div class="rounded-xl bg-bg/95 border border-white/10 p-4 space-y-2">
+              <div class="text-[11px] font-bold text-slate-400 uppercase">Metas de tu grupo hoy</div>
+              <div class="grid grid-cols-2 gap-2">
+                <div><label class="block text-[10px] text-emerald-300 mb-0.5">Mantener</label><input id="leagueKeepGoal" type="number" min="0" value="3000" class="w-full bg-card border border-white/15 rounded-lg px-2 py-1 text-xs font-bold text-emerald-300" /></div>
+                <div><label class="block text-[10px] text-amber-300 mb-0.5">+1 Frag.</label><input id="leagueWinGoal" type="number" min="1" value="10000" class="w-full bg-card border border-white/15 rounded-lg px-2 py-1 text-xs font-bold text-amber-300" /></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- BARRAS DE FRAGMENTOS EN TIEMPO REAL -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div class="rounded-2xl bg-bg/95 border border-emerald-400/35 p-4 space-y-2.5">
+              <div class="flex items-center justify-between"><span class="text-xs font-extrabold text-emerald-300">🛡️ No perder fragmento</span><span id="leagueKeepPct" class="text-xs font-extrabold text-emerald-200">0%</span></div>
+              <div id="leagueKeepText" class="font-display text-xl font-extrabold text-white">Faltan 3.000 🪙</div>
+              <div class="w-full h-3 rounded-full bg-slate-900 overflow-hidden"><div id="leagueKeepBar" class="h-full rounded-full transition-all duration-300" style="width:0%; background:linear-gradient(90deg,#10b981,#00f2ea)"></div></div>
+              <div class="text-[11px] text-slate-400">Zona segura para no bajar de liga.</div>
+            </div>
+
+            <div class="rounded-2xl bg-bg/95 border border-amber-400/35 p-4 space-y-2.5">
+              <div class="flex items-center justify-between"><span class="text-xs font-extrabold text-amber-300">⬆️ Ganar +1 fragmento</span><span id="leagueWinPct" class="text-xs font-extrabold text-amber-200">0%</span></div>
+              <div id="leagueWinText" class="font-display text-xl font-extrabold text-white">Faltan 10.000 🪙</div>
+              <div class="w-full h-3 rounded-full bg-slate-900 overflow-hidden"><div id="leagueWinBar" class="h-full rounded-full transition-all duration-300" style="width:0%; background:linear-gradient(90deg,#f59e0b,#fe2c55)"></div></div>
+              <div class="text-[11px] text-slate-400">4 fragmentos te ascienden a la siguiente liga.</div>
+            </div>
+
+            <div class="rounded-2xl bg-bg/95 border border-pinkNeon/35 p-4 space-y-2.5">
+              <div class="flex items-center justify-between"><span class="text-xs font-extrabold text-pink-300">🔥 Ganar +2 fragmentos</span><span id="leagueWin2Pct" class="text-xs font-extrabold text-pink-200">0%</span></div>
+              <div id="leagueWin2Text" class="font-display text-xl font-extrabold text-white">Faltan 20.000 🪙</div>
+              <div class="w-full h-3 rounded-full bg-slate-900 overflow-hidden"><div id="leagueWin2Bar" class="h-full rounded-full transition-all duration-300" style="width:0%; background:linear-gradient(90deg,#ec4899,#a855f7)"></div></div>
+              <div class="text-[11px] text-slate-400">Zona Top del grupo diario (2× meta de +1).</div>
+            </div>
+          </div>
+
+          <!-- FEED EN VIVO DE EVENTOS DE RANKING / LIGA DESDE TIKTOK -->
+          <div class="rounded-2xl bg-bg/90 border border-white/10 p-4 space-y-2.5">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-extrabold text-cyanNeon uppercase tracking-wider">📡 Señales de Ranking / Liga recibidas desde TikTok LIVE</span>
+              <span class="text-[11px] text-slate-400">RANK_UPDATE · HOURLY_RANK · RANK_TEXT</span>
+            </div>
+            <div id="tiktokRankFeedList" class="space-y-1.5 max-h-48 overflow-y-auto text-xs">
+              <div class="text-slate-500 italic">Conecta tu LIVE para recibir en tiempo real los puestos y avisos oficiales de Ranking y Liga de TikTok.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <!-- TAB 6: 💬 CHAT -->
       <section id="tab-chat" class="tab-panel hidden space-y-4">
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
@@ -890,6 +903,7 @@
         voz: '🔊 TTS Chat & Voz',
         batalla: '⚔️ Batalla PK',
         ranking: '🏆 Ranking',
+        liga: '💎 Liga y Diario',
         chat: '💬 Chat y Bot',
         espectadores: '👁️ Espectadores',
         overlay: '🎬 Overlays',
@@ -1392,6 +1406,30 @@
         if (wTxt) wTxt.textContent = winRem === 0 ? '🏆 ¡+1 Fragmento ganado!' : `Faltan ${winRem.toLocaleString('es-ES')} 🪙`;
         if (wPct) wPct.textContent = `${winPct}%`;
         if (wBar) wBar.style.width = `${winPct}%`;
+
+        const liveCoinsEl = document.getElementById('ligaCurrentLiveCoins');
+        if (liveCoinsEl) liveCoinsEl.innerHTML = `${Number(state.diamonds || 0).toLocaleString('es-ES')} <span class="text-sm">🪙</span>`;
+
+        const win2Goal = Math.max(2, winGoal * 2);
+        const win2Rem = Math.max(0, win2Goal - totalToday);
+        const win2Pct = Math.min(100, Math.round((totalToday / win2Goal) * 100));
+        const w2Txt = document.getElementById('leagueWin2Text');
+        const w2Pct = document.getElementById('leagueWin2Pct');
+        const w2Bar = document.getElementById('leagueWin2Bar');
+        if (w2Txt) w2Txt.textContent = win2Rem === 0 ? '👑 ¡+2 Fragmentos ganados!' : `Faltan ${win2Rem.toLocaleString('es-ES')} 🪙`;
+        if (w2Pct) w2Pct.textContent = `${win2Pct}%`;
+        if (w2Bar) w2Bar.style.width = `${win2Pct}%`;
+
+        const feedEl = document.getElementById('tiktokRankFeedList');
+        if (feedEl && state.rankInfo && Array.isArray(state.rankInfo.updates) && state.rankInfo.updates.length) {
+          feedEl.innerHTML = '';
+          state.rankInfo.updates.forEach((u) => {
+            const row = document.createElement('div');
+            row.className = 'flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-card border border-white/10';
+            row.innerHTML = `<span class="font-bold text-white truncate">🏅 ${esc(u.label || `Puesto #${u.ownerRank}`)}</span><span class="text-[10px] text-slate-400 shrink-0">${esc(u.time || '')}</span>`;
+            feedEl.appendChild(row);
+          });
+        }
       }
 
       (function initLeagueControls() {
@@ -2316,7 +2354,7 @@
             state.dailyCoins = Math.max(state.dailyCoins, syncData.dailyCoins, state.diamonds);
             saveDailyCoinsLocal(state.dailyCoins);
           }
-          if (syncData.rankInfo && Number(syncData.rankInfo.ownerRank) > 0) {
+          if (syncData.rankInfo && (Number(syncData.rankInfo.ownerRank) > 0 || (Array.isArray(syncData.rankInfo.updates) && syncData.rankInfo.updates.length))) {
             state.rankInfo = syncData.rankInfo;
           }
           if (Array.isArray(syncData.topLikes)) state.topLikes = syncData.topLikes;
