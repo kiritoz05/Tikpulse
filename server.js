@@ -169,7 +169,8 @@ app.post('/api/tts/edge', async (req, res) => {
   if (!text) return res.status(400).json({ error: 'Texto vacío' });
 
   try {
-    const { EdgeTTS } = require('edge-tts-universal');
+    const edgeMod = await import('edge-tts-universal');
+    const EdgeTTS = edgeMod.EdgeTTS || edgeMod.UniversalEdgeTTS || edgeMod.default?.EdgeTTS;
     const tts = new EdgeTTS(text, voice, { rate: rateStr });
     const result = await tts.synthesize();
     const arrBuf = await result.audio.arrayBuffer();
@@ -372,70 +373,67 @@ function serializeBattle(rs) {
     .filter((u) => Number(u.coins || 0) > 0)
     .sort((a, b) => b.coins - a.coins)
     .slice(0, 20);
-  // Refresh individual host names from knownUsers
-  const individualHosts = Array.from((rs.battle.individualHosts || new Map()).values())
-    .map((h, i) => {
-      const resolved = resolveHostName(rs, h.id, null, i);
-      return {
-        id: h.id,
-        name: (resolved && !resolved.startsWith('Anfitrión #')) ? resolved : (h.name || `Anfitrión #${i + 1}`),
-        score: Number(h.score || 0),
-        rank: Number(h.rank || 0)
-      };
-    })
-    .sort((a, b) => b.score - a.score);
+  const ownerId = safeId(rs.ownerUserId);
+  const ownerName = rs.ownerDisplayName || rs.username;
 
-  // Refresh top-bar players names: first by userId, then by exact score (1v1) or pair sum (2v2)!
-  const usedIndivIds = new Set();
-  const players = Object.values(rs.battle.hostMap)
+  // Build unified host list (prefer individualHosts when available, merge with hostMap so no host is lost)
+  const rawIndiv = Array.from((rs.battle.individualHosts || new Map()).values()).map((h, i) => {
+    const isOwner = Boolean(ownerId && safeId(h.id) === ownerId);
+    const resolved = isOwner ? ownerName : resolveHostName(rs, h.id, null, i);
+    const name = (resolved && !resolved.startsWith('Anfitrión #')) ? resolved : (h.name || `Rival #${i + 1}`);
+    return {
+      id: safeId(h.id) || `host_${i}`,
+      name,
+      score: Number(h.score || 0),
+      isOwner
+    };
+  });
+
+  // Also resolve top-bar hostMap entries (used when individualHosts is empty)
+  const rawPlayers = Object.values(rs.battle.hostMap)
     .filter((p) => p && (p.score > 0 || !p.isGhost))
-    .sort((a, b) => Number(b.score || 0) - Number(a.score || 0))
     .map((p, idx) => {
-      let name = p.name;
-      if (p.id && name.startsWith('Anfitrión #')) {
+      const isOwner = Boolean(ownerId && safeId(p.id) === ownerId);
+      let name = isOwner ? ownerName : p.name;
+      if (!isOwner && p.id && name.startsWith('Anfitrión #')) {
         const resolved = resolveHostName(rs, p.id, null, idx);
         if (resolved && !resolved.startsWith('Anfitrión #')) name = resolved;
       }
-      // Match by exact score against individualHosts (fixes 1v1 where battleItems uses slot_0/teamId!)
-      if (name.startsWith('Anfitrión #') && individualHosts.length) {
-        const exact = individualHosts.find((h) => !usedIndivIds.has(h.id) && h.score === Number(p.score || 0) && h.name && !h.name.startsWith('Anfitrión #'));
-        if (exact) {
-          name = exact.name;
-          usedIndivIds.add(exact.id);
-        } else if (individualHosts.length >= 3 && Number(p.score || 0) > 0) {
-          // 2v2 subset-sum match: find two hosts whose scores add up to this team's score
-          outer: for (let a = 0; a < individualHosts.length; a++) {
-            for (let b = a + 1; b < individualHosts.length; b++) {
-              const ha = individualHosts[a], hb = individualHosts[b];
-              if (usedIndivIds.has(ha.id) || usedIndivIds.has(hb.id)) continue;
-              if (Math.abs((ha.score + hb.score) - Number(p.score || 0)) <= 5) {
-                const nA = ha.name.split(' (')[0];
-                const nB = hb.name.split(' (')[0];
-                if (!nA.startsWith('Anfitrión #') || !nB.startsWith('Anfitrión #')) {
-                  name = `${nA} + ${nB}`;
-                  usedIndivIds.add(ha.id);
-                  usedIndivIds.add(hb.id);
-                  break outer;
-                }
-              }
-            }
-          }
-        }
+      if (name.startsWith('Anfitrión #') && rawIndiv.length) {
+        const match = rawIndiv.find((h) => h.score === Number(p.score || 0) && !h.name.startsWith('Anfitrión #') && !h.name.startsWith('Rival #'));
+        if (match) name = match.name;
       }
-      return { ...p, name };
+      return {
+        id: safeId(p.id) || `slot_${idx}`,
+        name: name.startsWith('Anfitrión #') ? `Rival #${idx + 1}` : name,
+        score: Number(p.score || 0),
+        isOwner: isOwner || (ownerName && name === ownerName)
+      };
     });
 
-  // If 1v1 and one side is still unnamed while we know ownerDisplayName and the other side isn't owner, assign owner if missing
-  if (players.length === 2 && rs.ownerDisplayName && !players.some((p) => p.name === rs.ownerDisplayName)) {
-    const firstUnknown = players.find((p) => p.name.startsWith('Anfitrión #'));
-    if (firstUnknown && !individualHosts.some((h) => h.name === rs.ownerDisplayName)) {
-      firstUnknown.name = rs.ownerDisplayName;
-    }
-  }
+  // Choose the richer host list (individualHosts if >= 2, otherwise rawPlayers)
+  const unified = rawIndiv.length >= 2 ? rawIndiv : (rawPlayers.length ? rawPlayers : rawIndiv);
 
-  const mode = individualHosts.length >= 3 && players.length === 2
-    ? '2 vs 2'
-    : (players.length === 2 ? '1 vs 1' : (players.length > 2 ? `Grupal (${players.length})` : ''));
+  // FIXED ORDER: Connected streamer (isOwner) ALWAYS index 0, rivals keep stable insertion order (never jump/swap!)
+  const orderedHosts = [
+    ...unified.filter((h) => h.isOwner),
+    ...unified.filter((h) => !h.isOwner)
+  ];
+
+  // Clean fallback labels: never say "Anfitrión #1" for a rival
+  let rivalCounter = 1;
+  orderedHosts.forEach((h, idx) => {
+    if (idx === 0 && h.isOwner && ownerName) {
+      h.name = ownerName;
+    } else if (!h.name || h.name.startsWith('Anfitrión #') || h.name.startsWith('Rival #')) {
+      h.name = orderedHosts.length === 2 ? 'Rival en batalla' : `Rival #${rivalCounter}`;
+      rivalCounter += 1;
+    }
+  });
+
+  const players = orderedHosts;
+  const individualHosts = orderedHosts;
+  const mode = orderedHosts.length === 4 ? '2 vs 2' : (orderedHosts.length === 2 ? '1 vs 1' : (orderedHosts.length > 2 ? `Grupal (${orderedHosts.length})` : ''));
 
   return {
     active: rs.battle.active,
