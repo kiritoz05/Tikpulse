@@ -65,6 +65,19 @@ app.get('/api/config', (_req, res) => res.json({
   hasEulerKey: Boolean(process.env.EULER_API_KEY)
 }));
 
+
+let ttsVoicesConfig = { fishVoices: [], elevenLabsVoices: [] };
+try { ttsVoicesConfig = require('./tts-voices'); } catch (_) {}
+
+app.get('/api/tts/voices', (_req, res) => {
+  res.json({
+    hasFishKey: Boolean(process.env.FISH_API_KEY),
+    hasElevenLabsKey: Boolean(process.env.ELEVENLABS_API_KEY),
+    fishVoices: Array.isArray(ttsVoicesConfig.fishVoices) ? ttsVoicesConfig.fishVoices : [],
+    elevenLabsVoices: Array.isArray(ttsVoicesConfig.elevenLabsVoices) ? ttsVoicesConfig.elevenLabsVoices : []
+  });
+});
+
 app.post('/api/tts/elevenlabs', async (req, res) => {
   const ip = req.ip || req.socket.remoteAddress || 'unknown';
   if (!allowRequest(ip, 25)) return res.status(429).json({ error: 'Demasiadas peticiones' });
@@ -344,6 +357,8 @@ const io = new Server(server, {
 const activeConnections = new Map();
 const roomSyncTimers = new Map();
 const roomStates = new Map();
+const liveSessionArchive = new Map();
+const dailyCoinsByUser = new Map(); // lowerUsername -> { dateKey, coins } // lowerUsername -> { roomId, stats, topLikes, topCoins, knownUsers, activeViewers, topViewers, updatedAt }
 
 function createInitialRoomState(username) {
   return {
@@ -359,6 +374,7 @@ function createInitialRoomState(username) {
     recentSocial: new Map(), // dedupe SHARE/FOLLOW vs SOCIAL
     lastRoomRefreshTs: 0,
     stats: { likes: 0, viewers: 0, follows: 0, coins: 0, shares: 0, subs: 0 },
+    rankInfo: { ownerRank: 0, rankLabel: '' },
     topLikes: new Map(),
     topCoins: new Map(),
     topViewers: [], // ranked viewers from ROOM_USER (ranksList / topViewers)
@@ -469,6 +485,22 @@ function trackActiveViewer(rs, label, role = 'Espectador') {
   }
 }
 
+function getTodayKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+function addDailyCoins(username, delta, floorCoins = 0) {
+  const key = String(username || '').replace(/^@/, '').toLowerCase();
+  if (!key) return 0;
+  const today = getTodayKey();
+  let rec = dailyCoinsByUser.get(key);
+  if (!rec || rec.dateKey !== today) rec = { dateKey: today, coins: 0 };
+  if (delta > 0) rec.coins += delta;
+  if (floorCoins > rec.coins) rec.coins = floorCoins;
+  dailyCoinsByUser.set(key, rec);
+  return rec.coins;
+}
+
 function buildTopViewersList(rs) {
   if (Array.isArray(rs.topViewers) && rs.topViewers.length) {
     return rs.topViewers.slice(0, 25);
@@ -497,6 +529,8 @@ function serializeRoomStats(rs) {
     connected: rs.connected,
     roomId: rs.roomId,
     stats: rs.stats,
+    dailyCoins: addDailyCoins(rs.username, 0, rs.stats.coins),
+    rankInfo: rs.rankInfo || { ownerRank: 0, rankLabel: '' },
     topLikes: Array.from(rs.topLikes.entries()).map(([user, val]) => ({ user, val })).sort((a, b) => b.val - a.val).slice(0, 15),
     topCoins: Array.from(rs.topCoins.entries()).map(([user, val]) => ({ user, val })).sort((a, b) => b.val - a.val).slice(0, 15),
     topViewers: buildTopViewersList(rs),
@@ -583,6 +617,26 @@ function serializeBattle(rs) {
   };
 }
 
+function archiveRoomState(rs) {
+  if (!rs || !rs.username) return;
+  const key = rs.username.replace(/^@/, '').toLowerCase();
+  if (!key) return;
+  liveSessionArchive.set(key, {
+    roomId: rs.roomId || '',
+    stats: { ...rs.stats },
+    topLikes: new Map(rs.topLikes),
+    topCoins: new Map(rs.topCoins),
+    knownUsers: new Map(rs.knownUsers),
+    activeViewers: new Map(rs.activeViewers),
+    topViewers: [...(rs.topViewers || [])],
+    updatedAt: Date.now()
+  });
+  if (liveSessionArchive.size > 30) {
+    const oldestKey = liveSessionArchive.keys().next().value;
+    if (oldestKey) liveSessionArchive.delete(oldestKey);
+  }
+}
+
 function disconnectRoom(token) {
   const t = roomSyncTimers.get(token);
   if (t) { clearInterval(t); roomSyncTimers.delete(token); }
@@ -592,7 +646,10 @@ function disconnectRoom(token) {
     activeConnections.delete(token);
   }
   const rs = roomStates.get(token);
-  if (rs) rs.connected = false;
+  if (rs) {
+    rs.connected = false;
+    archiveRoomState(rs);
+  }
 }
 
 function resolveHostName(rs, hid, fallbackObj, idx) {
@@ -648,7 +705,7 @@ function hydrateFromRoomInfo(rs, rawInfo) {
   // Also check link_mic.battle_settings / rival_anchor_id
   if (lm.rival_anchor_info) rememberUser(rs, lm.rival_anchor_info);
 
-  const likes = Number(rInfo.like_count || rInfo.stats?.like_count || 0);
+  const likes = Number(rInfo.like_count || rInfo.stats?.like_count || rInfo.stats?.total_like_count || rInfo.total_like_count || 0);
   const viewers = Number(rInfo.user_count || 0);
   const shares = Number(rInfo.stats?.share_count || rInfo.share_count || 0);
   const follows = Number(rInfo.stats?.follow_count || rInfo.follow_count || 0);
@@ -938,15 +995,19 @@ async function startTikTokConnection(socket, cleanUser, cleanToken) {
   disconnectRoom(cleanToken);
 
   const prevRs = roomStates.get(cleanToken);
-  const sameUser = prevRs && prevRs.username.toLowerCase() === ('@' + cleanUser).toLowerCase();
+  const archived = liveSessionArchive.get(cleanUser.toLowerCase());
+  const sourceState = (prevRs && prevRs.username.toLowerCase() === ('@' + cleanUser).toLowerCase())
+    ? prevRs
+    : (archived && (Date.now() - archived.updatedAt) < 6 * 60 * 60 * 1000 ? archived : null);
   const rs = createInitialRoomState(cleanUser);
-  if (sameUser) {
-    rs.stats = { ...prevRs.stats };
-    rs.topLikes = new Map(prevRs.topLikes);
-    rs.topCoins = new Map(prevRs.topCoins);
-    rs.knownUsers = new Map(prevRs.knownUsers);
-    rs.activeViewers = new Map(prevRs.activeViewers);
-    rs.topViewers = [...(prevRs.topViewers || [])];
+  if (sourceState) {
+    rs.roomId = sourceState.roomId || '';
+    rs.stats = { ...sourceState.stats };
+    rs.topLikes = new Map(sourceState.topLikes);
+    rs.topCoins = new Map(sourceState.topCoins);
+    rs.knownUsers = new Map(sourceState.knownUsers);
+    rs.activeViewers = new Map(sourceState.activeViewers);
+    rs.topViewers = [...(sourceState.topViewers || [])];
   }
   roomStates.set(cleanToken, rs);
 
@@ -960,8 +1021,16 @@ async function startTikTokConnection(socket, cleanUser, cleanToken) {
 
   tiktok.on(ControlEvent.CONNECTED, (st) => {
     rs.connected = true;
-    rs.roomId = st?.roomId || rs.roomId;
+    const newRoomId = safeId(st?.roomId || st?.roomInfo?.id_str || st?.roomInfo?.data?.id_str || '');
+    if (newRoomId && rs.roomId && newRoomId !== rs.roomId) {
+      rs.stats = { likes: 0, viewers: 0, follows: 0, coins: 0, shares: 0, subs: 0 };
+      rs.topLikes = new Map();
+      rs.topCoins = new Map();
+      rs.topViewers = [];
+    }
+    if (newRoomId) rs.roomId = newRoomId;
     hydrateFromRoomInfo(rs, st?.roomInfo || tiktok.roomInfo);
+    archiveRoomState(rs);
     emitToRoom('tiktok:status', { connected: true, username: rs.username, roomId: rs.roomId });
     emitToRoom('tiktok:stats_sync', serializeRoomStats(rs));
     emitToRoom('tiktok:battle_update', serializeBattle(rs));
@@ -984,6 +1053,34 @@ async function startTikTokConnection(socket, cleanUser, cleanToken) {
     rs.connected = false;
     emitToRoom('tiktok:status', { connected: false, username: rs.username });
   });
+
+  if (WebcastEvent.STREAM_END) {
+    tiktok.on(WebcastEvent.STREAM_END, () => {
+      const key = rs.username.replace(/^@/, '').toLowerCase();
+      liveSessionArchive.delete(key);
+      rs.connected = false;
+      rs.roomId = '';
+      rs.stats = { likes: 0, viewers: 0, follows: 0, coins: 0, shares: 0, subs: 0 };
+      rs.topLikes = new Map();
+      rs.topCoins = new Map();
+      rs.topViewers = [];
+      emitToRoom('tiktok:stats_sync', serializeRoomStats(rs));
+      emitToRoom('tiktok:status', { connected: false, username: rs.username, streamEnded: true });
+    });
+  }
+
+  if (WebcastEvent.RANK_UPDATE) {
+    tiktok.on(WebcastEvent.RANK_UPDATE, (d) => {
+      const first = Array.isArray(d?.updatesList) ? d.updatesList[0] : (Array.isArray(d?.updates) ? d.updates[0] : null);
+      if (first) {
+        const rk = Number(first.ownerRank ?? first.rank ?? 0);
+        if (rk > 0) {
+          rs.rankInfo = { ownerRank: rk, rankLabel: first.defaultContent || first.rankName || `Top #${rk}` };
+          emitToRoom('tiktok:stats_sync', serializeRoomStats(rs));
+        }
+      }
+    });
+  }
 
   tiktok.on(ControlEvent.ERROR, (err) => {
     console.error(`[TikPulse] Error en @${cleanUser}:`, err?.info || err?.message || err);
@@ -1032,6 +1129,7 @@ async function startTikTokConnection(socket, cleanUser, cleanToken) {
     if (deltaCount > 0) {
       const deltaCoins = unitCoins * deltaCount;
       rs.stats.coins += deltaCoins;
+      addDailyCoins(rs.username, deltaCoins, rs.stats.coins);
       rs.topCoins.set(user, (rs.topCoins.get(user) || 0) + deltaCoins);
 
       if (rs.battle.active && rs.ownerUserId && rs.battle.individualHosts.has(rs.ownerUserId)) {
@@ -1074,6 +1172,7 @@ async function startTikTokConnection(socket, cleanUser, cleanToken) {
     else rs.stats.likes += likeCount;
     rs.topLikes.set(user, (rs.topLikes.get(user) || 0) + likeCount);
     emitToRoom('tiktok:like', { user, likeCount, totalLikeCount: rs.stats.likes });
+    emitToRoom('tiktok:stats_sync', serializeRoomStats(rs));
   });
 
   function handleFollow(d) {
