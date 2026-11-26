@@ -1,0 +1,1728 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TikPulse — Alertas con Regalos TikTok, Música, TTS Chat y Batallas PK</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['DM Sans', 'system-ui', 'sans-serif'],
+            display: ['Syne', 'sans-serif']
+          },
+          colors: {
+            bg: '#0a0a0f',
+            panel: '#0d0d18',
+            card: '#131322',
+            cyanNeon: '#00F2EA',
+            pinkNeon: '#FE2C55'
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    body {
+      font-family: 'DM Sans', system-ui, sans-serif;
+      background-color: #0a0a0f;
+      color: #F1F5F9;
+      overflow-x: hidden;
+    }
+    .font-display { font-family: 'Syne', sans-serif; }
+    .tp-card {
+      background: linear-gradient(180deg, rgba(19, 19, 34, 0.96), rgba(13, 13, 24, 0.98));
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      box-shadow: 0 8px 26px rgba(0, 0, 0, 0.4);
+    }
+    .tp-btn-primary {
+      background: linear-gradient(135deg, #FE2C55 0%, #FF5E7E 50%, #00F2EA 100%);
+      color: #0a0a0f;
+      font-weight: 800;
+      box-shadow: 0 6px 20px rgba(254, 44, 85, 0.28);
+    }
+    .tp-btn-primary:hover { filter: brightness(1.08); }
+    .nav-item.active {
+      background: linear-gradient(90deg, rgba(254, 44, 85, 0.22), rgba(0, 242, 234, 0.05));
+      color: #FFFFFF;
+      border-left: 3px solid #FE2C55;
+    }
+    .subtab-btn.active {
+      background: rgba(254, 44, 85, 0.18);
+      color: #FF8FA3;
+      border-color: rgba(254, 44, 85, 0.55);
+    }
+    .toggle-switch {
+      width: 42px;
+      height: 23px;
+      border-radius: 9999px;
+      background: #26263d;
+      position: relative;
+      transition: background 0.2s ease;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .toggle-switch::after {
+      content: '';
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 17px;
+      height: 17px;
+      border-radius: 9999px;
+      background: #FFFFFF;
+      transition: transform 0.2s ease;
+    }
+    .toggle-switch.active { background: #FE2C55; }
+    .toggle-switch.active::after { transform: translateX(19px); }
+    .overlay-preview-box {
+      background:
+        radial-gradient(circle at 18% 15%, rgba(254, 44, 85, 0.14), transparent 45%),
+        radial-gradient(circle at 82% 85%, rgba(0, 242, 234, 0.14), transparent 45%),
+        #090910;
+      border: 1.5px solid rgba(0, 242, 234, 0.45);
+    }
+    .overlay-chroma { background: #00B140 !important; border-color: #00FF5E !important; }
+    @keyframes popIn { 0% { opacity: 0; transform: translateY(12px) scale(0.94); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
+    @keyframes shrinkBar { from { width: 100%; } to { width: 0%; } }
+    .animate-pop { animation: popIn 0.24s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+    .alert-progress-bar { animation-name: shrinkBar; animation-timing-function: linear; animation-fill-mode: forwards; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.02); }
+    ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.14); border-radius: 9999px; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col lg:flex-row">
+
+  <!-- Toast Container -->
+  <div id="toastContainer" class="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none max-w-xs w-full"></div>
+
+  <!-- Live Floating Alert Banner -->
+  <div id="globalAlertBanner" class="fixed bottom-5 right-5 z-50 hidden max-w-sm w-[calc(100%-2.5rem)] pointer-events-none"></div>
+
+  <!-- Mobile Sidebar Backdrop -->
+  <div id="sidebarBackdrop" class="fixed inset-0 z-40 bg-black/75 backdrop-blur-sm hidden lg:hidden"></div>
+
+  <!-- Action Create/Edit Modal -->
+  <div id="actionModal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm items-center justify-center p-4">
+    <div class="tp-card rounded-2xl w-full max-w-lg p-5 space-y-4 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-white/10 pb-3">
+        <div class="flex items-center gap-2.5">
+          <div id="modalGiftThumb" class="w-9 h-9 rounded-xl bg-bg border border-white/10 flex items-center justify-center overflow-hidden text-lg">🎁</div>
+          <h3 id="actionModalTitle" class="font-display text-base font-bold text-white">Configurar Alerta con Música</h3>
+        </div>
+        <button id="btnCloseActionModal" type="button" class="p-1.5 rounded-lg bg-white/5 hover:bg-white/15 text-slate-300"><i data-lucide="x" class="w-4 h-4"></i></button>
+      </div>
+      <form id="actionModalForm" class="space-y-3.5">
+        <input type="hidden" id="actEditId" />
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[11px] text-slate-400 mb-1">Tipo de alerta</label>
+            <select id="actType" class="w-full bg-bg border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-pinkNeon">
+              <option value="gift">🎁 Gift Alert (Regalo)</option>
+              <option value="follow">⭐ Follow Alert (Seguidor)</option>
+              <option value="sub">👑 Sub Alert (Suscripción)</option>
+              <option value="like">❤️ Like Alert (Cada X likes)</option>
+              <option value="share">📢 Share Alert (Compartido)</option>
+              <option value="join">👋 Join Alert (Entrada)</option>
+              <option value="keyword">💬 Palabra clave en chat</option>
+            </select>
+          </div>
+          <div id="actGiftWrap">
+            <label class="block text-[11px] text-slate-400 mb-1">Regalo de TikTok</label>
+            <select id="actGiftSelect" class="w-full bg-bg border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-pinkNeon"></select>
+          </div>
+          <div id="actKeywordWrap" class="hidden">
+            <label class="block text-[11px] text-slate-400 mb-1">Palabra clave</label>
+            <input id="actKeywordInput" type="text" maxlength="32" placeholder="Ej. fuego, vip" class="w-full bg-bg border border-white/10 rounded-xl px-3 py-2 text-xs text-cyanNeon focus:outline-none" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-3 gap-2.5">
+          <div>
+            <label class="block text-[11px] text-slate-400 mb-1">Mín. cantidad</label>
+            <input id="actMinCount" type="number" min="1" max="10000" value="1" class="w-full bg-bg border border-white/10 rounded-xl px-3 py-2 text-xs text-white" />
+          </div>
+          <div>
+            <label class="block text-[11px] text-slate-400 mb-1">Duración (Seg)</label>
+            <input id="actDuration" type="number" min="1" max="30" value="5" class="w-full bg-bg border border-white/10 rounded-xl px-3 py-2 text-xs text-white" />
+          </div>
+          <div>
+            <label class="block text-[11px] text-slate-400 mb-1">Pantalla</label>
+            <select id="actScreen" class="w-full bg-bg border border-white/10 rounded-xl px-2.5 py-2 text-xs text-white">
+              <option value="screen1">Screen 1</option>
+              <option value="screen2">Screen 2 Full</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[11px] text-slate-400 mb-1">Sonido base</label>
+            <select id="actSoundPreset" class="w-full bg-bg border border-white/10 rounded-xl px-3 py-2 text-xs text-white">
+              <option value="coin">Moneda rápida</option>
+              <option value="bell">Campana brillante</option>
+              <option value="laser">Láser arcade</option>
+              <option value="fanfare">Fanfarria épica</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-[11px] text-slate-400 mb-1">Subir música MP3/WAV (máx. 5 MB)</label>
+            <label class="flex items-center justify-center w-full bg-bg hover:bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-cyanNeon font-semibold cursor-pointer truncate">
+              <span id="actAudioLabel" class="truncate">+ Subir música MP3...</span>
+              <input id="actAudioFile" type="file" accept="audio/*" class="hidden" />
+            </label>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-[11px] text-slate-400 mb-1">Texto de alerta / TTS ({nickname}, {giftName}, {repeatCount})</label>
+          <input id="actMessage" type="text" maxlength="160" value="¡Gracias {nickname} por {repeatCount}x {giftName}!" class="w-full bg-bg border border-white/10 rounded-xl px-3 py-2 text-xs text-white" />
+        </div>
+
+        <div class="flex items-center justify-between p-3 rounded-xl bg-bg border border-white/10">
+          <span class="text-xs font-semibold text-slate-200">Leer mensaje con TTS al disparar</span>
+          <button id="actUseTtsToggle" type="button" class="toggle-switch active" aria-label="Leer con TTS"></button>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" id="btnCancelActionModal" class="px-4 py-2 rounded-xl bg-white/10 text-xs font-semibold text-slate-200">Cancelar</button>
+          <button type="submit" class="tp-btn-primary px-5 py-2 rounded-xl text-xs">Guardar Alerta</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Sidebar (TikPulse · 8 secciones) -->
+  <aside id="appSidebar" class="fixed lg:sticky top-0 left-0 z-50 lg:z-20 w-[225px] shrink-0 bg-panel border-r border-white/10 h-screen flex flex-col transform -translate-x-full lg:translate-x-0 transition-transform duration-200">
+    <div class="p-4 border-b border-white/10 flex items-center justify-between">
+      <div class="flex items-center gap-2.5">
+        <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-pinkNeon to-cyanNeon flex items-center justify-center shadow-lg">
+          <i data-lucide="zap" class="w-4 h-4 text-bg stroke-[2.6]"></i>
+        </div>
+        <div>
+          <div class="font-display font-extrabold text-base leading-none tracking-tight">Tik<span class="text-cyanNeon">Pulse</span></div>
+          <div class="text-[10px] text-pink-300 font-semibold mt-0.5">LIVE · SEGURO</div>
+        </div>
+      </div>
+      <button id="btnCloseDrawer" type="button" class="lg:hidden p-1 rounded-lg bg-white/5 text-slate-300"><i data-lucide="x" class="w-4 h-4"></i></button>
+    </div>
+
+    <div class="mx-3 mt-3 p-3 rounded-xl bg-white/[0.04] border border-white/10">
+      <div class="flex items-center justify-between mb-1">
+        <span class="text-xs font-bold text-white truncate" id="sidebarUserBadge">@tu_usuario</span>
+        <span class="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-gradient-to-r from-pinkNeon to-cyanNeon text-bg">PRO</span>
+      </div>
+      <div class="flex items-center gap-1.5 text-[11px]">
+        <span id="sidebarConnDot" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span id="sidebarConnText" class="text-emerald-400 font-semibold">Conectado</span>
+      </div>
+    </div>
+
+    <nav class="flex-1 p-3 space-y-1 overflow-y-auto">
+      <button type="button" data-tab="dashboard" class="nav-item active w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:bg-white/5 transition"><span>⚡</span> Dashboard</button>
+      <button type="button" data-tab="acciones" class="nav-item w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:bg-white/5 transition">
+        <span class="flex items-center gap-2.5"><span>🎁</span> Regalos y Alertas</span>
+        <span id="sidebarAlertState" class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300">ON</span>
+      </button>
+      <button type="button" data-tab="voz" class="nav-item w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:bg-white/5 transition">
+        <span class="flex items-center gap-2.5"><span>🔊</span> TTS Chat &amp; Voz</span>
+        <span id="sidebarTtsState" class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300">ON</span>
+      </button>
+      <button type="button" data-tab="batalla" class="nav-item w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:bg-white/5 transition">
+        <span class="flex items-center gap-2.5"><span>⚔️</span> Batalla PK</span>
+        <span class="text-[9px] px-1.5 py-0.5 rounded bg-pinkNeon/20 text-pink-300 font-bold">LIVE</span>
+      </button>
+      <button type="button" data-tab="ranking" class="nav-item w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:bg-white/5 transition"><span>🏆</span> Ranking</button>
+      <button type="button" data-tab="chat" class="nav-item w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:bg-white/5 transition"><span>💬</span> Chat y Bot</button>
+      <button type="button" data-tab="espectadores" class="nav-item w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:bg-white/5 transition">
+        <span class="flex items-center gap-2.5"><span>👁️</span> Espectadores</span>
+        <span id="sidebarViewerBadge" class="text-[10px] text-cyanNeon font-bold">148</span>
+      </button>
+      <button type="button" data-tab="overlay" class="nav-item w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:bg-white/5 transition"><span>🎬</span> Overlays</button>
+    </nav>
+
+    <div class="p-3 m-3 rounded-xl bg-white/[0.03] border border-white/10 flex items-center justify-between">
+      <div>
+        <div class="text-[11px] font-bold text-white">Auto-Simulador</div>
+        <div class="text-[10px] text-slate-400">Eventos en vivo</div>
+      </div>
+      <button id="toggleAutoSim" type="button" class="toggle-switch" aria-label="Activar auto simulador"></button>
+    </div>
+  </aside>
+
+  <!-- Main Workspace -->
+  <div class="flex-1 flex flex-col min-w-0">
+    <header class="sticky top-0 z-30 bg-bg/95 backdrop-blur-md border-b border-white/10 px-4 py-3">
+      <div class="max-w-6xl mx-auto flex items-center justify-between gap-3">
+        <div class="flex items-center gap-3 min-w-0">
+          <button id="btnOpenDrawer" type="button" class="lg:hidden p-2 rounded-xl bg-card border border-white/10 text-white hover:bg-white/10" aria-label="Abrir menú"><i data-lucide="menu" class="w-5 h-5"></i></button>
+          <h1 id="topPageTitle" class="font-display font-extrabold text-base sm:text-lg text-white truncate">⚡ Dashboard</h1>
+        </div>
+        <div class="flex items-center gap-2 sm:gap-2.5">
+          <button id="btnWakeLock" type="button" class="px-2.5 py-1.5 rounded-xl bg-card border border-white/10 text-[11px] font-semibold text-slate-300 hover:text-white flex items-center gap-1.5" title="Evitar que la pantalla se apague">
+            <i data-lucide="sun" class="w-3.5 h-3.5 text-amber-300"></i>
+            <span class="hidden sm:inline" id="wakeLockLabel">Pantalla activa: OFF</span>
+          </button>
+          <button id="btnQuickSimGift" type="button" class="px-3 py-1.5 rounded-xl bg-pinkNeon/15 border border-pinkNeon/40 text-pink-200 hover:bg-pinkNeon/25 text-xs font-bold flex items-center gap-1.5">
+            <i data-lucide="gift" class="w-3.5 h-3.5"></i> <span class="hidden sm:inline">Probar regalo</span>
+          </button>
+          <span id="topLivePill" class="px-2.5 py-1 rounded-full bg-pinkNeon/20 border border-pinkNeon/50 text-[11px] font-extrabold text-pink-200 flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-pinkNeon animate-pulse"></span> EN VIVO
+          </span>
+        </div>
+      </div>
+    </header>
+
+    <main class="flex-1 p-4 sm:p-5 max-w-6xl w-full mx-auto space-y-5">
+
+      <!-- TAB 1: ⚡ DASHBOARD -->
+      <section id="tab-dashboard" class="tab-panel space-y-4">
+        <div class="tp-card rounded-2xl p-4 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          <div class="flex-1 flex items-center gap-2 bg-bg border border-white/10 rounded-xl px-3.5 py-2.5">
+            <span class="text-pinkNeon font-bold text-sm">@</span>
+            <input id="connectUserInput" type="text" maxlength="32" value="tu_usuario" placeholder="usuario de TikTok LIVE" class="bg-transparent flex-1 text-sm font-semibold text-white focus:outline-none" />
+          </div>
+          <button id="btnConnectLive" type="button" class="tp-btn-primary px-5 py-2.5 rounded-xl text-xs sm:text-sm flex items-center justify-center gap-2">
+            <i data-lucide="radio" class="w-4 h-4"></i> <span id="connectBtnText">Conectado</span>
+          </button>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
+          <div class="tp-card rounded-xl p-3"><div class="text-[11px] text-slate-400">👁️ Espectadores</div><div id="cntViewers" class="font-display text-xl font-extrabold text-white mt-0.5">148</div></div>
+          <div class="tp-card rounded-xl p-3"><div class="text-[11px] text-slate-400">❤️ Likes</div><div id="cntLikes" class="font-display text-xl font-extrabold text-pinkNeon mt-0.5">4,280</div></div>
+          <div class="tp-card rounded-xl p-3"><div class="text-[11px] text-slate-400">⭐ Seguidores</div><div id="cntFollows" class="font-display text-xl font-extrabold text-cyanNeon mt-0.5">34</div></div>
+          <div class="tp-card rounded-xl p-3"><div class="text-[11px] text-slate-400">💎 Diamantes</div><div id="cntDiamonds" class="font-display text-xl font-extrabold text-amber-300 mt-0.5">1,650</div></div>
+          <div class="tp-card rounded-xl p-3"><div class="text-[11px] text-slate-400">📢 Compartidos</div><div id="cntShares" class="font-display text-xl font-extrabold text-purple-300 mt-0.5">19</div></div>
+          <div class="tp-card rounded-xl p-3"><div class="text-[11px] text-slate-400">👑 Suscriptores</div><div id="cntSubs" class="font-display text-xl font-extrabold text-emerald-300 mt-0.5">5</div></div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+          <div class="lg:col-span-8 tp-card rounded-2xl p-4 flex flex-col h-[430px]">
+            <div class="flex items-center justify-between mb-3">
+              <h2 class="font-display text-sm font-bold text-white">Actividad en Tiempo Real</h2>
+              <div class="flex items-center gap-2">
+                <button type="button" data-sim-quick="follow" class="text-[11px] px-2 py-1 rounded-lg bg-cyanNeon/15 text-cyanNeon font-bold">+ Follow</button>
+                <button type="button" data-sim-quick="sub" class="text-[11px] px-2 py-1 rounded-lg bg-amber-500/20 text-amber-300 font-bold">+ Sub</button>
+                <button id="btnClearActivity" type="button" class="text-xs text-slate-400 hover:text-white">Limpiar</button>
+              </div>
+            </div>
+            <div id="activityFeedList" class="flex-1 overflow-y-auto space-y-2 pr-1"></div>
+          </div>
+
+          <div class="lg:col-span-4 tp-card rounded-2xl p-4 flex flex-col justify-between h-[430px]">
+            <div class="flex items-center justify-between">
+              <span class="font-display text-sm font-bold text-white">Monitor de Alertas</span>
+              <span id="dashQueuePill" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/10 text-cyanNeon">Cola: 0</span>
+            </div>
+            <div id="dashAlertStage" class="flex-1 my-3 rounded-xl overlay-preview-box flex flex-col items-center justify-center p-4 text-center relative overflow-hidden">
+              <p class="text-xs text-slate-400">Las alertas con imagen real y barra de progreso aparecen aquí.</p>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <button type="button" data-sim-quick="gift" class="py-2 rounded-xl bg-pinkNeon/15 border border-pinkNeon/35 text-pink-200 text-xs font-bold hover:bg-pinkNeon/25">🎁 Regalo</button>
+              <button type="button" data-sim-quick="combo" class="py-2 rounded-xl bg-cyanNeon/15 border border-cyanNeon/35 text-cyanNeon text-xs font-bold hover:bg-cyanNeon/25">🔥 Combo ×10</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 2: 🎁 REGALOS CON IMAGEN Y ALERTAS CON MÚSICA (ESTILO TIKFINITY) -->
+      <section id="tab-acciones" class="tab-panel hidden space-y-4">
+        <div class="tp-card rounded-2xl p-4 sm:p-5 space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 class="font-display text-base font-bold text-white">🎁 Regalos de TikTok con Imagen y Música</h2>
+              <p class="text-xs text-slate-400">Explora el catálogo completo de regalos de TikTok (y al conectar en Render carga automáticamente los +100 regalos oficiales en vivo) para asignarles su MP3.</p>
+            </div>
+            <div class="flex items-center gap-2.5">
+              <div class="flex items-center gap-2 bg-bg px-3 py-1.5 rounded-xl border border-white/10">
+                <span class="text-xs font-bold text-slate-200">Alertas</span>
+                <button id="toggleMasterAlerts" type="button" class="toggle-switch active" aria-label="Alertas ON OFF"></button>
+              </div>
+              <button id="btnOpenNewAction" type="button" class="tp-btn-primary px-4 py-2 rounded-xl text-xs flex items-center gap-1.5">
+                <i data-lucide="plus" class="w-4 h-4"></i> Nueva
+              </button>
+            </div>
+          </div>
+
+          <!-- Two Main Sub-Views: Visual Gift Catalog Grid (TikFinity style) vs Active Alerts List -->
+          <div class="flex flex-wrap items-center gap-2 border-b border-white/10 pb-3">
+            <button type="button" data-acc-view="catalog" class="acc-view-btn subtab-btn active px-3.5 py-2 rounded-xl bg-bg border border-white/10 text-xs font-bold text-slate-300">🖼️ Catálogo Visual de Regalos (<span id="catalogTotalBadge">60</span>)</button>
+            <button type="button" data-acc-view="active" class="acc-view-btn subtab-btn px-3.5 py-2 rounded-xl bg-bg border border-white/10 text-xs font-bold text-slate-300">⚡ Mis Alertas Configuradas (<span id="activeAlertsBadge">5</span>)</button>
+          </div>
+
+          <!-- VIEW A: VISUAL TIKTOK GIFTS CATALOG WITH IMAGES (CLICK TO ASSIGN MUSIC!) -->
+          <div id="accView-catalog" class="space-y-3">
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-2.5">
+              <input id="catalogSearchInput" type="text" placeholder="Buscar regalo de TikTok (Rose, Galaxy, Lion, Universe, Corgi, Perfume...)" class="md:col-span-7 bg-bg border border-white/10 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-cyanNeon" />
+              <select id="catalogCoinFilter" class="md:col-span-5 bg-bg border border-white/10 rounded-xl px-3 py-2 text-xs text-white">
+                <option value="all">Todas las monedas (1 – 44,999 🪙)</option>
+                <option value="1-10">1 – 10 monedas (Rápidos)</option>
+                <option value="11-99">11 – 99 monedas</option>
+                <option value="100-999">100 – 999 monedas</option>
+                <option value="1000-9999">1,000 – 9,999 monedas</option>
+                <option value="10000+">10,000+ monedas (Épicos)</option>
+              </select>
+            </div>
+            <div id="visualGiftGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2.5 max-h-[520px] overflow-y-auto pr-1"></div>
+          </div>
+
+          <!-- VIEW B: ACTIVE CONFIGURED ALERTS (GIFTS, FOLLOW, SUB, LIKE, SHARE, JOIN, KEYWORD) -->
+          <div id="accView-active" class="hidden space-y-3">
+            <div class="flex flex-wrap items-center gap-1.5">
+              <button type="button" data-act-filter="all" class="act-filter-btn subtab-btn active px-3 py-1.5 rounded-xl bg-bg border border-white/10 text-xs font-bold text-slate-300">Todas</button>
+              <button type="button" data-act-filter="gift" class="act-filter-btn subtab-btn px-3 py-1.5 rounded-xl bg-bg border border-white/10 text-xs font-bold text-slate-300">🎁 Regalos</button>
+              <button type="button" data-act-filter="follow" class="act-filter-btn subtab-btn px-3 py-1.5 rounded-xl bg-bg border border-white/10 text-xs font-bold text-slate-300">⭐ Follow</button>
+              <button type="button" data-act-filter="sub" class="act-filter-btn subtab-btn px-3 py-1.5 rounded-xl bg-bg border border-white/10 text-xs font-bold text-slate-300">👑 Sub</button>
+              <button type="button" data-act-filter="other" class="act-filter-btn subtab-btn px-3 py-1.5 rounded-xl bg-bg border border-white/10 text-xs font-bold text-slate-300">❤️ Like / Share / Join / Keyword</button>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-2.5">
+              <input id="actionSearchInput" type="text" placeholder="Buscar alerta configurada..." class="md:col-span-6 bg-bg border border-white/10 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-pinkNeon" />
+              <select id="streakModeSelect" class="md:col-span-3 bg-bg border border-white/10 rounded-xl px-3 py-2 text-xs text-white">
+                <option value="end">Combos: Al terminar racha</option>
+                <option value="each">Combos: En cada toque</option>
+              </select>
+              <select id="queueModeSelect" class="md:col-span-3 bg-bg border border-white/10 rounded-xl px-3 py-2 text-xs text-white">
+                <option value="queue">Cola: Ordenada (sin pisar)</option>
+                <option value="instant">Cola: Inmediata</option>
+              </select>
+            </div>
+            <div id="actionsCardsList" class="space-y-2.5"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 3: 🔊 TTS CHAT & VOZ (CON VOZ ÚNICA POR USUARIO + COOLDOWN + 3 MOTORES) -->
+      <section id="tab-voz" class="tab-panel hidden space-y-4">
+        <div class="tp-card rounded-2xl p-4 sm:p-5 space-y-5">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 class="font-display text-base font-bold text-white">🔊 TTS Chat &amp; Voz (Cola Única Anti-Spam)</h2>
+              <p class="text-xs text-slate-400">Navegador, Google TTS (12 acentos), ElevenLabs (proxy seguro en Render) y voz única por espectador.</p>
+            </div>
+            <div class="flex items-center gap-2.5">
+              <button id="btnTtsSkip" type="button" class="px-3 py-1.5 rounded-xl bg-amber-500/20 text-amber-200 text-xs font-bold">Saltar</button>
+              <button id="btnTtsClear" type="button" class="px-3 py-1.5 rounded-xl bg-pinkNeon/20 text-pink-200 text-xs font-bold">Vaciar cola</button>
+              <button id="toggleMasterTts" type="button" class="toggle-switch active" aria-label="Activar TTS"></button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+            <button type="button" data-tts-engine="browser" class="tts-engine-btn subtab-btn active p-3.5 rounded-xl bg-bg border border-white/10 text-left"><div class="text-xs font-extrabold text-white">🔊 Navegador (Gratis)</div><div class="text-[11px] text-slate-400 mt-0.5">Web Speech API · 0.5x–2x</div></button>
+            <button type="button" data-tts-engine="google" class="tts-engine-btn subtab-btn p-3.5 rounded-xl bg-bg border border-white/10 text-left"><div class="text-xs font-extrabold text-white">🌐 Google TTS (12 acentos)</div><div class="text-[11px] text-slate-400 mt-0.5">es-US, es-MX, es-ES, pt-BR, en-US...</div></button>
+            <button type="button" data-tts-engine="elevenlabs" class="tts-engine-btn subtab-btn p-3.5 rounded-xl bg-bg border border-white/10 text-left"><div class="text-xs font-extrabold text-white">✨ ElevenLabs IA</div><div class="text-[11px] text-slate-400 mt-0.5">8 voces + proxy seguro en Render</div></button>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+            <div class="lg:col-span-7 space-y-4">
+              <div id="boxGoogleTts" class="hidden bg-cyanNeon/10 border border-cyanNeon/30 rounded-xl p-4 space-y-2">
+                <div class="text-xs font-bold text-cyanNeon">Idioma / Acento Google TTS</div>
+                <select id="googleAccentSelect" class="w-full bg-bg border border-white/15 rounded-xl px-3 py-2 text-xs text-white">
+                  <option value="es-US">Español (Latinoamérica / US)</option><option value="es-MX">Español (México)</option><option value="es-ES">Español (España)</option><option value="pt-BR">Portugués (Brasil)</option><option value="en-US">English (US)</option><option value="en-GB">English (UK)</option><option value="fr-FR">Français</option><option value="de-DE">Deutsch</option><option value="it-IT">Italiano</option><option value="ja-JP">日本語</option><option value="ko-KR">한국어</option><option value="ru-RU">Русский</option>
+                </select>
+              </div>
+
+              <div id="boxElevenLabs" class="hidden bg-pinkNeon/10 border border-pinkNeon/35 rounded-xl p-4 space-y-3">
+                <div class="flex items-center justify-between"><span class="text-xs font-bold text-pink-200">ElevenLabs IA</span><span class="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold">Protegido en Render</span></div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <div><label class="block text-[11px] text-slate-300 mb-1">API Key (solo prueba local)</label><input id="elApiKey" type="password" autocomplete="off" placeholder="En Render usa ELEVENLABS_API_KEY" class="w-full bg-bg border border-white/15 rounded-lg px-3 py-2 text-xs text-white" /></div>
+                  <div><label class="block text-[11px] text-slate-300 mb-1">Voz predefinida</label><select id="elVoiceSelect" class="w-full bg-bg border border-white/15 rounded-lg px-3 py-2 text-xs text-white"><option value="EXAVITQu4vr4xnSDxMaL">Bella</option><option value="21m00Tcm4TlvDq8ikWAM">Rachel</option><option value="AZnzlk1XvdvUeBnXmlld">Domi</option><option value="MF3mGyEYCl7XYWbV9V6O">Elli</option><option value="ErXwobaYiN019PkySvjV">Antoni</option><option value="VR6AewLTigWG4xSOukaG">Arnold</option><option value="pNInz6obpgDQGcFmaJgB">Adam</option><option value="yoZ06aMxZJJ28mfd3POQ">Sam</option></select></div>
+                </div>
+                <div><label class="block text-[11px] text-slate-300 mb-1">Voice ID personalizado (opcional)</label><input id="elCustomVoiceId" type="text" placeholder="Opcional" class="w-full bg-bg border border-white/15 rounded-lg px-3 py-2 text-xs font-mono text-cyanNeon" /></div>
+              </div>
+
+              <div class="bg-bg/90 rounded-xl p-4 border border-white/10 space-y-3">
+                <div class="text-xs font-bold text-white uppercase tracking-wider">Permisos, Cooldown y Voz por Usuario</div>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                  <div><label class="block text-[11px] text-slate-400 mb-1">Audiencia</label><select id="ttsAudience" class="w-full bg-card border border-white/10 rounded-lg px-2 py-2 text-xs text-white"><option value="all">Todos</option><option value="filtered">Filtrados</option></select></div>
+                  <div><label class="block text-[11px] text-slate-400 mb-1">Cooldown (s)</label><input id="ttsCooldownSec" type="number" min="0" max="120" value="4" class="w-full bg-card border border-white/10 rounded-lg px-2.5 py-2 text-xs text-cyanNeon font-bold" /></div>
+                  <div><label class="block text-[11px] text-slate-400 mb-1">Máx. letras</label><input id="ttsMaxChars" type="number" min="20" max="300" value="140" class="w-full bg-card border border-white/10 rounded-lg px-2.5 py-2 text-xs text-white" /></div>
+                  <div><label class="block text-[11px] text-slate-400 mb-1">Mín. monedas</label><input id="ttsMinCoins" type="number" min="0" value="1" class="w-full bg-card border border-white/10 rounded-lg px-2.5 py-2 text-xs text-amber-300 font-bold" /></div>
+                </div>
+                <div class="flex flex-wrap gap-3 text-xs text-slate-300">
+                  <label class="flex items-center gap-1.5 cursor-pointer"><input id="chkUniqueVoice" type="checkbox" checked class="accent-cyanNeon" /> Voz distinta por usuario</label>
+                  <label class="flex items-center gap-1.5 cursor-pointer"><input id="chkFollowers" type="checkbox" checked class="accent-pinkNeon" /> Seguidores</label>
+                  <label class="flex items-center gap-1.5 cursor-pointer"><input id="chkSubs" type="checkbox" checked class="accent-pinkNeon" /> Suscriptores</label>
+                  <label class="flex items-center gap-1.5 cursor-pointer"><input id="chkStripEmojis" type="checkbox" checked class="accent-cyanNeon" /> Limpiar emojis</label>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <div><label class="block text-[11px] text-slate-400 mb-1">Lista blanca VIP</label><input id="ttsWhitelist" type="text" placeholder="@vip1, @mod_juan" class="w-full bg-card border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white" /></div>
+                  <div><label class="block text-[11px] text-slate-400 mb-1">Palabras bloqueadas (→ ***)</label><input id="ttsBlockedWords" type="text" value="spam,groseria,http" class="w-full bg-card border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white" /></div>
+                </div>
+              </div>
+
+              <div class="bg-bg/90 rounded-xl p-4 border border-white/10 space-y-2.5">
+                <div class="text-xs font-bold text-white uppercase tracking-wider">Plantillas de lectura</div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <div><label class="block text-[10px] text-slate-400 mb-1">Chat</label><input id="tplTtsChat" type="text" value="{nickname} dice {message}" class="w-full bg-card border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white" /></div>
+                  <div><label class="block text-[10px] text-slate-400 mb-1">Regalos</label><input id="tplTtsGift" type="text" value="{nickname} envió {repeatCount} {giftName}" class="w-full bg-card border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white" /></div>
+                  <div><label class="block text-[10px] text-slate-400 mb-1">Seguidores</label><input id="tplTtsFollow" type="text" value="Gracias {nickname} por seguir" class="w-full bg-card border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white" /></div>
+                  <div><label class="block text-[10px] text-slate-400 mb-1">Compartidos</label><input id="tplTtsShare" type="text" value="{nickname} compartió el directo" class="w-full bg-card border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white" /></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="lg:col-span-5 space-y-4">
+              <div class="bg-bg/90 rounded-xl p-4 border border-white/10 space-y-3">
+                <div><label class="block text-xs text-slate-400 mb-1">Voz del navegador</label><select id="browserVoiceSelect" class="w-full bg-card border border-white/10 rounded-lg px-3 py-2 text-xs text-white"><option value="">Automática (Español)</option></select></div>
+                <div><div class="flex justify-between text-xs mb-1"><span>Volumen global</span><span id="lblVol" class="text-cyanNeon font-bold">85%</span></div><input id="rngVol" type="range" min="0" max="100" value="85" class="w-full accent-pinkNeon" /></div>
+                <div><div class="flex justify-between text-xs mb-1"><span>Velocidad</span><span id="lblRate" class="text-cyanNeon font-bold">1.05x</span></div><input id="rngRate" type="range" min="0.5" max="2" step="0.05" value="1.05" class="w-full accent-cyanNeon" /></div>
+                <div><div class="flex justify-between text-xs mb-1"><span>Tono</span><span id="lblPitch" class="text-cyanNeon font-bold">1.0</span></div><input id="rngPitch" type="range" min="0.5" max="2" step="0.1" value="1.0" class="w-full accent-cyanNeon" /></div>
+                <div class="pt-1"><label class="block text-xs text-slate-400 mb-1">Probar voz ahora</label><div class="flex gap-2"><input id="ttsTestText" type="text" value="¡Gracias Sofía por la Galaxia en la batalla! 🔥" class="flex-1 bg-card border border-white/10 rounded-lg px-3 py-2 text-xs text-white" /><button id="btnRunTtsTest" type="button" class="tp-btn-primary px-3.5 py-2 rounded-lg text-xs">Hablar</button></div></div>
+              </div>
+              <div class="bg-bg/90 rounded-xl p-4 border border-white/10">
+                <div class="flex items-center justify-between mb-2"><span class="text-xs font-bold text-white">Cola de reproducción TTS</span><span id="ttsQueueBadge" class="text-[11px] font-bold text-cyanNeon">0 en cola</span></div>
+                <div id="ttsQueueBox" class="space-y-1.5 max-h-40 overflow-y-auto text-xs text-slate-400"><div class="italic text-slate-500">Cola vacía</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 4: ⚔️ BATALLA PK (1v1 / 2v2 / FFA GRUPAL EN TIEMPO REAL) -->
+      <section id="tab-batalla" class="tab-panel hidden space-y-4">
+        <div class="tp-card rounded-2xl p-4 sm:p-5 space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-2.5"><h2 class="font-display text-base font-bold text-white">⚔️ Batalla PK en Tiempo Real</h2><span id="pkStatusBadge" class="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-pinkNeon/20 text-pink-200">🔴 EN CURSO</span></div>
+            <div class="flex items-center gap-2">
+              <button id="btnPkPause" type="button" class="px-3 py-1.5 rounded-xl bg-emerald-500/20 text-emerald-300 text-xs font-bold">Pausar</button>
+              <button id="btnPkReset" type="button" class="px-3 py-1.5 rounded-xl bg-white/10 text-slate-200 text-xs font-bold">Reiniciar 5:00</button>
+            </div>
+          </div>
+          <div class="grid grid-cols-3 gap-2">
+            <button type="button" data-pk-mode="1v1" class="pk-mode-btn subtab-btn active py-2.5 px-3 rounded-xl bg-bg border border-white/10 text-xs font-bold text-white">⚔️ 1 vs 1</button>
+            <button type="button" data-pk-mode="2v2" class="pk-mode-btn subtab-btn py-2.5 px-3 rounded-xl bg-bg border border-white/10 text-xs font-bold text-white">🛡️ 2 vs 2 (4P)</button>
+            <button type="button" data-pk-mode="ffa" class="pk-mode-btn subtab-btn py-2.5 px-3 rounded-xl bg-bg border border-white/10 text-xs font-bold text-white">👑 Grupal (FFA)</button>
+          </div>
+          <div id="pkBoardRender" class="bg-bg rounded-2xl p-4 sm:p-5 border border-white/10 space-y-4"></div>
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="text-xs font-bold text-slate-400 mr-1">Potenciadores:</span>
+            <button type="button" data-boost="2" class="px-3 py-1.5 rounded-lg bg-amber-500/20 text-amber-200 text-xs font-bold">⚡ ×2 (30s)</button>
+            <button type="button" data-boost="3" class="px-3 py-1.5 rounded-lg bg-orange-500/20 text-orange-200 text-xs font-bold">🔥 ×3 (20s)</button>
+            <button type="button" data-boost="glove" class="px-3 py-1.5 rounded-lg bg-cyanNeon/20 text-cyanNeon text-xs font-bold">🥊 Guante ×5</button>
+            <button type="button" data-boost="mist" class="px-3 py-1.5 rounded-lg bg-purple-500/20 text-purple-200 text-xs font-bold">🌫️ Neblina</button>
+            <button type="button" data-boost="sniper" class="px-3 py-1.5 rounded-lg bg-pinkNeon/20 text-pink-200 text-xs font-bold">🎯 Sniper 15s</button>
+          </div>
+          <div id="pkControlsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3"></div>
+        </div>
+      </section>
+
+      <!-- TAB 5: 🏆 RANKING -->
+      <section id="tab-ranking" class="tab-panel hidden space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="tp-card rounded-2xl p-5">
+            <div class="flex items-center justify-between mb-4"><h2 class="font-display text-sm font-bold text-amber-300">💎 Top 10 Donadores (Diamantes)</h2><span id="rankTotalDiamonds" class="text-xs font-bold text-slate-300">1,650 💎</span></div>
+            <div id="rankDiamondsList" class="space-y-2.5"></div>
+          </div>
+          <div class="tp-card rounded-2xl p-5">
+            <div class="flex items-center justify-between mb-4"><h2 class="font-display text-sm font-bold text-pinkNeon">❤️ Top 10 Tap Tap (Likes)</h2><span id="rankTotalLikes" class="text-xs font-bold text-slate-300">4,280 ❤️</span></div>
+            <div id="rankLikesList" class="space-y-2.5"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 6: 💬 CHAT -->
+      <section id="tab-chat" class="tab-panel hidden space-y-4">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+          <div class="lg:col-span-8 tp-card rounded-2xl p-4 flex flex-col h-[500px]">
+            <div class="flex items-center justify-between mb-3"><h2 class="font-display text-sm font-bold text-white">💬 Chat en Vivo (Anti-XSS)</h2><input id="chatSearchInput" type="text" placeholder="Filtrar..." class="bg-bg border border-white/10 rounded-lg px-3 py-1 text-xs text-white w-44" /></div>
+            <div id="dedicatedChatList" class="flex-1 overflow-y-auto space-y-2 pr-1"></div>
+            <form id="chatSendForm" class="mt-3 pt-3 border-t border-white/10 flex gap-2">
+              <input id="chatSendInput" type="text" maxlength="200" placeholder="Prueba !redes, !pk o palabra clave 'fuego'..." class="flex-1 bg-bg border border-white/10 rounded-xl px-3 py-2 text-xs text-white" />
+              <button type="submit" class="tp-btn-primary px-4 py-2 rounded-xl text-xs">Enviar</button>
+            </form>
+          </div>
+          <div class="lg:col-span-4 tp-card rounded-2xl p-4 flex flex-col space-y-3">
+            <div class="flex items-center justify-between"><h3 class="font-display text-sm font-bold text-cyanNeon">🤖 Chatbot</h3><button id="toggleChatbot" type="button" class="toggle-switch active"></button></div>
+            <div id="botCmdList" class="space-y-2 flex-1 overflow-y-auto max-h-72"></div>
+            <form id="botCmdForm" class="space-y-2 pt-2 border-t border-white/10">
+              <input id="botTrigInp" type="text" required maxlength="24" placeholder="!comando" class="w-full bg-bg border border-white/10 rounded-lg px-3 py-1.5 text-xs font-mono text-cyanNeon" />
+              <input id="botRepInp" type="text" required maxlength="160" placeholder="Respuesta..." class="w-full bg-bg border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white" />
+              <button type="submit" class="w-full py-2 rounded-lg bg-white/10 hover:bg-white/15 text-xs font-bold text-white">+ Agregar comando</button>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 7: 👁️ ESPECTADORES -->
+      <section id="tab-espectadores" class="tab-panel hidden space-y-4">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+          <div class="lg:col-span-6 tp-card rounded-2xl p-4 space-y-3">
+            <div class="flex items-center justify-between"><h2 class="font-display text-sm font-bold text-cyanNeon">👁️ Top Espectadores en Sala</h2><span id="viewersCountLabel" class="text-xs font-bold text-slate-300">148 en vivo</span></div>
+            <div id="activeViewersList" class="space-y-2 max-h-[420px] overflow-y-auto pr-1"></div>
+          </div>
+          <div class="lg:col-span-6 tp-card rounded-2xl p-4 space-y-3">
+            <div class="flex items-center justify-between"><h2 class="font-display text-sm font-bold text-emerald-300">👋 Entradas recientes (Member)</h2><button id="btnSimJoin" type="button" class="px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 text-xs font-bold">+ Simular entrada</button></div>
+            <div id="memberJoinList" class="space-y-2 max-h-[420px] overflow-y-auto pr-1"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 8: 🎬 OVERLAYS -->
+      <section id="tab-overlay" class="tab-panel hidden space-y-4">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+          <div class="lg:col-span-7 tp-card rounded-2xl p-5 space-y-4">
+            <div class="flex items-center justify-between">
+              <h2 class="font-display text-base font-bold text-white">🎬 Overlays TikPulse (OBS / TikTok Studio)</h2>
+              <button id="btnRegenToken" type="button" class="text-xs px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/15 text-cyanNeon font-bold">Regenerar token</button>
+            </div>
+            <div class="space-y-3">
+              <div class="p-3.5 rounded-xl bg-bg border border-white/10 space-y-2">
+                <div class="flex items-center justify-between"><span class="text-xs font-bold text-pinkNeon">❤️ Overlay Top 6 Likes (420 × 700 px)</span><button type="button" data-copy-ov="likes" class="text-xs font-bold text-cyanNeon hover:underline">Copiar URL</button></div>
+                <input id="urlOverlayLikes" type="text" readonly class="w-full bg-card border border-white/10 rounded-lg px-3 py-2 text-[11px] font-mono text-slate-300" />
+              </div>
+              <div class="p-3.5 rounded-xl bg-bg border border-white/10 space-y-2">
+                <div class="flex items-center justify-between"><span class="text-xs font-bold text-cyanNeon">🎬 Overlay Alertas + Batalla PK (Screen 1 &amp; 2)</span><button type="button" data-copy-ov="master" class="text-xs font-bold text-cyanNeon hover:underline">Copiar URL</button></div>
+                <input id="urlOverlayMaster" type="text" readonly class="w-full bg-card border border-white/10 rounded-lg px-3 py-2 text-[11px] font-mono text-slate-300" />
+              </div>
+            </div>
+            <div class="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs text-emerald-200 space-y-1">
+              <div class="font-bold text-emerald-300">🛡️ Seguridad y sincronización en vivo:</div>
+              <div>• Al conectar tu LIVE en Render, <strong>TikPulse</strong> descarga automáticamente todos los regalos oficiales de TikTok con su imagen real (<code class="text-cyanNeon">fetchAvailableGifts</code>) y los puntajes PK en tiempo real.</div>
+              <div>• Escape Anti-XSS, límite de 5 MB en MP3, CORS restringido y proxy seguro de ElevenLabs.</div>
+            </div>
+          </div>
+
+          <div class="lg:col-span-5 tp-card rounded-2xl p-5 flex flex-col items-center">
+            <div class="w-full flex items-center justify-between mb-3">
+              <span class="text-xs font-bold text-white">Vista Previa · Top 6 Likes</span>
+              <button id="btnToggleOvChroma" type="button" class="text-[11px] px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 font-bold">Fondo Chroma</button>
+            </div>
+            <div id="overlayLikesPreview" class="w-full max-w-[290px] rounded-2xl p-4 overlay-preview-box space-y-2.5">
+              <div class="text-center pb-2 border-b border-white/10">
+                <div class="font-display text-sm font-extrabold bg-gradient-to-r from-pinkNeon to-cyanNeon bg-clip-text text-transparent">TOP 6 TAP TAP ❤️</div>
+                <div class="text-[10px] text-slate-400">TikPulse LIVE</div>
+              </div>
+              <div id="overlayTop6List" class="space-y-2"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <script>
+    (function () {
+      function esc(str) {
+        return String(str ?? '')
+          .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+      }
+
+      // Rich TikTok LIVE Gifts Catalog (60+ real TikTok gifts, with verified official TikTok CDN images + crisp fallback icons; auto-extended to 100+ live gifts when connected via Render!)
+      const GIFTS_CATALOG = [
+        { name: 'Rose', coins: 1, emoji: '🌹', img: 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/eba3a9bb85c33e017f3648eaf88d7189~tplv-obj.webp' },
+        { name: 'TikTok', coins: 1, emoji: '🎵', img: '' },
+        { name: 'GG', coins: 1, emoji: '🎮', img: '' },
+        { name: 'Ice Cream Cone', coins: 1, emoji: '🍦', img: '' },
+        { name: 'Weights', coins: 1, emoji: '🏋️', img: '' },
+        { name: 'Heart Me', coins: 1, emoji: '🩷', img: '' },
+        { name: 'Glow Stick', coins: 1, emoji: '✨', img: '' },
+        { name: 'Tennis', coins: 1, emoji: '🎾', img: '' },
+        { name: 'Football', coins: 1, emoji: '⚽', img: '' },
+        { name: 'Finger Heart', coins: 5, emoji: '🫰', img: 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/a4c4dc437fd3a6632aba149769491f49.png~tplv-obj.webp' },
+        { name: 'Chili', coins: 5, emoji: '🌶️', img: '' },
+        { name: 'Mic', coins: 5, emoji: '🎤', img: '' },
+        { name: 'Panda', coins: 5, emoji: '🐼', img: '' },
+        { name: 'Rosa', coins: 10, emoji: '🌷', img: 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/eb77ead5c3abb6da6034d3cf6cfeb438~tplv-obj.webp' },
+        { name: 'Friendship Necklace', coins: 10, emoji: '📿', img: '' },
+        { name: 'Tiny Diny', coins: 10, emoji: '🦕', img: '' },
+        { name: 'Perfume', coins: 20, emoji: '🧴', img: 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/20b8f61246c7b6032777bb81bf4ee055~tplv-obj.webp' },
+        { name: 'S Flowers', coins: 20, emoji: '💐', img: '' },
+        { name: 'Doughnut', coins: 30, emoji: '🍩', img: 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/4e7ad6bdf0a1d860c538f38026d4e812~tplv-obj.webp' },
+        { name: 'Butterfly', coins: 88, emoji: '🦋', img: '' },
+        { name: 'Paper Crane', coins: 99, emoji: '🕊️', img: '' },
+        { name: 'Hat and Mustache', coins: 99, emoji: '🎩', img: '' },
+        { name: 'Cap', coins: 99, emoji: '🧢', img: '' },
+        { name: 'Star', coins: 99, emoji: '⭐', img: '' },
+        { name: 'Hand Hearts', coins: 100, emoji: '🫶', img: 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/6cd022271dc4669d182cad856384870f~tplv-obj.webp' },
+        { name: 'Confetti', coins: 100, emoji: '🎉', img: '' },
+        { name: 'Bear Love', coins: 100, emoji: '🧸', img: '' },
+        { name: 'Marvelous Confetti', coins: 100, emoji: '🎊', img: '' },
+        { name: 'Hearts', coins: 199, emoji: '💕', img: '' },
+        { name: 'Sunglasses', coins: 199, emoji: '🕶️', img: 'https://p16-webcast.tiktokcdn.com/img/alisg/webcast-sg/08af67ab13a8053269bf539fd27f3873.png~tplv-obj.webp' },
+        { name: 'Garland Headpiece', coins: 199, emoji: '🌸', img: '' },
+        { name: 'Gold Medal', coins: 200, emoji: '🥇', img: '' },
+        { name: 'Boxing Gloves', coins: 299, emoji: '🥊', img: '' },
+        { name: 'Corgi', coins: 299, emoji: '🐶', img: '' },
+        { name: 'Rock n Roll', coins: 299, emoji: '🎸', img: '' },
+        { name: 'Naughty Chicken', coins: 299, emoji: '🐔', img: '' },
+        { name: 'Cake Slice', coins: 300, emoji: '🍰', img: '' },
+        { name: 'Coral', coins: 499, emoji: '🪸', img: '' },
+        { name: 'Money Gun', coins: 500, emoji: '💵', img: '' },
+        { name: 'Baby Chicks', coins: 500, emoji: '🐥', img: 'https://p16-webcast.tiktokcdn.com/img/alisg/webcast-sg/resource/f1b0b043890f33ba610f2b30fffad49f.png~tplv-obj.webp' },
+        { name: 'Gem Gun', coins: 500, emoji: '💎', img: '' },
+        { name: 'Swan', coins: 699, emoji: '🦢', img: '' },
+        { name: 'Train', coins: 899, emoji: '🚂', img: '' },
+        { name: 'Galaxy', coins: 1000, emoji: '🌌', img: 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/resource/79a02148079526539f7599150da9fd28.png~tplv-obj.webp' },
+        { name: 'Fireworks', coins: 1088, emoji: '🎆', img: '' },
+        { name: 'Diamond Tree', coins: 1088, emoji: '🌳', img: '' },
+        { name: 'Garland', coins: 1500, emoji: '💐', img: '' },
+        { name: 'Greeting Card', coins: 1500, emoji: '💌', img: '' },
+        { name: 'Whale Diving', coins: 2150, emoji: '🐳', img: 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/46fa70966d8e931497f5289060f9a794~tplv-obj.webp' },
+        { name: 'Motorcycle', coins: 2988, emoji: '🏍️', img: '' },
+        { name: 'Meteor Shower', coins: 3000, emoji: '☄️', img: '' },
+        { name: 'Private Jet', coins: 4888, emoji: '✈️', img: '' },
+        { name: 'Unicorn Fantasy', coins: 5000, emoji: '🦄', img: '' },
+        { name: 'Sports Car', coins: 7000, emoji: '🏎️', img: '' },
+        { name: 'Interstellar', coins: 10000, emoji: '🚀', img: '' },
+        { name: 'Falcon', coins: 10999, emoji: '🦅', img: '' },
+        { name: 'Planet', coins: 15000, emoji: '🪐', img: '' },
+        { name: 'Castle Fantasy', coins: 20000, emoji: '🏰', img: '' },
+        { name: 'Phoenix', coins: 25999, emoji: '🔥', img: '' },
+        { name: 'Dragon', coins: 26999, emoji: '🐉', img: '' },
+        { name: 'Lion', coins: 29999, emoji: '🦁', img: 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/4fb89af2082a290b37d704e20f4fe729~tplv-obj.webp' },
+        { name: 'TikTok Stars', coins: 39999, emoji: '🌟', img: '' },
+        { name: 'TikTok Universe', coins: 44999, emoji: '🌌', img: 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/8f471afbcebfda3841a6cc515e381f58~tplv-obj.webp' }
+      ];
+
+      const TAB_TITLES = {
+        dashboard: '⚡ Dashboard',
+        acciones: '🎁 Regalos y Alertas',
+        voz: '🔊 TTS Chat & Voz',
+        batalla: '⚔️ Batalla PK',
+        ranking: '🏆 Ranking',
+        chat: '💬 Chat y Bot',
+        espectadores: '👁️ Espectadores',
+        overlay: '🎬 Overlays'
+      };
+
+      const DEFAULT_ACTIONS = [
+        { id: 'a1', type: 'gift', giftName: 'Rose', keyword: '', minCount: 1, duration: 4, screen: 'screen1', preset: 'coin', audioUrl: null, audioName: '', message: '¡Gracias {nickname} por {repeatCount}x Rose!', useTts: true, enabled: true },
+        { id: 'a2', type: 'gift', giftName: 'Galaxy', keyword: '', minCount: 1, duration: 6, screen: 'screen2', preset: 'fanfare', audioUrl: null, audioName: '', message: '¡GALAXIA épica de {nickname}!', useTts: true, enabled: true },
+        { id: 'a3', type: 'follow', giftName: '', keyword: '', minCount: 1, duration: 4, screen: 'screen1', preset: 'bell', audioUrl: null, audioName: '', message: '⭐ ¡Bienvenido {nickname} al canal!', useTts: true, enabled: true },
+        { id: 'a4', type: 'sub', giftName: '', keyword: '', minCount: 1, duration: 6, screen: 'screen2', preset: 'fanfare', audioUrl: null, audioName: '', message: '👑 ¡{nickname} se acaba de SUSCRIBIR!', useTts: true, enabled: true },
+        { id: 'a5', type: 'keyword', giftName: '', keyword: 'fuego', minCount: 1, duration: 4, screen: 'screen1', preset: 'laser', audioUrl: null, audioName: '', message: '🔥 ¡{nickname} prendió el chat!', useTts: false, enabled: true }
+      ];
+
+      function loadSavedActions() {
+        try {
+          const raw = localStorage.getItem('tikpulse_actions_v2');
+          if (!raw) return DEFAULT_ACTIONS;
+          const parsed = JSON.parse(raw);
+          return Array.isArray(parsed) && parsed.length ? parsed.map((a) => ({ ...a, audioUrl: null })) : DEFAULT_ACTIONS;
+        } catch (_) { return DEFAULT_ACTIONS; }
+      }
+      function saveActions() {
+        try { localStorage.setItem('tikpulse_actions_v2', JSON.stringify(state.actions.map(({ audioUrl, ...r }) => r))); } catch (_) {}
+      }
+
+      const state = {
+        activeTab: 'dashboard',
+        accView: 'catalog',
+        actionFilter: 'all',
+        gifts: [...GIFTS_CATALOG],
+        username: 'tu_usuario',
+        connected: true,
+        wakeLockObj: null,
+        autoSim: false,
+        autoSimTimer: null,
+        masterAlerts: true,
+        streakMode: 'end',
+        queueMode: 'queue',
+        alertQueue: [],
+        alertBusy: false,
+        alertTimer: null,
+        viewers: 148,
+        likes: 4280,
+        follows: 34,
+        diamonds: 1650,
+        shares: 19,
+        subs: 5,
+        pendingAudioUrl: null,
+        pendingAudioName: '',
+        actions: loadSavedActions(),
+        ttsEnabled: true,
+        ttsEngine: 'browser',
+        googleAccent: 'es-US',
+        elApiKey: '',
+        elVoiceId: 'EXAVITQu4vr4xnSDxMaL',
+        elCustomVoiceId: '',
+        ttsVolume: 0.85,
+        ttsRate: 1.05,
+        ttsPitch: 1.0,
+        ttsCooldownSec: 4,
+        ttsMaxChars: 140,
+        ttsMinCoins: 1,
+        ttsUniqueVoice: true,
+        ttsLastUserTs: {},
+        browserVoiceUri: '',
+        stripEmojis: true,
+        blockedWords: 'spam,groseria,http',
+        ttsQueue: [],
+        ttsSpeaking: false,
+        chatbotEnabled: true,
+        botCommands: [
+          { trigger: '!redes', reply: 'Síguenos en Instagram y YouTube como @tu_usuario 🔥' },
+          { trigger: '!pk', reply: '¡Tap tap y rosas para ganar la batalla PK! ⚔️' }
+        ],
+        activity: [
+          { kind: 'gift', user: '@sofia_live', text: 'envió Rose ×50 🌹 (+50 💎)' },
+          { kind: 'chat', user: '@carlos_pe', text: '¡TikPulse se ve brutal!' },
+          { kind: 'follow', user: '@luna_gamer', text: 'empezó a seguirte ⭐' }
+        ],
+        chats: [
+          { user: '@sofia_live', text: '¡Vamos con todo en la batalla! 🔥' },
+          { user: '@carlos_pe', text: 'Prueba escribir !redes o fuego' }
+        ],
+        topDiamonds: [{ user: '@sofia_live', val: 1050 }, { user: '@carlos_pe', val: 380 }, { user: '@luna_gamer', val: 150 }, { user: '@alex_stream', val: 70 }],
+        topLikes: [{ user: '@sofia_live', val: 1420 }, { user: '@camila_tk', val: 980 }, { user: '@carlos_pe', val: 760 }, { user: '@luna_gamer', val: 540 }, { user: '@mateo_x', val: 350 }, { user: '@diego_tk', val: 230 }],
+        pkMode: '1v1',
+        pkRunning: true,
+        pkSeconds: 225,
+        pkBoost: 1,
+        pkBoostLabel: '',
+        pkBoostSec: 0,
+        pkMist: false,
+        pkPlayers: [
+          { id: 'p1', name: '@tu_usuario', team: 'A', score: 1840, color: '#00F2EA' },
+          { id: 'p2', name: '@aliado_pro', team: 'A', score: 1120, color: '#38BDF8' },
+          { id: 'p3', name: '@rival_uno', team: 'B', score: 1520, color: '#FE2C55' },
+          { id: 'p4', name: '@rival_dos', team: 'B', score: 1290, color: '#F59E0B' }
+        ],
+        activeViewers: [{ user: '@sofia_live', role: 'Suscriptor · Nv.12' }, { user: '@carlos_pe', role: 'Moderador' }, { user: '@luna_gamer', role: 'Fan Club · Nv.6' }, { user: '@camila_tk', role: 'Seguidor' }, { user: '@alex_stream', role: 'Espectador' }],
+        memberJoins: [{ user: '@mateo_x', time: 'Ahora' }, { user: '@valeria_99', time: 'Hace 15s' }],
+        ovChroma: false,
+        token: 'tp_' + Math.random().toString(36).slice(2, 11)
+      };
+
+      const sampleUsers = ['@sofia_live', '@carlos_pe', '@luna_gamer', '@camila_tk', '@alex_stream', '@mateo_x'];
+
+      // Helper to render gift icon (official TikTok CDN WebP with automatic emoji fallback)
+      function giftIconHtml(giftObj, sizeCls = 'w-10 h-10') {
+        if (giftObj && giftObj.img) {
+          return `<img src="${esc(giftObj.img)}" alt="${esc(giftObj.name)}" class="${sizeCls} object-contain" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" /><span style="display:none" class="${sizeCls} items-center justify-center text-2xl">${esc(giftObj.emoji || '🎁')}</span>`;
+        }
+        return `<span class="${sizeCls} flex items-center justify-center text-2xl">${esc(giftObj?.emoji || '🎁')}</span>`;
+      }
+
+      // ---------- AUDIO ----------
+      let audioCtx = null;
+      function playTone(freq, dur = 0.2, type = 'triangle', slide = null) {
+        if (!state.masterAlerts) return;
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        if (!Ctx) return;
+        if (!audioCtx) audioCtx = new Ctx();
+        if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
+        const osc = audioCtx.createOscillator(), g = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        if (slide) osc.frequency.exponentialRampToValueAtTime(slide, audioCtx.currentTime + dur);
+        g.gain.setValueAtTime(Math.max(0.01, state.ttsVolume * 0.25), audioCtx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+        osc.connect(g); g.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + dur);
+      }
+      function playSound(preset, customUrl) {
+        if (!state.masterAlerts) return;
+        if (customUrl) {
+          try { const a = new Audio(customUrl); a.volume = state.ttsVolume; a.play().catch(() => {}); return; } catch (_) {}
+        }
+        if (preset === 'bell') { playTone(880, 0.24, 'sine', 1320); setTimeout(() => playTone(1320, 0.2, 'sine'), 100); }
+        else if (preset === 'laser') { playTone(980, 0.18, 'sawtooth', 240); }
+        else if (preset === 'fanfare') { playTone(523, 0.14); setTimeout(() => playTone(659, 0.14), 110); setTimeout(() => playTone(784, 0.14), 220); setTimeout(() => playTone(1046, 0.3), 330); }
+        else { playTone(587, 0.12, 'triangle', 880); setTimeout(() => playTone(880, 0.16, 'sine'), 90); }
+      }
+
+      // ---------- TTS QUEUE (PER-USER UNIQUE VOICE + COOLDOWN + 3 ENGINES) ----------
+      let voices = [];
+      function loadVoices() {
+        if (!('speechSynthesis' in window)) return;
+        voices = window.speechSynthesis.getVoices() || [];
+        const sel = document.getElementById('browserVoiceSelect');
+        if (!sel) return;
+        sel.innerHTML = '<option value="">Automática (Español)</option>';
+        [...voices].sort((a, b) => (a.lang.startsWith('es') ? 0 : 1) - (b.lang.startsWith('es') ? 0 : 1))
+          .forEach((v) => { const o = document.createElement('option'); o.value = v.voiceURI; o.textContent = `${v.name} (${v.lang})`; sel.appendChild(o); });
+      }
+      if ('speechSynthesis' in window) { loadVoices(); window.speechSynthesis.onvoiceschanged = loadVoices; }
+
+      function cleanTtsText(str) {
+        let out = String(str || '');
+        if (state.stripEmojis) out = out.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, '');
+        state.blockedWords.split(',').map((w) => w.trim()).filter(Boolean).forEach((w) => {
+          out = out.replace(new RegExp(w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), '***');
+        });
+        return out.trim().slice(0, Math.max(20, state.ttsMaxChars));
+      }
+
+      function userPitchOffset(userKey) {
+        if (!state.ttsUniqueVoice || !userKey) return state.ttsPitch;
+        let hash = 0;
+        for (let i = 0; i < userKey.length; i++) hash = (hash * 31 + userKey.charCodeAt(i)) % 100;
+        return Math.max(0.65, Math.min(1.55, 0.75 + (hash / 100) * 0.7));
+      }
+
+      function renderTtsQueue() {
+        const box = document.getElementById('ttsQueueBox'), b = document.getElementById('ttsQueueBadge');
+        if (!box || !b) return;
+        b.textContent = `${state.ttsQueue.length} en cola`;
+        box.innerHTML = state.ttsQueue.length ? '' : '<div class="italic text-slate-500">Cola vacía</div>';
+        state.ttsQueue.forEach((item, i) => {
+          const d = document.createElement('div');
+          d.className = i === 0 ? 'px-2.5 py-1.5 rounded-lg bg-pinkNeon/15 border border-pinkNeon/35 text-pink-100 truncate' : 'px-2.5 py-1.5 rounded-lg bg-white/5 text-slate-300 truncate';
+          d.textContent = (i === 0 ? '🔊 ' : `#${i + 1} `) + item.text;
+          box.appendChild(d);
+        });
+      }
+
+      async function playElevenLabs(text) {
+        const key = state.elApiKey.trim();
+        const vid = (state.elCustomVoiceId.trim() || state.elVoiceId);
+        if (!key) return false;
+        try {
+          const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(vid)}`, {
+            method: 'POST',
+            headers: { 'xi-api-key': key, 'Content-Type': 'application/json', Accept: 'audio/mpeg' },
+            body: JSON.stringify({ text, model_id: 'eleven_multilingual_v2' })
+          });
+          if (!res.ok) throw new Error('EL ' + res.status);
+          const url = URL.createObjectURL(await res.blob());
+          return await new Promise((resolve) => {
+            const a = new Audio(url);
+            a.volume = state.ttsVolume;
+            a.onended = () => { URL.revokeObjectURL(url); resolve(true); };
+            a.onerror = () => { URL.revokeObjectURL(url); resolve(false); };
+            a.play().catch(() => resolve(false));
+          });
+        } catch (_) {
+          toast('ElevenLabs no disponible; usando voz local', 'pink');
+          return false;
+        }
+      }
+
+      async function pumpTts() {
+        if (!state.ttsEnabled || state.ttsSpeaking || !state.ttsQueue.length) { renderTtsQueue(); return; }
+        const item = state.ttsQueue[0];
+        state.ttsSpeaking = true;
+        renderTtsQueue();
+        const done = () => { state.ttsQueue.shift(); state.ttsSpeaking = false; pumpTts(); };
+        if (state.ttsEngine === 'elevenlabs' && state.elApiKey.trim()) {
+          if (await playElevenLabs(item.text)) return done();
+        }
+        if (!('speechSynthesis' in window)) return done();
+        try {
+          const u = new SpeechSynthesisUtterance(item.text);
+          u.lang = state.ttsEngine === 'google' ? state.googleAccent : 'es-ES';
+          if (state.ttsEngine === 'browser' && state.browserVoiceUri) {
+            const f = voices.find((v) => v.voiceURI === state.browserVoiceUri);
+            if (f) u.voice = f;
+          }
+          u.rate = state.ttsRate;
+          u.pitch = userPitchOffset(item.userKey);
+          u.volume = state.ttsVolume;
+          u.onend = done; u.onerror = done;
+          window.speechSynthesis.speak(u);
+        } catch (_) { done(); }
+      }
+
+      function enqueueTts(raw, userKey = null) {
+        if (!state.ttsEnabled) return;
+        if (userKey && state.ttsCooldownSec > 0) {
+          const now = Date.now();
+          if (now - (state.ttsLastUserTs[userKey] || 0) < state.ttsCooldownSec * 1000) return;
+          state.ttsLastUserTs[userKey] = now;
+        }
+        const clean = cleanTtsText(raw);
+        if (!clean) return;
+        state.ttsQueue.push({ text: clean, userKey });
+        pumpTts();
+      }
+
+      // ---------- TOAST & COPY ----------
+      function toast(msg, tone = 'cyan') {
+        const c = document.getElementById('toastContainer');
+        if (!c) return;
+        const d = document.createElement('div');
+        d.className = `pointer-events-auto px-3.5 py-2.5 rounded-xl bg-panel/95 border ${tone === 'pink' ? 'border-pinkNeon/60 text-pink-100' : 'border-cyanNeon/60 text-cyan-100'} text-xs font-semibold shadow-xl animate-pop`;
+        d.textContent = msg;
+        c.appendChild(d);
+        setTimeout(() => d.remove(), 2500);
+      }
+
+      function copyStr(str) {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(str).then(() => toast('URL copiada al portapapeles')).catch(() => fallbackCopy(str));
+        } else fallbackCopy(str);
+      }
+      function fallbackCopy(str) {
+        const ta = document.createElement('textarea'); ta.value = str; ta.style.position = 'fixed'; ta.style.opacity = '0';
+        document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); } catch (_) {} ta.remove();
+        toast('URL copiada al portapapeles');
+      }
+
+      // ---------- VISUAL ALERT CARD ----------
+      function buildAlertCardNode(item) {
+        const card = document.createElement('div');
+        const accent = item.screen === 'screen2' ? '#FE2C55' : '#00F2EA';
+        card.className = 'w-full rounded-2xl bg-[#0d0d18]/95 border-2 overflow-hidden shadow-2xl animate-pop';
+        card.style.borderColor = accent;
+
+        const body = document.createElement('div');
+        body.className = 'p-3.5 flex items-center gap-3';
+
+        const iconBox = document.createElement('div');
+        iconBox.className = 'w-12 h-12 rounded-xl flex items-center justify-center shrink-0 bg-white/5 border border-white/10 overflow-hidden';
+        iconBox.innerHTML = item.img ? giftIconHtml({ img: item.img, name: item.badgeLabel, emoji: item.emoji }, 'w-10 h-10') : `<span class="text-2xl">${esc(item.emoji || '🎁')}</span>`;
+
+        const textWrap = document.createElement('div');
+        textWrap.className = 'min-w-0 text-left flex-1';
+
+        const badge = document.createElement('div');
+        badge.className = 'text-[10px] font-extrabold uppercase tracking-wider mb-0.5';
+        badge.style.color = accent;
+        badge.textContent = `${item.badgeLabel || 'ALERTA'} · ${item.screen === 'screen2' ? 'SCREEN 2' : 'SCREEN 1'}`;
+
+        const title = document.createElement('div');
+        title.className = 'text-xs sm:text-sm font-extrabold text-white break-words';
+        title.textContent = item.title;
+
+        textWrap.append(badge, title);
+        body.append(iconBox, textWrap);
+
+        const barTrack = document.createElement('div');
+        barTrack.className = 'w-full h-1 bg-white/10';
+        const barFill = document.createElement('div');
+        barFill.className = 'h-full alert-progress-bar';
+        barFill.style.background = accent;
+        barFill.style.animationDuration = `${item.duration || 4}s`;
+        barTrack.appendChild(barFill);
+
+        card.append(body, barTrack);
+        return card;
+      }
+
+      function queueAlert(item) {
+        if (state.queueMode === 'instant') {
+          state.alertQueue = [item];
+          if (state.alertTimer) clearTimeout(state.alertTimer);
+          state.alertBusy = false;
+          pumpAlerts();
+        } else {
+          state.alertQueue.push(item);
+          document.getElementById('dashQueuePill').textContent = `Cola: ${state.alertQueue.length}`;
+          if (!state.alertBusy) pumpAlerts();
+        }
+      }
+
+      function pumpAlerts() {
+        document.getElementById('dashQueuePill').textContent = `Cola: ${state.alertQueue.length}`;
+        const stage = document.getElementById('dashAlertStage');
+        const banner = document.getElementById('globalAlertBanner');
+        if (!state.alertQueue.length) {
+          state.alertBusy = false;
+          if (banner) { banner.classList.add('hidden'); banner.innerHTML = ''; }
+          return;
+        }
+        state.alertBusy = true;
+        const item = state.alertQueue.shift();
+        document.getElementById('dashQueuePill').textContent = `Cola: ${state.alertQueue.length}`;
+        if (stage) { stage.innerHTML = ''; stage.appendChild(buildAlertCardNode(item)); }
+        if (banner && state.activeTab !== 'dashboard') {
+          banner.innerHTML = '';
+          banner.appendChild(buildAlertCardNode(item));
+          banner.classList.remove('hidden');
+        }
+        state.alertTimer = setTimeout(() => {
+          if (stage) stage.innerHTML = '<p class="text-xs text-slate-400">Esperando siguiente evento...</p>';
+          if (banner) { banner.classList.add('hidden'); banner.innerHTML = ''; }
+          pumpAlerts();
+        }, (item.duration || 4) * 1000);
+      }
+
+      function runAction(act, user = '@sofia_live', repeatCount = 1) {
+        const nick = user.replace('@', '');
+        const msg = (act.message || '').replace('{nickname}', nick).replace('{username}', user).replace('{giftName}', act.giftName || 'Regalo').replace('{repeatCount}', String(repeatCount));
+        playSound(act.preset, act.audioUrl);
+        if (act.useTts) enqueueTts(msg);
+        if (act.screen === 'screen2' && typeof confetti === 'function') confetti({ particleCount: 55, spread: 70, origin: { y: 0.65 } });
+        const giftObj = state.gifts.find((g) => g.name === act.giftName);
+        const typeNames = { gift: 'GIFT ALERT', follow: 'FOLLOW ALERT', sub: 'SUB ALERT', like: 'LIKE ALERT', share: 'SHARE ALERT', join: 'JOIN ALERT', keyword: 'KEYWORD' };
+        queueAlert({
+          screen: act.screen,
+          badgeLabel: typeNames[act.type] || 'ALERTA',
+          emoji: giftObj ? giftObj.emoji : (act.type === 'sub' ? '👑' : act.type === 'follow' ? '⭐' : act.type === 'join' ? '👋' : '⚡'),
+          img: giftObj ? giftObj.img : '',
+          title: msg,
+          duration: act.duration
+        });
+      }
+
+      // ---------- VISUAL GIFT CATALOG (TIKFINITY STYLE) ----------
+      function renderVisualGiftGrid() {
+        const grid = document.getElementById('visualGiftGrid');
+        document.getElementById('catalogTotalBadge').textContent = String(state.gifts.length);
+        document.getElementById('activeAlertsBadge').textContent = String(state.actions.length);
+        if (!grid) return;
+
+        const q = (document.getElementById('catalogSearchInput')?.value || '').trim().toLowerCase();
+        const range = document.getElementById('catalogCoinFilter')?.value || 'all';
+        const filtered = state.gifts.filter((g) => {
+          if (q && !g.name.toLowerCase().includes(q)) return false;
+          if (range === '1-10' && (g.coins < 1 || g.coins > 10)) return false;
+          if (range === '11-99' && (g.coins < 11 || g.coins > 99)) return false;
+          if (range === '100-999' && (g.coins < 100 || g.coins > 999)) return false;
+          if (range === '1000-9999' && (g.coins < 1000 || g.coins > 9999)) return false;
+          if (range === '10000+' && g.coins < 10000) return false;
+          return true;
+        });
+
+        grid.innerHTML = '';
+        filtered.forEach((g) => {
+          const configured = state.actions.find((a) => a.type === 'gift' && a.giftName === g.name);
+          const card = document.createElement('div');
+          card.className = `p-3 rounded-xl bg-bg border ${configured ? 'border-cyanNeon/60 shadow-[0_0_14px_rgba(0,242,234,0.14)]' : 'border-white/10 hover:border-pinkNeon/50'} flex flex-col items-center text-center gap-1.5 transition`;
+          card.innerHTML = `
+            <div class="w-12 h-12 rounded-xl bg-card border border-white/10 flex items-center justify-center overflow-hidden">${giftIconHtml(g, 'w-10 h-10')}</div>
+            <div class="text-xs font-bold text-white truncate w-full">${esc(g.name)}</div>
+            <div class="text-[11px] font-bold text-amber-300">${g.coins.toLocaleString('es-ES')} 🪙</div>
+            <div class="w-full flex gap-1 mt-1">
+              <button type="button" data-pick-gift="${esc(g.name)}" class="flex-1 py-1 rounded-lg ${configured ? 'bg-cyanNeon/20 text-cyanNeon' : 'bg-white/10 hover:bg-pinkNeon/25 text-slate-200'} text-[10px] font-bold">
+                ${configured ? '🎵 Editar MP3' : '+ Música'}
+              </button>
+              <button type="button" data-quick-fire="${esc(g.name)}" class="px-2 py-1 rounded-lg bg-pinkNeon/20 hover:bg-pinkNeon/30 text-pink-200 text-[10px] font-bold" title="Probar regalo">▶</button>
+            </div>
+          `;
+          grid.appendChild(card);
+        });
+      }
+
+      // ---------- OTHER RENDERERS ----------
+      function fmtTime(s) { return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`; }
+
+      function renderCountersAndFeeds() {
+        document.getElementById('cntViewers').textContent = state.viewers.toLocaleString('es-ES');
+        document.getElementById('cntLikes').textContent = state.likes.toLocaleString('es-ES');
+        document.getElementById('cntFollows').textContent = state.follows.toLocaleString('es-ES');
+        document.getElementById('cntDiamonds').textContent = state.diamonds.toLocaleString('es-ES');
+        document.getElementById('cntShares').textContent = state.shares.toLocaleString('es-ES');
+        document.getElementById('cntSubs').textContent = state.subs.toLocaleString('es-ES');
+        document.getElementById('sidebarViewerBadge').textContent = state.viewers;
+        document.getElementById('viewersCountLabel').textContent = `${state.viewers} en vivo`;
+        document.getElementById('sidebarUserBadge').textContent = '@' + state.username.replace(/^@/, '');
+
+        const actEl = document.getElementById('activityFeedList');
+        if (actEl) {
+          actEl.innerHTML = '';
+          const colors = { gift: 'bg-pinkNeon/15 border-pinkNeon/35', sub: 'bg-amber-500/15 border-amber-400/35', follow: 'bg-cyanNeon/15 border-cyanNeon/30', join: 'bg-emerald-500/10 border-emerald-500/25', chat: 'bg-white/[0.04] border-white/5' };
+          state.activity.slice(0, 40).forEach((ev) => {
+            const row = document.createElement('div');
+            row.className = `px-3 py-2 rounded-xl border text-xs animate-pop ${colors[ev.kind] || colors.chat}`;
+            const u = document.createElement('span'); u.className = 'font-bold text-white mr-1.5'; u.textContent = ev.user;
+            const t = document.createElement('span'); t.className = 'text-slate-300'; t.textContent = ev.text;
+            row.append(u, t); actEl.appendChild(row);
+          });
+        }
+
+        const chatEl = document.getElementById('dedicatedChatList');
+        if (chatEl) {
+          const q = (document.getElementById('chatSearchInput')?.value || '').trim().toLowerCase();
+          chatEl.innerHTML = '';
+          state.chats.filter((c) => !q || c.text.toLowerCase().includes(q) || c.user.toLowerCase().includes(q)).slice(0, 60).forEach((c) => {
+            const row = document.createElement('div');
+            row.className = c.isBot ? 'px-3 py-2 rounded-xl bg-cyanNeon/15 border border-cyanNeon/30 text-xs' : 'px-3 py-2 rounded-xl bg-white/[0.04] border border-white/5 text-xs';
+            const u = document.createElement('span'); u.className = c.isBot ? 'font-bold text-cyanNeon mr-1.5' : 'font-bold text-pink-300 mr-1.5'; u.textContent = c.user + ':';
+            const t = document.createElement('span'); t.className = 'text-slate-200'; t.textContent = c.text;
+            row.append(u, t); chatEl.appendChild(row);
+          });
+        }
+
+        document.getElementById('rankTotalDiamonds').textContent = `${state.diamonds.toLocaleString('es-ES')} 💎`;
+        document.getElementById('rankTotalLikes').textContent = `${state.likes.toLocaleString('es-ES')} ❤️`;
+        renderRankList('rankDiamondsList', state.topDiamonds, '💎', '#F59E0B', 10);
+        renderRankList('rankLikesList', state.topLikes, '❤️', '#FE2C55', 10);
+        renderRankList('overlayTop6List', state.topLikes, '❤️', '#00F2EA', 6);
+
+        const vList = document.getElementById('activeViewersList');
+        if (vList) {
+          vList.innerHTML = '';
+          state.activeViewers.forEach((v) => {
+            const r = document.createElement('div');
+            r.className = 'flex items-center justify-between px-3 py-2 rounded-xl bg-bg border border-white/5 text-xs';
+            const s1 = document.createElement('span'); s1.className = 'font-bold text-white'; s1.textContent = v.user;
+            const s2 = document.createElement('span'); s2.className = 'text-[11px] text-cyanNeon'; s2.textContent = v.role;
+            r.append(s1, s2); vList.appendChild(r);
+          });
+        }
+        const mList = document.getElementById('memberJoinList');
+        if (mList) {
+          mList.innerHTML = '';
+          state.memberJoins.slice(0, 30).forEach((m) => {
+            const r = document.createElement('div');
+            r.className = 'flex items-center justify-between px-3 py-2 rounded-xl bg-bg border border-emerald-500/20 text-xs';
+            const s1 = document.createElement('span'); s1.className = 'font-bold text-emerald-300'; s1.textContent = '👋 ' + m.user;
+            const s2 = document.createElement('span'); s2.className = 'text-[11px] text-slate-400'; s2.textContent = m.time;
+            r.append(s1, s2); mList.appendChild(r);
+          });
+        }
+
+        const cleanU = encodeURIComponent(state.username.replace(/^@/, '') || 'tu_usuario');
+        document.getElementById('urlOverlayLikes').value = `https://tikpulse-live.onrender.com/overlay-likes.html?user=${cleanU}&token=${state.token}`;
+        document.getElementById('urlOverlayMaster').value = `https://tikpulse-live.onrender.com/overlay?user=${cleanU}&token=${state.token}`;
+      }
+
+      function renderRankList(elId, arr, icon, color, maxItems) {
+        const el = document.getElementById(elId);
+        if (!el) return;
+        const sorted = [...arr].sort((a, b) => b.val - a.val).slice(0, maxItems);
+        const top = Math.max(1, sorted[0]?.val || 1);
+        el.innerHTML = '';
+        sorted.forEach((item, i) => {
+          const pct = Math.max(8, Math.round((item.val / top) * 100));
+          const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i + 1}`;
+          const wrap = document.createElement('div');
+          wrap.className = 'p-2.5 rounded-xl bg-bg/90 border border-white/5 space-y-1.5';
+          wrap.innerHTML = `<div class="flex items-center justify-between text-xs font-bold"><span class="text-white truncate">${medal} ${esc(item.user)}</span><span style="color:${color}">${item.val.toLocaleString('es-ES')} ${icon}</span></div><div class="w-full h-1.5 rounded-full bg-white/10 overflow-hidden"><div class="h-full rounded-full transition-all duration-300" style="width:${pct}%; background:${color}"></div></div>`;
+          el.appendChild(wrap);
+        });
+      }
+
+      function renderActionsCards() {
+        const list = document.getElementById('actionsCardsList');
+        document.getElementById('activeAlertsBadge').textContent = String(state.actions.length);
+        if (!list) return;
+        const q = (document.getElementById('actionSearchInput')?.value || '').trim().toLowerCase();
+        const badgeStyle = {
+          gift: { text: 'GIFT', cls: 'bg-pinkNeon/20 text-pink-200 border-pinkNeon/40' },
+          follow: { text: 'FOLLOW', cls: 'bg-cyanNeon/15 text-cyanNeon border-cyanNeon/35' },
+          sub: { text: 'SUB', cls: 'bg-amber-500/20 text-amber-200 border-amber-400/40' },
+          like: { text: 'LIKE', cls: 'bg-rose-500/20 text-rose-200 border-rose-400/40' },
+          share: { text: 'SHARE', cls: 'bg-purple-500/20 text-purple-200 border-purple-400/40' },
+          join: { text: 'JOIN', cls: 'bg-emerald-500/20 text-emerald-200 border-emerald-400/40' },
+          keyword: { text: 'KEYWORD', cls: 'bg-sky-500/20 text-sky-200 border-sky-400/40' }
+        };
+
+        const filtered = state.actions.filter((a) => {
+          if (state.actionFilter === 'gift' && a.type !== 'gift') return false;
+          if (state.actionFilter === 'follow' && a.type !== 'follow') return false;
+          if (state.actionFilter === 'sub' && a.type !== 'sub') return false;
+          if (state.actionFilter === 'other' && ['gift', 'follow', 'sub'].includes(a.type)) return false;
+          if (q && !(a.giftName || '').toLowerCase().includes(q) && !(a.message || '').toLowerCase().includes(q) && !a.type.includes(q)) return false;
+          return true;
+        });
+
+        list.innerHTML = '';
+        if (!filtered.length) { list.innerHTML = '<div class="text-center py-8 text-xs text-slate-500">No hay alertas en esta categoría.</div>'; return; }
+
+        filtered.forEach((a) => {
+          const st = badgeStyle[a.type] || badgeStyle.gift;
+          const giftObj = state.gifts.find((g) => g.name === a.giftName);
+          const row = document.createElement('div');
+          row.className = 'p-3.5 rounded-xl bg-bg/95 border border-white/10 hover:border-white/20 transition flex flex-col sm:flex-row sm:items-center justify-between gap-3';
+          row.innerHTML = `
+            <div class="flex items-center gap-3 min-w-0">
+              <div class="w-11 h-11 rounded-xl bg-card border border-white/10 flex items-center justify-center overflow-hidden shrink-0">
+                ${giftObj ? giftIconHtml(giftObj, 'w-9 h-9') : `<span class="text-xl">${a.type === 'sub' ? '👑' : a.type === 'follow' ? '⭐' : a.type === 'join' ? '👋' : '⚡'}</span>`}
+              </div>
+              <div class="min-w-0">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="text-[10px] font-extrabold px-2 py-0.5 rounded-md border ${st.cls}">${st.text}</span>
+                  <span class="text-xs font-extrabold text-white truncate">${esc(a.giftName || (a.keyword ? '"' + a.keyword + '"' : 'Evento automático'))}</span>
+                  <span class="text-[10px] text-slate-400">Mín: ${a.minCount} · ${a.duration}s · ${a.screen === 'screen2' ? 'Screen 2' : 'Screen 1'}</span>
+                </div>
+                <div class="text-xs text-slate-300 truncate mt-1">${esc(a.message)}</div>
+                <div class="text-[10px] text-slate-400 mt-0.5">🎵 ${esc(a.audioName || a.preset)}${a.useTts ? ' · 🗣️ TTS activo' : ''}</div>
+              </div>
+            </div>
+            <div class="flex items-center justify-end gap-2 shrink-0">
+              <button type="button" data-act-test="${esc(a.id)}" class="px-3 py-1.5 rounded-lg bg-cyanNeon/15 hover:bg-cyanNeon/25 text-cyanNeon text-xs font-bold">▶ Test</button>
+              <button type="button" data-act-edit="${esc(a.id)}" class="px-2.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 text-slate-200 text-xs font-bold">Editar</button>
+              <button type="button" data-act-del="${esc(a.id)}" class="px-2 py-1.5 rounded-lg bg-pinkNeon/15 hover:bg-pinkNeon/25 text-pink-300 text-xs font-bold">✕</button>
+              <button type="button" data-act-toggle="${esc(a.id)}" class="toggle-switch ${a.enabled ? 'active' : ''}" aria-label="Activar alerta"></button>
+            </div>
+          `;
+          list.appendChild(row);
+        });
+      }
+
+      function renderBattleBoard() {
+        const board = document.getElementById('pkBoardRender');
+        if (!board) return;
+        state.pkPlayers[0].name = '@' + state.username.replace(/^@/, '');
+        const tStr = fmtTime(state.pkSeconds);
+        const sDisp = (n) => state.pkMist ? '???' : n.toLocaleString('es-ES');
+        const boostStr = state.pkBoost > 1 && state.pkBoostSec > 0 ? `⚡ ${esc(state.pkBoostLabel)} (${state.pkBoostSec}s)` : (state.pkMist ? '🌫️ Neblina' : 'Normal');
+        document.getElementById('pkStatusBadge').textContent = state.pkSeconds > 0 ? '🔴 EN CURSO' : '✅ FINALIZADA';
+
+        if (state.pkMode === '1v1') {
+          const p1 = state.pkPlayers[0], p3 = state.pkPlayers[2];
+          const tot = Math.max(1, p1.score + p3.score), pct1 = Math.round((p1.score / tot) * 100), diff = p1.score - p3.score;
+          board.innerHTML = `
+            <div class="grid grid-cols-3 items-center gap-2">
+              <div><div class="text-xs font-bold text-cyanNeon truncate">${esc(p1.name)}</div><div class="font-display text-2xl sm:text-4xl font-extrabold text-white">${sDisp(p1.score)}</div></div>
+              <div class="text-center"><div class="inline-block px-3 py-1 rounded-full bg-white/10 font-mono text-base font-extrabold">${tStr}</div><div class="text-[11px] text-amber-300 font-bold mt-1">${boostStr}</div></div>
+              <div class="text-right"><div class="text-xs font-bold text-pinkNeon truncate">${esc(p3.name)}</div><div class="font-display text-2xl sm:text-4xl font-extrabold text-white">${sDisp(p3.score)}</div></div>
+            </div>
+            <div class="w-full h-5 rounded-full bg-slate-800 overflow-hidden flex border border-white/10">
+              <div class="h-full bg-gradient-to-r from-cyan-400 to-cyanNeon flex items-center px-2 text-[11px] font-black text-bg" style="width:${pct1}%">${pct1}%</div>
+              <div class="h-full bg-gradient-to-r from-pinkNeon to-rose-600 flex items-center justify-end px-2 text-[11px] font-black text-white" style="width:${100 - pct1}%">${100 - pct1}%</div>
+            </div>
+            <div class="text-xs font-bold ${diff >= 0 ? 'text-emerald-300' : 'text-amber-300'}">${diff >= 0 ? `Arriba por +${diff.toLocaleString('es-ES')} pts` : `Sniper: faltan ${(Math.abs(diff) + 1).toLocaleString('es-ES')} pts para pasar`}</div>
+          `;
+        } else if (state.pkMode === '2v2') {
+          const tA = state.pkPlayers[0].score + state.pkPlayers[1].score, tB = state.pkPlayers[2].score + state.pkPlayers[3].score;
+          const tot = Math.max(1, tA + tB), pctA = Math.round((tA / tot) * 100), diff = tA - tB;
+          board.innerHTML = `
+            <div class="grid grid-cols-3 items-center gap-2">
+              <div><div class="text-xs font-bold text-cyanNeon">🛡️ EQUIPO A</div><div class="font-display text-2xl sm:text-4xl font-extrabold text-white">${sDisp(tA)}</div><div class="text-[11px] text-slate-400">${esc(state.pkPlayers[0].name)}: ${sDisp(state.pkPlayers[0].score)} · ${esc(state.pkPlayers[1].name)}: ${sDisp(state.pkPlayers[1].score)}</div></div>
+              <div class="text-center"><div class="inline-block px-3 py-1 rounded-full bg-white/10 font-mono text-base font-extrabold">${tStr}</div><div class="text-[11px] text-amber-300 font-bold mt-1">${boostStr}</div></div>
+              <div class="text-right"><div class="text-xs font-bold text-pinkNeon">EQUIPO B 🔥</div><div class="font-display text-2xl sm:text-4xl font-extrabold text-white">${sDisp(tB)}</div><div class="text-[11px] text-slate-400">${esc(state.pkPlayers[2].name)}: ${sDisp(state.pkPlayers[2].score)} · ${esc(state.pkPlayers[3].name)}: ${sDisp(state.pkPlayers[3].score)}</div></div>
+            </div>
+            <div class="w-full h-5 rounded-full bg-slate-800 overflow-hidden flex border border-white/10">
+              <div class="h-full bg-gradient-to-r from-cyan-400 to-blue-500 flex items-center px-2 text-[11px] font-black text-bg" style="width:${pctA}%">${pctA}%</div>
+              <div class="h-full bg-gradient-to-r from-pinkNeon to-orange-500 flex items-center justify-end px-2 text-[11px] font-black text-white" style="width:${100 - pctA}%">${100 - pctA}%</div>
+            </div>
+            <div class="text-xs font-bold ${diff >= 0 ? 'text-emerald-300' : 'text-amber-300'}">${diff >= 0 ? `Equipo A lidera por +${diff.toLocaleString('es-ES')} pts` : `Equipo A necesita ${(Math.abs(diff) + 1).toLocaleString('es-ES')} pts`}</div>
+          `;
+        } else {
+          const ranked = [...state.pkPlayers].sort((a, b) => b.score - a.score);
+          const tot = Math.max(1, ranked.reduce((s, p) => s + p.score, 0));
+          const medals = ['🥇 1º', '🥈 2º', '🥉 3º', '4º'];
+          board.innerHTML = `
+            <div class="flex items-center justify-between"><span class="text-xs font-extrabold text-amber-300">👑 Batalla Grupal (FFA 4 Jugadores)</span><span class="font-mono text-sm font-bold">${tStr} · ${boostStr}</span></div>
+            <div class="w-full h-4 rounded-full bg-slate-800 overflow-hidden flex border border-white/10">${ranked.map((p) => `<div class="h-full transition-all" style="width:${Math.max(4, Math.round((p.score / tot) * 100))}%; background:${p.color}"></div>`).join('')}</div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">${ranked.map((p, i) => `<div class="p-2.5 rounded-xl bg-card border border-white/10 flex items-center justify-between text-xs font-bold"><span>${medals[i]} ${esc(p.name)}</span><span style="color:${p.color}">${sDisp(p.score)} pts</span></div>`).join('')}</div>
+          `;
+        }
+      }
+
+      function renderBattleControls() {
+        const grid = document.getElementById('pkControlsGrid');
+        if (!grid) return;
+        const active = state.pkMode === '1v1' ? [state.pkPlayers[0], state.pkPlayers[2]] : state.pkPlayers;
+        grid.className = state.pkMode === '1v1' ? 'grid grid-cols-1 sm:grid-cols-2 gap-3' : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3';
+        grid.innerHTML = '';
+        active.forEach((p) => {
+          const c = document.createElement('div');
+          c.className = 'p-3 rounded-xl bg-bg border border-white/10 space-y-2';
+          c.innerHTML = `<input type="text" maxlength="32" data-p-name="${esc(p.id)}" value="${esc(p.name)}" class="bg-transparent text-xs font-extrabold w-full focus:outline-none" style="color:${p.color}" /><div class="grid grid-cols-3 gap-1.5"><button type="button" data-p-add="${esc(p.id)}:10" class="py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-bold">+10</button><button type="button" data-p-add="${esc(p.id)}:100" class="py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-bold">+100</button><button type="button" data-p-add="${esc(p.id)}:1000" class="py-1.5 rounded-lg bg-pinkNeon/20 hover:bg-pinkNeon/30 text-pink-200 text-xs font-bold">+1K</button></div>`;
+          grid.appendChild(c);
+        });
+      }
+
+      function renderBotCmds() {
+        const list = document.getElementById('botCmdList');
+        if (!list) return;
+        list.innerHTML = '';
+        state.botCommands.forEach((c, i) => {
+          const r = document.createElement('div');
+          r.className = 'p-2.5 rounded-xl bg-bg border border-white/10 flex items-start justify-between gap-2 text-xs';
+          r.innerHTML = `<div class="min-w-0"><div class="font-mono font-bold text-cyanNeon">${esc(c.trigger)}</div><div class="text-slate-300 mt-0.5">${esc(c.reply)}</div></div><button type="button" data-bot-rm="${i}" class="text-slate-400 hover:text-pinkNeon font-bold">✕</button>`;
+          list.appendChild(r);
+        });
+      }
+
+      function populateGiftSelect() {
+        const gSel = document.getElementById('actGiftSelect');
+        if (!gSel) return;
+        gSel.innerHTML = '<option value="Cualquier regalo">🎁 Cualquier regalo</option>';
+        state.gifts.forEach((g) => {
+          const o = document.createElement('option');
+          o.value = g.name;
+          o.textContent = `${g.emoji || '🎁'} ${g.name} (${g.coins.toLocaleString('es-ES')} 🪙)`;
+          gSel.appendChild(o);
+        });
+      }
+
+      // ---------- EVENTS SIMULATOR ----------
+      function fireGift(giftName = 'Rose', repeatCount = 1) {
+        const user = sampleUsers[Math.floor(Math.random() * sampleUsers.length)];
+        const gObj = state.gifts.find((g) => g.name === giftName) || state.gifts[0];
+        const total = Math.max(1, gObj.coins) * repeatCount;
+        state.diamonds += total;
+        state.pkPlayers[0].score += total * state.pkBoost;
+        const dRow = state.topDiamonds.find((x) => x.user === user);
+        if (dRow) dRow.val += total; else state.topDiamonds.push({ user, val: total });
+        state.activity.unshift({ kind: 'gift', user, text: `envió ${gObj.name} ×${repeatCount} ${gObj.emoji || '🎁'} (+${total.toLocaleString('es-ES')} 💎)` });
+
+        const matched = state.actions.find((a) => a.enabled && a.type === 'gift' && (a.giftName === gObj.name || a.giftName === 'Cualquier regalo') && repeatCount >= a.minCount);
+        if (matched) {
+          runAction(matched, user, repeatCount);
+        } else {
+          playSound(total >= 500 ? 'fanfare' : 'coin', null);
+          queueAlert({
+            screen: total >= 1000 ? 'screen2' : 'screen1',
+            badgeLabel: 'GIFT ALERT',
+            emoji: gObj.emoji || '🎁',
+            img: gObj.img || '',
+            title: `¡${user} envió ${repeatCount}x ${gObj.name}! (+${total.toLocaleString('es-ES')} 🪙)`,
+            duration: total >= 1000 ? 6 : 4
+          });
+          if (total >= state.ttsMinCoins) {
+            enqueueTts((document.getElementById('tplTtsGift').value || '{nickname} envió {repeatCount} {giftName}').replace('{nickname}', user.replace('@', '')).replace('{repeatCount}', String(repeatCount)).replace('{giftName}', gObj.name), user);
+          }
+        }
+        renderCountersAndFeeds();
+        renderBattleBoard();
+      }
+
+      function fireFollow() {
+        const user = sampleUsers[Math.floor(Math.random() * sampleUsers.length)];
+        state.follows += 1;
+        state.activity.unshift({ kind: 'follow', user, text: 'empezó a seguirte ⭐' });
+        const matched = state.actions.find((a) => a.enabled && a.type === 'follow');
+        if (matched) runAction(matched, user, 1);
+        renderCountersAndFeeds();
+      }
+      function fireSub() {
+        const user = sampleUsers[Math.floor(Math.random() * sampleUsers.length)];
+        state.subs += 1;
+        state.activity.unshift({ kind: 'sub', user, text: 'se acaba de SUSCRIBIR 👑' });
+        const matched = state.actions.find((a) => a.enabled && a.type === 'sub');
+        if (matched) runAction(matched, user, 1);
+        renderCountersAndFeeds();
+      }
+      function fireChat(user, text) {
+        state.chats.unshift({ user, text });
+        state.activity.unshift({ kind: 'chat', user, text });
+        if (state.chatbotEnabled) {
+          const cmd = state.botCommands.find((c) => text.trim().toLowerCase().startsWith(c.trigger.toLowerCase()));
+          if (cmd) setTimeout(() => { state.chats.unshift({ user: '🤖 TikPulse Bot', text: cmd.reply, isBot: true }); renderCountersAndFeeds(); }, 300);
+        }
+        state.actions.filter((a) => a.enabled && a.type === 'keyword' && a.keyword && text.toLowerCase().includes(a.keyword.toLowerCase()))
+          .forEach((a) => runAction(a, user, 1));
+        enqueueTts((document.getElementById('tplTtsChat').value || '{nickname} dice {message}').replace('{nickname}', user.replace('@', '')).replace('{message}', text), user);
+        renderCountersAndFeeds();
+      }
+
+      // ---------- NAVIGATION & MODAL ----------
+      function openDrawer() { document.getElementById('appSidebar').classList.remove('-translate-x-full'); document.getElementById('sidebarBackdrop').classList.remove('hidden'); }
+      function closeDrawer() { document.getElementById('appSidebar').classList.add('-translate-x-full'); document.getElementById('sidebarBackdrop').classList.add('hidden'); }
+      function switchTab(id) {
+        state.activeTab = id;
+        document.querySelectorAll('.tab-panel').forEach((s) => s.classList.toggle('hidden', s.id !== `tab-${id}`));
+        document.querySelectorAll('[data-tab]').forEach((b) => b.classList.toggle('active', b.getAttribute('data-tab') === id));
+        document.getElementById('topPageTitle').textContent = TAB_TITLES[id] || id;
+        closeDrawer();
+      }
+
+      function updateModalGiftThumb(giftName) {
+        const thumb = document.getElementById('modalGiftThumb');
+        const gObj = state.gifts.find((g) => g.name === giftName);
+        if (thumb) thumb.innerHTML = gObj ? giftIconHtml(gObj, 'w-7 h-7') : '🎁';
+      }
+
+      function openActionModal(editObj = null, prefillGiftName = null) {
+        const m = document.getElementById('actionModal');
+        document.getElementById('actionModalTitle').textContent = editObj ? 'Editar Alerta' : (prefillGiftName ? `Música para ${prefillGiftName}` : 'Nueva Alerta con Música');
+        document.getElementById('actEditId').value = editObj ? editObj.id : '';
+        document.getElementById('actType').value = editObj ? editObj.type : 'gift';
+        const gName = editObj && editObj.giftName ? editObj.giftName : (prefillGiftName || 'Rose');
+        document.getElementById('actGiftSelect').value = gName;
+        updateModalGiftThumb(gName);
+        document.getElementById('actKeywordInput').value = editObj ? (editObj.keyword || '') : '';
+        document.getElementById('actMinCount').value = editObj ? editObj.minCount : 1;
+        document.getElementById('actDuration').value = editObj ? editObj.duration : 5;
+        document.getElementById('actScreen').value = editObj ? editObj.screen : ((state.gifts.find((x) => x.name === gName)?.coins || 0) >= 1000 ? 'screen2' : 'screen1');
+        document.getElementById('actSoundPreset').value = editObj ? editObj.preset : 'coin';
+        document.getElementById('actMessage').value = editObj ? editObj.message : `¡Gracias {nickname} por {repeatCount}x ${gName}!`;
+        document.getElementById('actUseTtsToggle').classList.toggle('active', editObj ? editObj.useTts : true);
+        state.pendingAudioUrl = editObj ? editObj.audioUrl : null;
+        state.pendingAudioName = editObj ? editObj.audioName : '';
+        document.getElementById('actAudioLabel').textContent = state.pendingAudioName ? '🎵 ' + state.pendingAudioName : '+ Subir música MP3...';
+        syncModalTypeFields();
+        m.classList.remove('hidden'); m.classList.add('flex');
+      }
+      function closeActionModal() { const m = document.getElementById('actionModal'); m.classList.add('hidden'); m.classList.remove('flex'); }
+      function syncModalTypeFields() {
+        const t = document.getElementById('actType').value;
+        document.getElementById('actGiftWrap').classList.toggle('hidden', t !== 'gift');
+        document.getElementById('actKeywordWrap').classList.toggle('hidden', t !== 'keyword');
+      }
+
+      // Expose hook for real Socket.IO backend (Render) to load 100+ live TikTok gifts & real-time PK scores
+      window.__tikpulseApplyLiveGifts = function (liveGifts) {
+        if (!Array.isArray(liveGifts) || !liveGifts.length) return;
+        state.gifts = liveGifts.map((g) => ({
+          name: String(g.name || 'Regalo'),
+          coins: Number(g.coins || g.diamond_count || 1),
+          emoji: '🎁',
+          img: String(g.img || '')
+        }));
+        populateGiftSelect();
+        renderVisualGiftGrid();
+        toast(`Catálogo en vivo cargado: ${state.gifts.length} regalos de TikTok`);
+      };
+      window.__tikpulseApplyBattleUpdate = function (playersArr) {
+        if (!Array.isArray(playersArr) || !playersArr.length) return;
+        if (playersArr.length === 2) state.pkMode = '1v1';
+        else if (playersArr.length >= 3) state.pkMode = 'ffa';
+        playersArr.slice(0, 4).forEach((pl, idx) => {
+          if (state.pkPlayers[idx]) {
+            state.pkPlayers[idx].name = pl.name || state.pkPlayers[idx].name;
+            state.pkPlayers[idx].score = Number(pl.score || 0);
+          }
+        });
+        renderBattleBoard();
+      };
+
+      // ---------- TIMERS ----------
+      setInterval(() => {
+        if (state.pkRunning && state.pkSeconds > 0) state.pkSeconds -= 1;
+        if (state.pkBoostSec > 0) { state.pkBoostSec -= 1; if (state.pkBoostSec === 0) { state.pkBoost = 1; state.pkBoostLabel = ''; } }
+        renderBattleBoard();
+      }, 1000);
+
+      // ---------- LISTENERS ----------
+      document.getElementById('btnOpenDrawer').addEventListener('click', openDrawer);
+      document.getElementById('btnCloseDrawer').addEventListener('click', closeDrawer);
+      document.getElementById('sidebarBackdrop').addEventListener('click', closeDrawer);
+      document.querySelectorAll('[data-tab]').forEach((b) => b.addEventListener('click', () => switchTab(b.getAttribute('data-tab'))));
+
+      document.getElementById('btnWakeLock').addEventListener('click', async () => {
+        const lbl = document.getElementById('wakeLockLabel');
+        if (state.wakeLockObj) { try { await state.wakeLockObj.release(); } catch (_) {} state.wakeLockObj = null; lbl.textContent = 'Pantalla activa: OFF'; toast('Wake Lock desactivado', 'pink'); }
+        else {
+          if ('wakeLock' in navigator) { try { state.wakeLockObj = await navigator.wakeLock.request('screen'); lbl.textContent = 'Pantalla activa: ON'; toast('Pantalla activa (Wake Lock)'); return; } catch (_) {} }
+          state.wakeLockObj = { release: async () => {} }; lbl.textContent = 'Pantalla activa: ON'; toast('Modo pantalla activa simulado');
+        }
+      });
+
+      document.getElementById('connectUserInput').addEventListener('input', (e) => {
+        state.username = e.target.value.replace(/[^a-zA-Z0-9._]/g, '').slice(0, 32) || 'tu_usuario';
+        renderCountersAndFeeds(); renderBattleBoard();
+      });
+      document.getElementById('btnConnectLive').addEventListener('click', () => {
+        state.connected = !state.connected;
+        document.getElementById('connectBtnText').textContent = state.connected ? 'Conectado' : 'Conectar';
+        document.getElementById('sidebarConnText').textContent = state.connected ? 'Conectado' : 'Sin conexión';
+        document.getElementById('sidebarConnDot').className = state.connected ? 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse' : 'w-2 h-2 rounded-full bg-slate-500';
+        document.getElementById('topLivePill').classList.toggle('opacity-40', !state.connected);
+      });
+
+      document.getElementById('btnQuickSimGift').addEventListener('click', () => fireGift(['Rose', 'Galaxy', 'Finger Heart', 'Lion', 'TikTok Universe'][Math.floor(Math.random() * 5)], 1));
+      document.querySelectorAll('[data-sim-quick]').forEach((b) => {
+        b.addEventListener('click', () => {
+          const k = b.getAttribute('data-sim-quick');
+          if (k === 'follow') fireFollow();
+          else if (k === 'sub') fireSub();
+          else if (k === 'combo') fireGift('Rose', 10);
+          else fireGift(['Rose', 'Galaxy', 'Whale Diving', 'Doughnut'][Math.floor(Math.random() * 4)], 1);
+        });
+      });
+      document.getElementById('btnClearActivity').addEventListener('click', () => { state.activity = []; renderCountersAndFeeds(); });
+
+      // Sub-view switcher inside Gifts & Alerts (Visual Catalog vs Active Alerts)
+      document.querySelectorAll('[data-acc-view]').forEach((b) => {
+        b.addEventListener('click', () => {
+          state.accView = b.getAttribute('data-acc-view');
+          document.querySelectorAll('[data-acc-view]').forEach((x) => x.classList.toggle('active', x === b));
+          document.getElementById('accView-catalog').classList.toggle('hidden', state.accView !== 'catalog');
+          document.getElementById('accView-active').classList.toggle('hidden', state.accView !== 'active');
+        });
+      });
+      document.getElementById('catalogSearchInput').addEventListener('input', renderVisualGiftGrid);
+      document.getElementById('catalogCoinFilter').addEventListener('change', renderVisualGiftGrid);
+      document.getElementById('visualGiftGrid').addEventListener('click', (e) => {
+        const pick = e.target.closest('[data-pick-gift]');
+        if (pick) {
+          const gName = pick.getAttribute('data-pick-gift');
+          const existing = state.actions.find((a) => a.type === 'gift' && a.giftName === gName);
+          openActionModal(existing || null, gName);
+        }
+        const fire = e.target.closest('[data-quick-fire]');
+        if (fire) fireGift(fire.getAttribute('data-quick-fire'), 1);
+      });
+
+      document.querySelectorAll('[data-act-filter]').forEach((b) => {
+        b.addEventListener('click', () => { state.actionFilter = b.getAttribute('data-act-filter'); document.querySelectorAll('[data-act-filter]').forEach((x) => x.classList.toggle('active', x === b)); renderActionsCards(); });
+      });
+      document.getElementById('toggleMasterAlerts').addEventListener('click', (e) => { state.masterAlerts = !state.masterAlerts; e.currentTarget.classList.toggle('active', state.masterAlerts); document.getElementById('sidebarAlertState').textContent = state.masterAlerts ? 'ON' : 'OFF'; });
+      document.getElementById('btnOpenNewAction').addEventListener('click', () => openActionModal(null));
+      document.getElementById('btnCloseActionModal').addEventListener('click', closeActionModal);
+      document.getElementById('btnCancelActionModal').addEventListener('click', closeActionModal);
+      document.getElementById('actType').addEventListener('change', syncModalTypeFields);
+      document.getElementById('actGiftSelect').addEventListener('change', (e) => updateModalGiftThumb(e.target.value));
+      document.getElementById('actUseTtsToggle').addEventListener('click', (e) => e.currentTarget.classList.toggle('active'));
+
+      document.getElementById('actAudioFile').addEventListener('change', (e) => {
+        const f = e.target.files && e.target.files[0];
+        if (!f) return;
+        if (!f.type.startsWith('audio/')) { toast('Solo se permiten archivos de audio (MP3/WAV)', 'pink'); e.target.value = ''; return; }
+        if (f.size > 5 * 1024 * 1024) { toast('El audio supera el límite de 5 MB', 'pink'); e.target.value = ''; return; }
+        if (state.pendingAudioUrl && state.pendingAudioUrl.startsWith('blob:')) URL.revokeObjectURL(state.pendingAudioUrl);
+        state.pendingAudioUrl = URL.createObjectURL(f);
+        state.pendingAudioName = f.name;
+        document.getElementById('actAudioLabel').textContent = '🎵 ' + f.name;
+      });
+
+      document.getElementById('actionModalForm').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const editId = document.getElementById('actEditId').value;
+        const type = document.getElementById('actType').value;
+        const obj = {
+          id: editId || 'a_' + Date.now(),
+          type,
+          giftName: type === 'gift' ? document.getElementById('actGiftSelect').value : '',
+          keyword: type === 'keyword' ? document.getElementById('actKeywordInput').value.trim() : '',
+          minCount: Math.max(1, Number(document.getElementById('actMinCount').value) || 1),
+          duration: Math.max(1, Math.min(30, Number(document.getElementById('actDuration').value) || 5)),
+          screen: document.getElementById('actScreen').value,
+          preset: document.getElementById('actSoundPreset').value,
+          audioUrl: state.pendingAudioUrl,
+          audioName: state.pendingAudioName,
+          message: document.getElementById('actMessage').value.trim() || '¡Nueva alerta!',
+          useTts: document.getElementById('actUseTtsToggle').classList.contains('active'),
+          enabled: true
+        };
+        if (editId) { const idx = state.actions.findIndex((x) => x.id === editId); if (idx >= 0) state.actions[idx] = obj; }
+        else state.actions.unshift(obj);
+        saveActions();
+        closeActionModal();
+        renderActionsCards();
+        renderVisualGiftGrid();
+        toast(editId ? 'Alerta actualizada' : 'Alerta guardada');
+      });
+
+      document.getElementById('actionSearchInput').addEventListener('input', renderActionsCards);
+      document.getElementById('streakModeSelect').addEventListener('change', (e) => { state.streakMode = e.target.value; });
+      document.getElementById('queueModeSelect').addEventListener('change', (e) => { state.queueMode = e.target.value; });
+      document.getElementById('actionsCardsList').addEventListener('click', (e) => {
+        const testB = e.target.closest('[data-act-test]');
+        if (testB) { const a = state.actions.find((x) => x.id === testB.getAttribute('data-act-test')); if (a) runAction(a, '@sofia_live', a.minCount); }
+        const editB = e.target.closest('[data-act-edit]');
+        if (editB) { const a = state.actions.find((x) => x.id === editB.getAttribute('data-act-edit')); if (a) openActionModal(a); }
+        const togB = e.target.closest('[data-act-toggle]');
+        if (togB) { const a = state.actions.find((x) => x.id === togB.getAttribute('data-act-toggle')); if (a) { a.enabled = !a.enabled; saveActions(); renderActionsCards(); } }
+        const delB = e.target.closest('[data-act-del]');
+        if (delB) {
+          const target = state.actions.find((x) => x.id === delB.getAttribute('data-act-del'));
+          if (target?.audioUrl?.startsWith('blob:')) URL.revokeObjectURL(target.audioUrl);
+          state.actions = state.actions.filter((x) => x.id !== delB.getAttribute('data-act-del'));
+          saveActions(); renderActionsCards(); renderVisualGiftGrid();
+        }
+      });
+
+      // TTS listeners
+      document.querySelectorAll('[data-tts-engine]').forEach((b) => {
+        b.addEventListener('click', () => {
+          state.ttsEngine = b.getAttribute('data-tts-engine');
+          document.querySelectorAll('[data-tts-engine]').forEach((x) => x.classList.toggle('active', x === b));
+          document.getElementById('boxGoogleTts').classList.toggle('hidden', state.ttsEngine !== 'google');
+          document.getElementById('boxElevenLabs').classList.toggle('hidden', state.ttsEngine !== 'elevenlabs');
+        });
+      });
+      document.getElementById('googleAccentSelect').addEventListener('change', (e) => { state.googleAccent = e.target.value; });
+      document.getElementById('elApiKey').addEventListener('input', (e) => { state.elApiKey = e.target.value; });
+      document.getElementById('elVoiceSelect').addEventListener('change', (e) => { state.elVoiceId = e.target.value; });
+      document.getElementById('elCustomVoiceId').addEventListener('input', (e) => { state.elCustomVoiceId = e.target.value; });
+      document.getElementById('browserVoiceSelect').addEventListener('change', (e) => { state.browserVoiceUri = e.target.value; });
+      document.getElementById('ttsCooldownSec').addEventListener('input', (e) => { state.ttsCooldownSec = Math.max(0, Number(e.target.value) || 0); });
+      document.getElementById('ttsMaxChars').addEventListener('input', (e) => { state.ttsMaxChars = Math.max(20, Number(e.target.value) || 140); });
+      document.getElementById('ttsMinCoins').addEventListener('input', (e) => { state.ttsMinCoins = Math.max(0, Number(e.target.value) || 0); });
+      document.getElementById('chkUniqueVoice').addEventListener('change', (e) => { state.ttsUniqueVoice = e.target.checked; });
+      document.getElementById('chkStripEmojis').addEventListener('change', (e) => { state.stripEmojis = e.target.checked; });
+      document.getElementById('ttsBlockedWords').addEventListener('input', (e) => { state.blockedWords = e.target.value; });
+      document.getElementById('rngVol').addEventListener('input', (e) => { state.ttsVolume = Number(e.target.value) / 100; document.getElementById('lblVol').textContent = `${e.target.value}%`; });
+      document.getElementById('rngRate').addEventListener('input', (e) => { state.ttsRate = Number(e.target.value); document.getElementById('lblRate').textContent = `${state.ttsRate.toFixed(2)}x`; });
+      document.getElementById('rngPitch').addEventListener('input', (e) => { state.ttsPitch = Number(e.target.value); document.getElementById('lblPitch').textContent = state.ttsPitch.toFixed(1); });
+      document.getElementById('btnRunTtsTest').addEventListener('click', () => enqueueTts(document.getElementById('ttsTestText').value));
+      document.getElementById('toggleMasterTts').addEventListener('click', (e) => {
+        state.ttsEnabled = !state.ttsEnabled;
+        e.currentTarget.classList.toggle('active', state.ttsEnabled);
+        document.getElementById('sidebarTtsState').textContent = state.ttsEnabled ? 'ON' : 'OFF';
+        if (!state.ttsEnabled && 'speechSynthesis' in window) { window.speechSynthesis.cancel(); state.ttsSpeaking = false; }
+      });
+      document.getElementById('btnTtsSkip').addEventListener('click', () => { if ('speechSynthesis' in window) window.speechSynthesis.cancel(); state.ttsQueue.shift(); state.ttsSpeaking = false; pumpTts(); });
+      document.getElementById('btnTtsClear').addEventListener('click', () => { if ('speechSynthesis' in window) window.speechSynthesis.cancel(); state.ttsQueue = []; state.ttsSpeaking = false; renderTtsQueue(); });
+
+      // Chat & Bot
+      document.getElementById('chatSearchInput').addEventListener('input', renderCountersAndFeeds);
+      document.getElementById('chatSendForm').addEventListener('submit', (e) => { e.preventDefault(); const inp = document.getElementById('chatSendInput'); if (!inp.value.trim()) return; const txt = inp.value.trim(); inp.value = ''; fireChat(sampleUsers[Math.floor(Math.random() * sampleUsers.length)], txt); });
+      document.getElementById('toggleChatbot').addEventListener('click', (e) => { state.chatbotEnabled = !state.chatbotEnabled; e.currentTarget.classList.toggle('active', state.chatbotEnabled); });
+      document.getElementById('botCmdList').addEventListener('click', (e) => { const b = e.target.closest('[data-bot-rm]'); if (b) { state.botCommands.splice(Number(b.getAttribute('data-bot-rm')), 1); renderBotCmds(); } });
+      document.getElementById('botCmdForm').addEventListener('submit', (e) => { e.preventDefault(); state.botCommands.push({ trigger: document.getElementById('botTrigInp').value.trim(), reply: document.getElementById('botRepInp').value.trim() }); document.getElementById('botTrigInp').value = ''; document.getElementById('botRepInp').value = ''; renderBotCmds(); });
+
+      // Battle PK
+      document.querySelectorAll('[data-pk-mode]').forEach((b) => {
+        b.addEventListener('click', () => { state.pkMode = b.getAttribute('data-pk-mode'); document.querySelectorAll('[data-pk-mode]').forEach((x) => x.classList.toggle('active', x === b)); renderBattleBoard(); renderBattleControls(); });
+      });
+      document.querySelectorAll('[data-boost]').forEach((b) => {
+        b.addEventListener('click', () => {
+          const v = b.getAttribute('data-boost');
+          if (v === 'sniper') { state.pkSeconds = 15; state.pkRunning = true; toast('🎯 Zona Sniper (15s)', 'pink'); }
+          else if (v === 'mist') { state.pkMist = !state.pkMist; toast(state.pkMist ? '🌫️ Neblina ON' : '🌫️ Neblina OFF'); }
+          else if (v === 'glove') { state.pkBoost = 5; state.pkBoostLabel = 'GUANTE ×5'; state.pkBoostSec = 20; toast('🥊 Guante ×5'); }
+          else { state.pkBoost = Number(v); state.pkBoostLabel = `×${v} BOOST`; state.pkBoostSec = v === '3' ? 20 : 30; toast(`⚡ Boost ×${v}`); }
+          renderBattleBoard();
+        });
+      });
+      document.getElementById('btnPkPause').addEventListener('click', (e) => { state.pkRunning = !state.pkRunning; e.target.textContent = state.pkRunning ? 'Pausar' : 'Reanudar'; });
+      document.getElementById('btnPkReset').addEventListener('click', () => { state.pkPlayers.forEach((p) => { p.score = 0; }); state.pkSeconds = 300; state.pkBoost = 1; state.pkBoostSec = 0; state.pkMist = false; state.pkRunning = true; renderBattleBoard(); });
+      const pkGrid = document.getElementById('pkControlsGrid');
+      pkGrid.addEventListener('click', (e) => { const b = e.target.closest('[data-p-add]'); if (b) { const [pid, amt] = b.getAttribute('data-p-add').split(':'); const p = state.pkPlayers.find((x) => x.id === pid); if (p) { p.score += Number(amt) * state.pkBoost; playTone(p.team === 'A' ? 600 : 320, 0.14); renderBattleBoard(); } } });
+      pkGrid.addEventListener('input', (e) => { const inp = e.target.closest('[data-p-name]'); if (inp) { const p = state.pkPlayers.find((x) => x.id === inp.getAttribute('data-p-name')); if (p) { p.name = inp.value; renderBattleBoard(); } } });
+
+      // Viewers & Overlay
+      document.getElementById('btnSimJoin').addEventListener('click', () => { const u = sampleUsers[Math.floor(Math.random() * sampleUsers.length)]; state.viewers += 1; state.memberJoins.unshift({ user: u, time: 'Ahora' }); state.activity.unshift({ kind: 'join', user: u, text: 'entró al LIVE 👋' }); renderCountersAndFeeds(); });
+      document.querySelectorAll('[data-copy-ov]').forEach((b) => { b.addEventListener('click', () => { const k = b.getAttribute('data-copy-ov'); copyStr(document.getElementById(k === 'likes' ? 'urlOverlayLikes' : 'urlOverlayMaster').value); }); });
+      document.getElementById('btnRegenToken').addEventListener('click', () => { state.token = 'tp_' + Math.random().toString(36).slice(2, 11); renderCountersAndFeeds(); toast('Token regenerado'); });
+      document.getElementById('btnToggleOvChroma').addEventListener('click', () => { state.ovChroma = !state.ovChroma; document.getElementById('overlayLikesPreview').classList.toggle('overlay-chroma', state.ovChroma); });
+
+      // Auto-simulator
+      document.getElementById('toggleAutoSim').addEventListener('click', (e) => {
+        state.autoSim = !state.autoSim;
+        e.currentTarget.classList.toggle('active', state.autoSim);
+        if (state.autoSimTimer) { clearInterval(state.autoSimTimer); state.autoSimTimer = null; }
+        if (state.autoSim) {
+          toast('Auto-simulador activo');
+          state.autoSimTimer = setInterval(() => {
+            const r = Math.random(), u = sampleUsers[Math.floor(Math.random() * sampleUsers.length)];
+            state.likes += Math.floor(Math.random() * 40) + 10;
+            const lr = state.topLikes.find((x) => x.user === u);
+            if (lr) lr.val += 25; else state.topLikes.push({ user: u, val: 25 });
+            if (r < 0.35) fireChat(u, ['¡Vamos equipo!', 'Tap tap ❤️', '!pk', 'Esto está puro fuego'][Math.floor(Math.random() * 4)]);
+            else if (r < 0.65) fireGift(['Rose', 'Finger Heart', 'Doughnut', 'Galaxy', 'Whale Diving'][Math.floor(Math.random() * 5)], 1);
+            else if (r < 0.8) fireFollow();
+            else { state.pkPlayers[2].score += 50; renderBattleBoard(); }
+            renderCountersAndFeeds();
+          }, 2600);
+        } else toast('Auto-simulador pausado', 'pink');
+      });
+
+      if (window.lucide && window.lucide.createIcons) window.lucide.createIcons();
+      populateGiftSelect();
+      renderVisualGiftGrid();
+      renderCountersAndFeeds();
+      renderActionsCards();
+      renderBotCmds();
+      renderBattleBoard();
+      renderBattleControls();
+      renderTtsQueue();
+    })();
+  </script>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    (function () {
+      if (typeof io !== 'function') return;
+      const socket = io();
+      const inp = document.getElementById('connectUserInput');
+      const btn = document.getElementById('btnConnectLive');
+      const ovField = document.getElementById('urlOverlayMaster');
+      function getToken() {
+        try { return new URL(ovField.value).searchParams.get('token') || 'main'; } catch (_) { return 'main'; }
+      }
+      if (btn) {
+        btn.addEventListener('click', () => {
+          socket.emit('tiktok:connect', { username: (inp && inp.value || '').trim(), token: getToken() });
+        });
+      }
+      socket.on('tiktok:gifts_catalog', (list) => {
+        if (window.__tikpulseApplyLiveGifts) window.__tikpulseApplyLiveGifts(list);
+      });
+      socket.on('tiktok:battle_update', (players) => {
+        if (window.__tikpulseApplyBattleUpdate) window.__tikpulseApplyBattleUpdate(players);
+      });
+    })();
+  </script>
+</body>
+</html>
