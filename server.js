@@ -115,11 +115,14 @@ function createInitialRoomState(username) {
     stats: { likes: 0, viewers: 0, follows: 0, coins: 0, shares: 0, subs: 0 },
     topLikes: new Map(),
     topCoins: new Map(),
+    topViewers: [], // ranked viewers from ROOM_USER (ranksList / topViewers)
     activeViewers: new Map(),
     giftsCatalog: [],
     battle: {
       active: false,
       status: 0,
+      battleId: '',
+      mode: '',
       hostMap: {},
       players: [],
       matchGifters: new Map(),
@@ -130,8 +133,51 @@ function createInitialRoomState(username) {
 
 function safeId(val) {
   if (val === null || val === undefined) return '';
-  if (typeof val === 'object' && typeof val.toString === 'function') return String(val.toString()).trim();
-  return String(val).trim();
+  if (typeof val === 'bigint') return val.toString();
+  if (typeof val === 'object') {
+    if (typeof val.low === 'number' && typeof val.high === 'number') {
+      try {
+        const low = BigInt(val.low >>> 0);
+        const high = BigInt(val.high >>> 0);
+        return ((high << 32n) | low).toString();
+      } catch (_) {}
+    }
+    if (typeof val.toString === 'function') {
+      const s = String(val.toString()).trim();
+      if (s && s !== '[object Object]') return s;
+    }
+    return '';
+  }
+  const s = String(val).trim();
+  return (s && s !== '[object Object]' && s !== 'undefined' && s !== 'null') ? s : '';
+}
+
+function deepHarvestUsers(rs, obj, depth = 0) {
+  if (!obj || typeof obj !== 'object' || depth > 5) return;
+  if (Array.isArray(obj)) {
+    for (let i = 0; i < obj.length && i < 60; i++) {
+      deepHarvestUsers(rs, obj[i], depth + 1);
+    }
+    return;
+  }
+  const uid = safeId(obj.userId || obj.user_id || obj.id_str || obj.id || obj.uid || obj.hostUserId || obj.host_user_id || obj.anchorId || obj.anchor_id);
+  const label = parseUserLabel(obj, '');
+  if (uid && label && !label.startsWith('Anfitrión #') && !label.startsWith('Equipo #')) {
+    rs.knownUsers.set(uid, label);
+    if (rs.battle.hostMap[uid] && (rs.battle.hostMap[uid].name.startsWith('Anfitrión #') || rs.battle.hostMap[uid].name.startsWith('Equipo #'))) {
+      rs.battle.hostMap[uid].name = label;
+    }
+  }
+  const keys = Object.keys(obj);
+  for (let i = 0; i < keys.length && i < 40; i++) {
+    const k = keys[i];
+    const v = obj[k];
+    if (v && typeof v === 'object') {
+      // If key itself looks like a numeric TikTok userId, pass it as explicitId
+      if (/^\d{6,}$/.test(k)) rememberUser(rs, v, k);
+      deepHarvestUsers(rs, v, depth + 1);
+    }
+  }
 }
 
 function parseUserLabel(u, fallback = 'Usuario') {
@@ -171,6 +217,27 @@ function trackActiveViewer(rs, label, role = 'Espectador') {
   }
 }
 
+function buildTopViewersList(rs) {
+  if (Array.isArray(rs.topViewers) && rs.topViewers.length) {
+    return rs.topViewers.slice(0, 25);
+  }
+  // Fallback ranking from live coins + likes + active viewers when TikTok hasn't sent ranksList yet
+  const scoreMap = new Map();
+  for (const [user, coins] of rs.topCoins.entries()) {
+    scoreMap.set(user, { user, coins, likes: rs.topLikes.get(user) || 0, role: 'Donador 🎁' });
+  }
+  for (const [user, likes] of rs.topLikes.entries()) {
+    if (!scoreMap.has(user)) scoreMap.set(user, { user, coins: 0, likes, role: 'Tap Tap ❤️' });
+  }
+  for (const [user, role] of rs.activeViewers.entries()) {
+    if (!scoreMap.has(user)) scoreMap.set(user, { user, coins: 0, likes: 0, role });
+  }
+  return Array.from(scoreMap.values())
+    .sort((a, b) => (b.coins - a.coins) || (b.likes - a.likes))
+    .slice(0, 25)
+    .map((v, idx) => ({ rank: idx + 1, user: v.user, coins: v.coins, likes: v.likes, role: v.role }));
+}
+
 function serializeRoomStats(rs) {
   return {
     username: rs.username,
@@ -180,6 +247,7 @@ function serializeRoomStats(rs) {
     stats: rs.stats,
     topLikes: Array.from(rs.topLikes.entries()).map(([user, val]) => ({ user, val })).sort((a, b) => b.val - a.val).slice(0, 15),
     topCoins: Array.from(rs.topCoins.entries()).map(([user, val]) => ({ user, val })).sort((a, b) => b.val - a.val).slice(0, 15),
+    topViewers: buildTopViewersList(rs),
     activeViewers: Array.from(rs.activeViewers.entries()).slice(-25).reverse().map(([user, role]) => ({ user, role }))
   };
 }
@@ -189,10 +257,15 @@ function serializeBattle(rs) {
     .filter((u) => Number(u.coins || 0) > 0)
     .sort((a, b) => b.coins - a.coins)
     .slice(0, 20);
+  const players = Object.values(rs.battle.hostMap)
+    .filter((p) => p && (p.score > 0 || !p.isGhost))
+    .sort((a, b) => Number(b.score || 0) - Number(a.score || 0));
   return {
     active: rs.battle.active,
     status: rs.battle.status,
-    players: Object.values(rs.battle.hostMap),
+    battleId: rs.battle.battleId || '',
+    mode: rs.battle.mode || (players.length === 2 ? '1v1 / 2v2' : (players.length > 2 ? `Grupal (${players.length})` : '')),
+    players,
     matchTopUsers,
     throws: rs.battle.throws.slice(0, 35)
   };
@@ -271,31 +344,56 @@ function hydrateFromRoomInfo(rs, rawInfo) {
   if (shares > rs.stats.shares) rs.stats.shares = shares;
   if (initCoins > rs.stats.coins) rs.stats.coins = initCoins;
 
+  // Deep-harvest all nested userId -> nickname mappings from roomInfo
+  deepHarvestUsers(rs, rInfo.link_mic || {}, 0);
+  deepHarvestUsers(rs, rInfo.battle_info || {}, 0);
+
+  if (Array.isArray(rInfo.top_fans) && rInfo.top_fans.length && !rs.topViewers.length) {
+    rs.topViewers = rInfo.top_fans.slice(0, 25).map((tf, i) => {
+      const uObj = tf.user || tf;
+      rememberUser(rs, uObj);
+      return {
+        rank: i + 1,
+        user: parseUserLabel(uObj, 'Espectador'),
+        coins: Number(tf.fan_ticket || tf.coin_count || tf.score || 0),
+        role: i < 3 ? `Top #${i + 1} 👑` : 'Top Espectador'
+      };
+    });
+  }
+
+  // Only seed battle_scores from roomInfo if we don't already have live LINK_MIC_ARMIES scores
   const bScores = lm.battle_scores || rInfo.battle_info?.battle_scores || [];
-  if (Array.isArray(bScores) && bScores.length) {
+  if (Array.isArray(bScores) && bScores.length && !Object.keys(rs.battle.hostMap).length) {
     rs.battle.active = true;
     rs.battle.status = 1;
+    const nextMap = {};
     bScores.forEach((bs, idx) => {
-      const hid = safeId(bs.user_id || bs.host_user_id || idx);
+      const hid = safeId(bs.user_id || bs.host_user_id || bs.id);
+      if (!hid) return;
       rememberUser(rs, bs, hid);
-      const existing = rs.battle.hostMap[hid];
-      rs.battle.hostMap[hid] = {
+      nextMap[hid] = {
         id: hid,
         name: resolveHostName(rs, hid, bs, idx),
         score: Number(bs.score || bs.points || 0),
-        contributors: existing?.contributors || []
+        contributors: []
       };
     });
-    rs.battle.players = Object.values(rs.battle.hostMap);
+    if (Object.keys(nextMap).length) {
+      rs.battle.hostMap = nextMap;
+      rs.battle.players = Object.values(nextMap);
+    }
   }
 }
 
 function parseBattleStart(rs, d) {
+  deepHarvestUsers(rs, d, 0);
+  const newBattleId = safeId(d?.battleId || d?.battleSetting?.battleId || '');
   const hostMap = {};
   const anchors = d?.anchorInfo || d?.anchors;
   if (Array.isArray(anchors)) {
     anchors.forEach((info, idx) => {
-      const hid = safeId(info?.user?.userId || info?.userId || idx);
+      const hid = safeId(info?.user?.userId || info?.userId || info?.anchorId);
+      if (!hid) return;
       rememberUser(rs, info?.user || info, hid);
       hostMap[hid] = {
         id: hid,
@@ -306,7 +404,8 @@ function parseBattleStart(rs, d) {
     });
   } else if (anchors && typeof anchors === 'object') {
     Object.entries(anchors).forEach(([k, info], idx) => {
-      const hid = safeId(info?.user?.userId || info?.userId || k || idx);
+      const hid = safeId(info?.user?.userId || info?.userId || info?.anchorId || k);
+      if (!hid) return;
       rememberUser(rs, info?.user || info, hid);
       hostMap[hid] = {
         id: hid,
@@ -318,7 +417,8 @@ function parseBattleStart(rs, d) {
   }
   if (!Object.keys(hostMap).length && Array.isArray(d?.battleUsers)) {
     d.battleUsers.forEach((u, idx) => {
-      const hid = safeId(u?.userId || u?.id || idx);
+      const hid = safeId(u?.userId || u?.id);
+      if (!hid) return;
       rememberUser(rs, u, hid);
       hostMap[hid] = {
         id: hid,
@@ -331,6 +431,8 @@ function parseBattleStart(rs, d) {
   rs.battle = {
     active: true,
     status: 1,
+    battleId: newBattleId,
+    mode: '',
     hostMap,
     players: Object.values(hostMap),
     matchGifters: new Map(),
@@ -339,21 +441,27 @@ function parseBattleStart(rs, d) {
 }
 
 function parseBattleArmies(rs, d) {
+  deepHarvestUsers(rs, d, 0);
   const status = Number(d?.battleStatus ?? 1);
-  if (d?.anchorInfo && typeof d.anchorInfo === 'object') {
-    const entries = Array.isArray(d.anchorInfo) ? d.anchorInfo.map((v, i) => [safeId(v?.user?.userId || v?.userId || i), v]) : Object.entries(d.anchorInfo);
-    entries.forEach(([k, v]) => rememberUser(rs, v?.user || v, k));
+  const incomingBattleId = safeId(d?.battleId || d?.battleSetting?.battleId || '');
+
+  // If a new battle started, reset stale gifters & hosts cleanly
+  if (incomingBattleId && rs.battle.battleId && incomingBattleId !== rs.battle.battleId) {
+    rs.battle.hostMap = {};
+    rs.battle.matchGifters = new Map();
+    rs.battle.throws = [];
   }
+  if (incomingBattleId) rs.battle.battleId = incomingBattleId;
 
   let rawEntries = [];
   if (Array.isArray(d?.battleItems) && d.battleItems.length) {
-    rawEntries = d.battleItems.map((it, i) => [safeId(it?.hostUserId || it?.userId || i), it]);
+    rawEntries = d.battleItems.map((it, i) => [safeId(it?.hostUserId || it?.userId || it?.anchorId || it?.id) || `slot_${i}`, it]);
   } else if (d?.battleItems && typeof d.battleItems === 'object' && Object.keys(d.battleItems).length) {
-    rawEntries = Object.entries(d.battleItems).map(([k, it]) => [safeId(it?.hostUserId || k), it]);
+    rawEntries = Object.entries(d.battleItems).map(([k, it], i) => [safeId(it?.hostUserId || it?.userId || k) || `slot_${i}`, it]);
   } else if (Array.isArray(d?.battleArmies) && d.battleArmies.length) {
-    rawEntries = d.battleArmies.map((it, i) => [safeId(it?.hostUserId || i), it]);
+    rawEntries = d.battleArmies.map((it, i) => [safeId(it?.hostUserId || it?.userId) || `slot_${i}`, it]);
   } else if (d?.armies && typeof d.armies === 'object' && Object.keys(d.armies).length) {
-    rawEntries = Object.entries(d.armies).map(([k, it]) => [safeId(it?.hostUserId || k), it]);
+    rawEntries = Object.entries(d.armies).map(([k, it], i) => [safeId(it?.hostUserId || it?.userId || k) || `slot_${i}`, it]);
   }
 
   if (!rawEntries.length) return false;
@@ -361,10 +469,15 @@ function parseBattleArmies(rs, d) {
   rs.battle.active = status !== 2;
   rs.battle.status = status;
 
+  // CRITICAL FIX: Build a CLEAN snapshot from the current LINK_MIC_ARMIES packet
+  // instead of piling up old/ghost/mismatched-ID hosts (which caused 8 duplicate hosts!)
+  const nextHostMap = {};
   let hasUnknownHost = false;
+
   rawEntries.forEach(([hid, item], idx) => {
-    rememberUser(rs, item?.hostUser || item?.user || item?.anchorInfo, hid);
-    const hostName = resolveHostName(rs, hid, item?.hostUser || item?.user || item?.anchorInfo, idx);
+    const cleanHid = safeId(hid) || `slot_${idx}`;
+    rememberUser(rs, item?.hostUser || item?.user || item?.anchorInfo, cleanHid);
+    const hostName = resolveHostName(rs, cleanHid, item?.hostUser || item?.user || item?.anchorInfo, idx);
     if (hostName.startsWith('Anfitrión #')) hasUnknownHost = true;
 
     let score = Number(item?.hostScore ?? item?.points ?? item?.score ?? 0);
@@ -379,7 +492,6 @@ function parseBattleArmies(rs, d) {
           grp.users.forEach((u) => {
             rememberUser(rs, u);
             const uname = parseUserLabel(u, 'Espectador');
-            // ONLY use explicit individual user score (NEVER fall back to host total gPts!)
             const uPts = Number(u?.score || u?.points || 0);
             contributors.push({ user: uname, points: uPts });
             if (uPts > 0 && uPts !== gPts) {
@@ -414,15 +526,28 @@ function parseBattleArmies(rs, d) {
 
     contributors.sort((a, b) => b.points - a.points);
 
-    rs.battle.hostMap[hid] = {
-      id: hid,
-      name: hostName,
-      score,
-      contributors: contributors.slice(0, 10)
-    };
+    // Deduplicate if the same hostId appears twice in the same packet (keep higher score & real name)
+    const prevInSnap = nextHostMap[cleanHid];
+    if (prevInSnap) {
+      nextHostMap[cleanHid] = {
+        id: cleanHid,
+        name: (!hostName.startsWith('Anfitrión #')) ? hostName : prevInSnap.name,
+        score: Math.max(prevInSnap.score, score),
+        contributors: contributors.length ? contributors.slice(0, 10) : prevInSnap.contributors
+      };
+    } else {
+      nextHostMap[cleanHid] = {
+        id: cleanHid,
+        name: hostName,
+        score,
+        contributors: contributors.slice(0, 10)
+      };
+    }
   });
 
-  rs.battle.players = Object.values(rs.battle.hostMap);
+  // Replace hostMap with ONLY the current live snapshot (never keep phantom 0-pt duplicates!)
+  rs.battle.hostMap = nextHostMap;
+  rs.battle.players = Object.values(nextHostMap);
   return { updated: true, hasUnknownHost };
 }
 
@@ -604,15 +729,26 @@ async function startTikTokConnection(socket, cleanUser, cleanToken) {
   });
 
   tiktok.on(WebcastEvent.ROOM_USER, (d) => {
-    rs.stats.viewers = Number(d.viewerCount || 0);
-    if (Array.isArray(d.ranksList)) {
-      d.ranksList.forEach((r) => {
-        rememberUser(rs, r.user);
-        const u = parseUserLabel(r.user, '');
-        if (u) trackActiveViewer(rs, u, 'Top Espectador');
+    rs.stats.viewers = Number(d.viewerCount || d.viewer_count || 0);
+    const rawRanks = Array.isArray(d.ranksList) && d.ranksList.length
+      ? d.ranksList
+      : (Array.isArray(d.topViewers) ? d.topViewers : []);
+    if (rawRanks.length) {
+      rs.topViewers = rawRanks.slice(0, 25).map((r, idx) => {
+        const uObj = r.user || r;
+        rememberUser(rs, uObj);
+        const label = parseUserLabel(uObj, 'Espectador');
+        const coins = Number(r.coinCount ?? r.coin_count ?? r.score ?? r.fanTicket ?? 0);
+        const role = idx === 0 ? 'Top #1 👑' : (idx === 1 ? 'Top #2 🥈' : (idx === 2 ? 'Top #3 🥉' : (coins > 0 ? 'Donador 🎁' : 'En sala')));
+        trackActiveViewer(rs, label, role);
+        return { rank: Number(r.rank || (idx + 1)), user: label, coins, role };
       });
     }
-    emitToRoom('tiktok:viewers', { viewerCount: rs.stats.viewers });
+    emitToRoom('tiktok:viewers', {
+      viewerCount: rs.stats.viewers,
+      topViewers: buildTopViewersList(rs),
+      activeViewers: Array.from(rs.activeViewers.entries()).slice(-25).reverse().map(([user, role]) => ({ user, role }))
+    });
   });
 
   if (WebcastEvent.LINK_MIC_FAN_TICKET_METHOD) {
