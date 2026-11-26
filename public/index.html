@@ -416,10 +416,11 @@
             </div>
           </div>
 
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
             <button type="button" data-tts-engine="browser" class="tts-engine-btn subtab-btn active p-3.5 rounded-xl bg-bg border border-white/10 text-left"><div class="text-xs font-extrabold text-white">🔊 Navegador (Gratis)</div><div class="text-[11px] text-slate-400 mt-0.5">Web Speech API · 0.5x–2x</div></button>
-            <button type="button" data-tts-engine="google" class="tts-engine-btn subtab-btn p-3.5 rounded-xl bg-bg border border-white/10 text-left"><div class="text-xs font-extrabold text-white">🌐 Google TTS (16 acentos)</div><div class="text-[11px] text-slate-400 mt-0.5">es-US, es-MX, es-ES, pt-BR, en-US...</div></button>
-            <button type="button" data-tts-engine="elevenlabs" class="tts-engine-btn subtab-btn p-3.5 rounded-xl bg-bg border border-white/10 text-left"><div class="text-xs font-extrabold text-white">✨ ElevenLabs IA</div><div class="text-[11px] text-slate-400 mt-0.5">16 voces + voz clonada (Railway)</div></button>
+            <button type="button" data-tts-engine="google" class="tts-engine-btn subtab-btn p-3.5 rounded-xl bg-bg border border-white/10 text-left"><div class="text-xs font-extrabold text-white">🌐 Google TTS (16 acentos)</div><div class="text-[11px] text-slate-400 mt-0.5">es-PE, es-MX, es-CO, es-AR...</div></button>
+            <button type="button" data-tts-engine="fish" class="tts-engine-btn subtab-btn p-3.5 rounded-xl bg-bg border border-white/10 text-left"><div class="text-xs font-extrabold text-white">🐟 Fish Audio IA</div><div class="text-[11px] text-cyanNeon mt-0.5">Voz clonada · s2.1-pro-free</div></button>
+            <button type="button" data-tts-engine="elevenlabs" class="tts-engine-btn subtab-btn p-3.5 rounded-xl bg-bg border border-white/10 text-left"><div class="text-xs font-extrabold text-white">✨ ElevenLabs IA</div><div class="text-[11px] text-slate-400 mt-0.5">16 voces + voz clonada</div></button>
           </div>
 
           <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
@@ -440,13 +441,44 @@
                 <div><label class="block text-[11px] text-slate-300 mb-1">Voice ID personalizado / Voz clonada</label><input id="elCustomVoiceId" type="text" placeholder="Pega aquí el Voice ID de tu voz clonada en ElevenLabs" class="w-full bg-bg border border-white/15 rounded-lg px-3 py-2 text-xs font-mono text-cyanNeon" /></div>
               </div>
 
+              <div id="boxFishAudio" class="hidden bg-cyanNeon/10 border border-cyanNeon/35 rounded-xl p-4 space-y-3">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <span class="text-xs font-bold text-cyanNeon">🐟 Fish Audio IA · Voz Clonada (Proxy Railway sin CORS)</span>
+                  <a href="https://fish.audio/" target="_blank" rel="noopener noreferrer" class="text-[10px] px-2 py-0.5 rounded bg-cyanNeon/20 text-cyanNeon font-bold hover:underline">Abrir Fish Audio ↗</a>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <div>
+                    <label class="block text-[11px] text-slate-300 mb-1">Fish API Key (o usa FISH_API_KEY en Railway)</label>
+                    <input id="fishApiKey" type="password" autocomplete="off" placeholder="Pega tu API Key o déjalo vacío si está en Railway" class="w-full bg-bg border border-white/15 rounded-lg px-3 py-2 text-xs text-white" />
+                  </div>
+                  <div>
+                    <label class="block text-[11px] text-slate-300 mb-1">Modelo Fish Audio</label>
+                    <select id="fishModelSelect" class="w-full bg-bg border border-white/15 rounded-lg px-3 py-2 text-xs text-white">
+                      <option value="s2.1-pro-free">s2.1-pro-free (Gratis cuenta nueva)</option>
+                      <option value="s2.1-pro">s2.1-pro (Pro · Ultra baja latencia)</option>
+                      <option value="s2-pro">s2-pro (Clonación instantánea)</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-end">
+                  <div class="sm:col-span-8">
+                    <label class="block text-[11px] text-slate-300 mb-1">Reference ID / Model ID de tu voz clonada</label>
+                    <input id="fishRefId" type="text" placeholder="Ej: 933563129e564b19a115bedd57b7406a" class="w-full bg-bg border border-white/15 rounded-lg px-3 py-2 text-xs font-mono text-cyanNeon" />
+                  </div>
+                  <div class="sm:col-span-4">
+                    <button id="btnTestFishVoice" type="button" class="w-full px-3 py-2 rounded-lg bg-cyanNeon/20 hover:bg-cyanNeon/30 border border-cyanNeon/40 text-xs font-extrabold text-cyanNeon transition">▶ Probar voz Fish</button>
+                  </div>
+                </div>
+                <div class="text-[11px] text-slate-400">En Fish Audio crea o elige tu voz clonada, copia el <strong class="text-slate-200">Model ID</strong> (sale en la URL de la voz) y pégalo arriba en Reference ID.</div>
+              </div>
+
               <div id="boxVoiceClone" class="bg-gradient-to-br from-violet-500/10 to-cyanNeon/10 border border-violet-400/30 rounded-xl p-4 space-y-3">
                 <div class="flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <div class="text-xs font-extrabold text-white">🧬 Clonar tu propia voz para el TTS</div>
                     <div class="text-[11px] text-slate-300 mt-0.5">Graba 30–60 s limpios aquí, súbelo a ElevenLabs Voice Cloning y pega el Voice ID arriba.</div>
                   </div>
-                  <a href="https://elevenlabs.io/voice-cloning" target="_blank" rel="noopener noreferrer" class="px-3 py-1.5 rounded-lg bg-violet-500/25 hover:bg-violet-500/35 border border-violet-400/40 text-[11px] font-bold text-violet-200 transition">Abrir ElevenLabs ↗</a>
+                  <div class="flex items-center gap-1.5"><a href="https://fish.audio/" target="_blank" rel="noopener noreferrer" class="px-3 py-1.5 rounded-lg bg-cyanNeon/20 hover:bg-cyanNeon/30 border border-cyanNeon/40 text-[11px] font-bold text-cyanNeon transition">Fish Audio ↗</a><a href="https://elevenlabs.io/voice-cloning" target="_blank" rel="noopener noreferrer" class="px-3 py-1.5 rounded-lg bg-violet-500/25 hover:bg-violet-500/35 border border-violet-400/40 text-[11px] font-bold text-violet-200 transition">ElevenLabs ↗</a></div>
                 </div>
                 <div class="flex flex-wrap items-center gap-2">
                   <button id="btnRecVoiceStart" type="button" class="px-3 py-1.5 rounded-lg bg-pinkNeon/20 hover:bg-pinkNeon/30 border border-pinkNeon/40 text-xs font-bold text-pink-200">🎙️ Grabar muestra</button>
@@ -784,6 +816,9 @@
         elApiKey: '',
         elVoiceId: 'EXAVITQu4vr4xnSDxMaL',
         elCustomVoiceId: '',
+        fishApiKey: '',
+        fishRefId: '',
+        fishModel: 's2.1-pro-free',
         ttsVolume: 0.85,
         ttsRate: 1.05,
         ttsPitch: 1.0,
@@ -946,12 +981,46 @@
         }
       }
 
+      async function playFishAudio(text) {
+        try {
+          const res = await fetch('/api/tts/fish', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              text,
+              apiKey: state.fishApiKey.trim(),
+              referenceId: state.fishRefId.trim(),
+              model: state.fishModel || 's2.1-pro-free'
+            })
+          });
+          if (!res.ok) {
+            const errObj = await res.json().catch(() => ({}));
+            throw new Error(errObj.error || ('Fish ' + res.status));
+          }
+          const url = URL.createObjectURL(await res.blob());
+          return await new Promise((resolve) => {
+            const a = new Audio(url);
+            a.volume = state.ttsVolume;
+            a.playbackRate = Math.min(2, Math.max(0.5, state.ttsRate || 1));
+            a.onended = () => { URL.revokeObjectURL(url); resolve(true); };
+            a.onerror = () => { URL.revokeObjectURL(url); resolve(false); };
+            a.play().catch(() => resolve(false));
+          });
+        } catch (err) {
+          toast(err?.message || 'Fish Audio no disponible; usando voz local', 'pink');
+          return false;
+        }
+      }
+
       async function pumpTts() {
         if (!state.ttsEnabled || state.ttsSpeaking || !state.ttsQueue.length) { renderTtsQueue(); return; }
         const item = state.ttsQueue[0];
         state.ttsSpeaking = true;
         renderTtsQueue();
         const done = () => { state.ttsQueue.shift(); state.ttsSpeaking = false; pumpTts(); };
+        if (state.ttsEngine === 'fish') {
+          if (await playFishAudio(item.text)) return done();
+        }
         if (state.ttsEngine === 'elevenlabs') {
           if (await playElevenLabs(item.text)) return done();
         }
@@ -1185,9 +1254,9 @@
           });
         }
 
-        document.getElementById('rankTotalDiamonds').textContent = `${state.diamonds.toLocaleString('es-ES')} 💎`;
+        document.getElementById('rankTotalDiamonds').textContent = `${state.diamonds.toLocaleString('es-ES')} 🪙`;
         document.getElementById('rankTotalLikes').textContent = `${state.likes.toLocaleString('es-ES')} ❤️`;
-        renderRankList('rankDiamondsList', state.topDiamonds, '💎', '#F59E0B', 10);
+        renderRankList('rankDiamondsList', state.topDiamonds, '🪙', '#F59E0B', 10);
         renderRankList('rankLikesList', state.topLikes, '❤️', '#FE2C55', 10);
         renderRankList('overlayTop6List', state.topLikes, '❤️', '#00F2EA', 6);
 
@@ -1604,6 +1673,39 @@
             `;
           }
 
+          const indivList = Array.isArray(battleData?.individualHosts) ? battleData.individualHosts : [];
+          let indivHtml = '';
+          if (indivList.length > 0 && (isHeadToHead || indivList.length > ranked.length)) {
+            const maxIndiv = Math.max(1, Number(indivList[0]?.score || 1));
+            indivHtml = `
+              <div class="rounded-2xl bg-bg/80 border border-white/10 p-3.5 space-y-2.5">
+                <div class="flex items-center justify-between">
+                  <span class="text-[11px] font-extrabold text-cyanNeon uppercase tracking-wider">👥 Puntos individuales por anfitrión (${indivList.length})</span>
+                  <span class="text-[10px] text-slate-400">En tiempo real</span>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  ${indivList.map((h, i) => {
+                    const sc = Number(h.score || 0);
+                    const pct = Math.max(4, Math.round((sc / maxIndiv) * 100));
+                    const pal = palette[i % palette.length];
+                    const medal = i === 0 ? '🥇' : (i === 1 ? '🥈' : (i === 2 ? '🥉' : `#${i + 1}`));
+                    return `
+                      <div class="p-2.5 rounded-xl bg-card/90 space-y-1.5" style="border:1px solid ${pal.border}">
+                        <div class="flex items-center justify-between gap-2">
+                          <span class="text-xs font-extrabold text-white truncate">${medal} ${esc(h.name)}</span>
+                          <span class="font-display text-sm font-extrabold shrink-0" style="color:${pal.text}">${sc.toLocaleString('es-ES')} pts</span>
+                        </div>
+                        <div class="w-full h-1.5 rounded-full bg-slate-900 overflow-hidden">
+                          <div class="h-full rounded-full transition-all duration-300" style="width:${pct}%; background:${pal.bg}"></div>
+                        </div>
+                      </div>
+                    `;
+                  }).join('')}
+                </div>
+              </div>
+            `;
+          }
+
           board.innerHTML = `
             <div class="space-y-3.5">
               <div class="flex flex-wrap items-center justify-between gap-2">
@@ -1614,6 +1716,7 @@
                 <span class="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-[11px] text-slate-300 font-bold">${modeLabel} · Total ${tot.toLocaleString('es-ES')} pts</span>
               </div>
               ${topBarHtml}
+              ${indivHtml}
             </div>
           `;
         }
@@ -1726,6 +1829,8 @@
           const gObj = state.gifts.find((g) => g.name.toLowerCase() === giftName.toLowerCase()) || { name: giftName, coins: Number(d.coins || 1), emoji: '🎁', img: '' };
           const total = Math.max(1, Number(d.coins || gObj.coins || 1)) * repeatCount;
           state.activity.unshift({ kind: 'gift', user, text: `envió ${gObj.name} ×${repeatCount} ${gObj.emoji || '🎁'} (+${total.toLocaleString('es-ES')} 🪙)` });
+          const existingTop = state.topDiamonds.find((x) => x.user === user);
+          if (!existingTop) state.topDiamonds.push({ user, val: total });
           const matched = state.actions.find((a) => a.enabled && a.type === 'gift' && (a.giftName.toLowerCase() === gObj.name.toLowerCase() || a.giftName === 'Cualquier regalo') && repeatCount >= a.minCount);
           if (matched) {
             runAction(matched, user, repeatCount);
@@ -1787,6 +1892,7 @@
           if (!d) return;
           if (typeof d.viewerCount === 'number') state.viewers = d.viewerCount;
           if (Array.isArray(d.topViewers)) state.topViewers = d.topViewers;
+          if (Array.isArray(d.topCoins) && d.topCoins.length) state.topDiamonds = d.topCoins;
           if (Array.isArray(d.activeViewers)) state.activeViewers = d.activeViewers;
           renderCountersAndFeeds();
         }
@@ -1945,11 +2051,36 @@
           state.ttsEngine = b.getAttribute('data-tts-engine');
           document.querySelectorAll('[data-tts-engine]').forEach((x) => x.classList.toggle('active', x === b));
           document.getElementById('boxGoogleTts').classList.toggle('hidden', state.ttsEngine !== 'google');
+          document.getElementById('boxFishAudio').classList.toggle('hidden', state.ttsEngine !== 'fish');
           document.getElementById('boxElevenLabs').classList.toggle('hidden', state.ttsEngine !== 'elevenlabs');
+          try { localStorage.setItem('tikpulse_tts_engine', state.ttsEngine); } catch (_) {}
         });
       });
       document.getElementById('googleAccentSelect').addEventListener('change', (e) => { state.googleAccent = e.target.value; });
       document.getElementById('elApiKey').addEventListener('input', (e) => { state.elApiKey = e.target.value; });
+      document.getElementById('fishApiKey').addEventListener('input', (e) => { state.fishApiKey = e.target.value; });
+      document.getElementById('fishRefId').addEventListener('input', (e) => {
+        state.fishRefId = e.target.value;
+        try { localStorage.setItem('tikpulse_fish_ref_id', state.fishRefId); } catch (_) {}
+      });
+      document.getElementById('fishModelSelect').addEventListener('change', (e) => {
+        state.fishModel = e.target.value;
+        try { localStorage.setItem('tikpulse_fish_model', state.fishModel); } catch (_) {}
+      });
+      document.getElementById('btnTestFishVoice').addEventListener('click', () => {
+        state.ttsEngine = 'fish';
+        document.querySelectorAll('[data-tts-engine]').forEach((x) => x.classList.toggle('active', x.getAttribute('data-tts-engine') === 'fish'));
+        document.getElementById('boxGoogleTts').classList.add('hidden');
+        document.getElementById('boxElevenLabs').classList.add('hidden');
+        document.getElementById('boxFishAudio').classList.remove('hidden');
+        enqueueTts('¡Hola! Esta es tu voz clonada con Fish Audio en TikPulse LIVE.', 'Prueba Fish');
+      });
+      try {
+        const savedFishRef = localStorage.getItem('tikpulse_fish_ref_id');
+        if (savedFishRef) { state.fishRefId = savedFishRef; document.getElementById('fishRefId').value = savedFishRef; }
+        const savedFishModel = localStorage.getItem('tikpulse_fish_model');
+        if (savedFishModel) { state.fishModel = savedFishModel; document.getElementById('fishModelSelect').value = savedFishModel; }
+      } catch (_) {}
       document.getElementById('elVoiceSelect').addEventListener('change', (e) => { state.elVoiceId = e.target.value; });
       document.getElementById('elCustomVoiceId').addEventListener('input', (e) => {
         state.elCustomVoiceId = e.target.value;
