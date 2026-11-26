@@ -1,5 +1,6 @@
 require('dotenv').config();
 const path = require('path');
+const fs = require('fs');
 const http = require('http');
 const express = require('express');
 const cors = require('cors');
@@ -193,6 +194,52 @@ app.post('/api/tts/edge', async (req, res) => {
     } catch (_) {
       res.status(502).json({ error: 'Edge TTS temporalmente no disponible' });
     }
+  }
+});
+
+
+const SOUNDS_DIR = path.join(__dirname, 'public', 'sounds');
+try { fs.mkdirSync(SOUNDS_DIR, { recursive: true }); } catch (_) {}
+
+function listSoundLibrary() {
+  try {
+    const files = fs.readdirSync(SOUNDS_DIR);
+    return files
+      .filter((fn) => /\.(mp3|wav|ogg|m4a)$/i.test(fn))
+      .sort((a, b) => a.localeCompare(b))
+      .map((fn) => ({
+        name: fn.replace(/\.[^.]+$/, ''),
+        filename: fn,
+        url: '/sounds/' + encodeURIComponent(fn)
+      }));
+  } catch (_) {
+    return [];
+  }
+}
+
+app.get('/api/sounds', (_req, res) => {
+  res.json({ sounds: listSoundLibrary() });
+});
+
+app.post('/api/sounds/upload', (req, res) => {
+  const ip = req.ip || req.socket.remoteAddress || 'unknown';
+  if (!allowRequest(ip, 15)) return res.status(429).json({ error: 'Demasiadas peticiones' });
+  const rawName = String(req.body?.filename || '').trim();
+  const b64 = String(req.body?.dataBase64 || '').trim();
+  const extMatch = rawName.match(/\.(mp3|wav|ogg|m4a)$/i);
+  if (!extMatch || !b64) return res.status(400).json({ error: 'Solo se permiten archivos .mp3, .wav, .ogg o .m4a' });
+  const ext = extMatch[0].toLowerCase();
+  const stem = rawName.slice(0, -ext.length).replace(/[^a-zA-Z0-9 _-]/g, '').trim().slice(0, 48) || ('sonido_' + Date.now());
+  const safeName = stem + ext;
+  try {
+    const cleanB64 = b64.includes(',') ? b64.split(',').pop() : b64;
+    const buf = Buffer.from(cleanB64, 'base64');
+    if (buf.length > 5.2 * 1024 * 1024) return res.status(413).json({ error: 'El archivo supera los 5 MB' });
+    fs.mkdirSync(SOUNDS_DIR, { recursive: true });
+    fs.writeFileSync(path.join(SOUNDS_DIR, safeName), buf);
+    res.json({ ok: true, file: { name: stem, filename: safeName, url: '/sounds/' + encodeURIComponent(safeName) }, sounds: listSoundLibrary() });
+  } catch (_) {
+    res.status(500).json({ error: 'No se pudo guardar el audio' });
   }
 });
 
