@@ -447,11 +447,23 @@
                   <div><label class="block text-[11px] text-slate-400 mb-1">Máx. letras</label><input id="ttsMaxChars" type="number" min="20" max="300" value="140" class="w-full bg-card border border-white/10 rounded-lg px-2.5 py-2 text-xs text-white" /></div>
                   <div><label class="block text-[11px] text-slate-400 mb-1">Mín. monedas</label><input id="ttsMinCoins" type="number" min="0" value="1" class="w-full bg-card border border-white/10 rounded-lg px-2.5 py-2 text-xs text-amber-300 font-bold" /></div>
                 </div>
-                <div class="flex flex-wrap gap-3 text-xs text-slate-300">
-                  <label class="flex items-center gap-1.5 cursor-pointer"><input id="chkUniqueVoice" type="checkbox" checked class="accent-cyanNeon" /> Voz distinta por usuario</label>
-                  <label class="flex items-center gap-1.5 cursor-pointer"><input id="chkFollowers" type="checkbox" checked class="accent-pinkNeon" /> Seguidores</label>
-                  <label class="flex items-center gap-1.5 cursor-pointer"><input id="chkSubs" type="checkbox" checked class="accent-pinkNeon" /> Suscriptores</label>
-                  <label class="flex items-center gap-1.5 cursor-pointer"><input id="chkStripEmojis" type="checkbox" checked class="accent-cyanNeon" /> Limpiar emojis</label>
+                <div class="pt-1 border-t border-white/10 space-y-2">
+                  <div class="text-[11px] font-bold text-cyanNeon uppercase tracking-wider">¿Qué leer y qué silenciar?</div>
+                  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 text-xs text-slate-200">
+                    <label class="flex items-center gap-2 p-2 rounded-lg bg-card border border-white/5 cursor-pointer"><input id="chkTtsReadChat" type="checkbox" checked class="accent-cyanNeon" /> 💬 Leer mensajes del chat</label>
+                    <label class="flex items-center gap-2 p-2 rounded-lg bg-card border border-white/5 cursor-pointer"><input id="chkTtsReadGift" type="checkbox" checked class="accent-pinkNeon" /> 🎁 Leer "envió un regalo"</label>
+                    <label class="flex items-center gap-2 p-2 rounded-lg bg-card border border-white/5 cursor-pointer"><input id="chkGiftDefaultSfx" type="checkbox" checked class="accent-amber-400" /> 🔊 Sonido beep en regalos</label>
+                    <label class="flex items-center gap-2 p-2 rounded-lg bg-card border border-white/5 cursor-pointer"><input id="chkTtsReadFollow" type="checkbox" class="accent-cyanNeon" /> ⭐ Leer nuevos seguidores</label>
+                    <label class="flex items-center gap-2 p-2 rounded-lg bg-card border border-white/5 cursor-pointer"><input id="chkTtsReadSub" type="checkbox" checked class="accent-emerald-400" /> 👑 Leer suscripciones</label>
+                    <label class="flex items-center gap-2 p-2 rounded-lg bg-card border border-white/5 cursor-pointer"><input id="chkTtsReadShare" type="checkbox" class="accent-purple-400" /> 📢 Leer compartidos</label>
+                    <label class="flex items-center gap-2 p-2 rounded-lg bg-card border border-white/5 cursor-pointer"><input id="chkTtsReadJoin" type="checkbox" class="accent-slate-400" /> 👋 Leer entradas al LIVE</label>
+                    <label class="flex items-center gap-2 p-2 rounded-lg bg-card border border-white/5 cursor-pointer"><input id="chkUniqueVoice" type="checkbox" checked class="accent-cyanNeon" /> 🎭 Voz distinta por usuario</label>
+                    <label class="flex items-center gap-2 p-2 rounded-lg bg-card border border-white/5 cursor-pointer"><input id="chkStripEmojis" type="checkbox" checked class="accent-cyanNeon" /> ✨ Limpiar emojis</label>
+                  </div>
+                  <div>
+                    <label class="block text-[11px] text-slate-400 mb-1">Solo leer chat si empieza con comando (déjalo vacío para leer todo)</label>
+                    <input id="ttsCommandPrefix" type="text" placeholder="Ej: !tts o !voz (opcional)" class="w-full bg-card border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white" />
+                  </div>
                 </div>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   <div><label class="block text-[11px] text-slate-400 mb-1">Lista blanca VIP</label><input id="ttsWhitelist" type="text" placeholder="@vip1, @mod_juan" class="w-full bg-card border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white" /></div>
@@ -489,23 +501,21 @@
 
       <!-- TAB 4: ⚔️ BATALLA PK REAL EN TIEMPO REAL -->
       <section id="tab-batalla" class="tab-panel hidden space-y-4">
-        <div class="tp-card rounded-2xl p-4 sm:p-5 space-y-4">
+        <div class="tp-card rounded-2xl p-4 sm:p-5 space-y-4 border border-cyanNeon/20">
           <div class="flex flex-wrap items-center justify-between gap-3">
             <div class="flex items-center gap-2.5">
-              <h2 class="font-display text-base font-bold text-white">⚔️ Batalla TikTok en Tiempo Real</h2>
+              <h2 class="font-display text-base sm:text-lg font-extrabold text-white">⚔️ Batalla TikTok en Tiempo Real</h2>
               <span id="pkStatusBadge" class="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-slate-700 text-slate-300">⏳ ESPERANDO BATALLA</span>
             </div>
-            <span class="text-[11px] text-slate-400">Solo puntajes reales de TikTok LIVE</span>
+            <span class="text-[11px] text-slate-400">Datos 100% reales del LIVE</span>
           </div>
-          <!-- Barras superiores de oponentes con puntajes reales -->
-          <div id="pkBoardRender" class="bg-bg rounded-2xl p-4 sm:p-5 border border-white/10 space-y-4">
+          <div id="pkBoardRender" class="bg-bg/90 rounded-2xl p-4 sm:p-5 border border-white/10 space-y-4">
             <div class="text-center py-6 space-y-1.5">
               <div class="text-sm font-extrabold text-cyanNeon">⚔️ Esperando Batalla PK real en TikTok LIVE</div>
-              <div class="text-xs text-slate-400">Conecta un @usuario en batalla y verás aquí arriba los oponentes con sus puntajes reales en barras y abajo el top de usuarios que lanzaron.</div>
+              <div class="text-xs text-slate-400">Conecta un @usuario en batalla y verás aquí arriba los anfitriones con sus barras y puntajes reales, y abajo el top de usuarios que lanzaron.</div>
             </div>
           </div>
-          <!-- Top de usuarios y cantidad que lanzaron en esta partida -->
-          <div id="pkRealContributors" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+          <div id="pkRealContributors" class="grid grid-cols-1 lg:grid-cols-2 gap-4"></div>
         </div>
       </section>
 
@@ -513,11 +523,11 @@
       <section id="tab-ranking" class="tab-panel hidden space-y-4">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div class="tp-card rounded-2xl p-5">
-            <div class="flex items-center justify-between mb-4"><h2 class="font-display text-sm font-bold text-amber-300">🪙 Top 10 Donadores (Monedas)</h2><span id="rankTotalDiamonds" class="text-xs font-bold text-slate-300">1,650 💎</span></div>
+            <div class="flex items-center justify-between mb-4"><h2 class="font-display text-sm font-bold text-amber-300">🪙 Top 10 Donadores (Monedas)</h2><span id="rankTotalDiamonds" class="text-xs font-bold text-slate-300">0 🪙</span></div>
             <div id="rankDiamondsList" class="space-y-2.5"></div>
           </div>
           <div class="tp-card rounded-2xl p-5">
-            <div class="flex items-center justify-between mb-4"><h2 class="font-display text-sm font-bold text-pinkNeon">❤️ Top 10 Tap Tap (Likes)</h2><span id="rankTotalLikes" class="text-xs font-bold text-slate-300">4,280 ❤️</span></div>
+            <div class="flex items-center justify-between mb-4"><h2 class="font-display text-sm font-bold text-pinkNeon">❤️ Top 10 Tap Tap (Likes)</h2><span id="rankTotalLikes" class="text-xs font-bold text-slate-300">0 ❤️</span></div>
             <div id="rankLikesList" class="space-y-2.5"></div>
           </div>
         </div>
@@ -748,6 +758,14 @@
         ttsMaxChars: 140,
         ttsMinCoins: 1,
         ttsUniqueVoice: true,
+        ttsReadChat: true,
+        ttsReadGift: true,
+        giftDefaultSfx: true,
+        ttsReadFollow: false,
+        ttsReadSub: true,
+        ttsReadShare: false,
+        ttsReadJoin: false,
+        ttsCommandPrefix: '',
         ttsLastUserTs: {},
         browserVoiceUri: '',
         stripEmojis: true,
@@ -759,17 +777,10 @@
           { trigger: '!redes', reply: 'Síguenos en Instagram y YouTube como @tu_usuario 🔥' },
           { trigger: '!pk', reply: '¡Tap tap y rosas para ganar la batalla PK! ⚔️' }
         ],
-        activity: [
-          { kind: 'gift', user: '@sofia_live', text: 'envió Rose ×50 🌹 (+50 💎)' },
-          { kind: 'chat', user: '@carlos_pe', text: '¡TikPulse se ve brutal!' },
-          { kind: 'follow', user: '@luna_gamer', text: 'empezó a seguirte ⭐' }
-        ],
-        chats: [
-          { user: '@sofia_live', text: '¡Vamos con todo en la batalla! 🔥' },
-          { user: '@carlos_pe', text: 'Prueba escribir !redes o fuego' }
-        ],
-        topDiamonds: [{ user: '@sofia_live', val: 1050 }, { user: '@carlos_pe', val: 380 }, { user: '@luna_gamer', val: 150 }, { user: '@alex_stream', val: 70 }],
-        topLikes: [{ user: '@sofia_live', val: 1420 }, { user: '@camila_tk', val: 980 }, { user: '@carlos_pe', val: 760 }, { user: '@luna_gamer', val: 540 }, { user: '@mateo_x', val: 350 }, { user: '@diego_tk', val: 230 }],
+        activity: [],
+        chats: [],
+        topDiamonds: [],
+        topLikes: [],
         pkMode: '1v1',
         pkRunning: true,
         pkSeconds: 225,
@@ -783,8 +794,8 @@
           { id: 'p3', name: '@rival_uno', team: 'B', score: 1520, color: '#FE2C55' },
           { id: 'p4', name: '@rival_dos', team: 'B', score: 1290, color: '#F59E0B' }
         ],
-        activeViewers: [{ user: '@sofia_live', role: 'Suscriptor · Nv.12' }, { user: '@carlos_pe', role: 'Moderador' }, { user: '@luna_gamer', role: 'Fan Club · Nv.6' }, { user: '@camila_tk', role: 'Seguidor' }, { user: '@alex_stream', role: 'Espectador' }],
-        memberJoins: [{ user: '@mateo_x', time: 'Ahora' }, { user: '@valeria_99', time: 'Hace 15s' }],
+        activeViewers: [],
+        memberJoins: [],
         ovChroma: false,
         token: (localStorage.getItem('tikpulse_room_token') || (() => { const t = 'tp_' + Math.random().toString(36).slice(2, 11); localStorage.setItem('tikpulse_room_token', t); return t; })())
       };
@@ -995,6 +1006,9 @@
       }
 
       function queueAlert(item) {
+        if (window.__tikpulseEmitOverlay && item) {
+          window.__tikpulseEmitOverlay({ type: 'alert', emoji: item.emoji || '🎁', title: item.title || '', sub: item.badgeLabel || 'TikPulse LIVE' });
+        }
         if (state.queueMode === 'instant') {
           state.alertQueue = [item];
           if (state.alertTimer) clearTimeout(state.alertTimer);
@@ -1324,7 +1338,13 @@
         }
         state.actions.filter((a) => a.enabled && a.type === 'keyword' && a.keyword && text.toLowerCase().includes(a.keyword.toLowerCase()))
           .forEach((a) => runAction(a, user, 1));
-        enqueueTts((document.getElementById('tplTtsChat').value || '{nickname} dice {message}').replace('{nickname}', user.replace('@', '')).replace('{message}', text), user);
+        if (state.ttsReadChat) {
+          const pref = (state.ttsCommandPrefix || '').trim().toLowerCase();
+          if (!pref || text.trim().toLowerCase().startsWith(pref)) {
+            const cleanTxt = pref ? text.trim().slice(pref.length).trim() : text;
+            if (cleanTxt) enqueueTts((document.getElementById('tplTtsChat').value || '{nickname} dice {message}').replace('{nickname}', user.replace('@', '')).replace('{message}', cleanTxt), user);
+          }
+        }
         renderCountersAndFeeds();
       }
 
@@ -1406,7 +1426,7 @@
         if (badgeEl) {
           if (players.length && battleData.active) {
             badgeEl.textContent = '🔴 BATALLA REAL EN VIVO';
-            badgeEl.className = 'text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300';
+            badgeEl.className = 'text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 animate-pulse';
           } else if (players.length) {
             badgeEl.textContent = '🏁 PARTIDA FINALIZADA';
             badgeEl.className = 'text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300';
@@ -1420,50 +1440,65 @@
           board.innerHTML = `
             <div class="text-center py-6 space-y-1.5">
               <div class="text-sm font-extrabold text-cyanNeon">⚔️ Esperando Batalla PK real en TikTok LIVE</div>
-              <div class="text-xs text-slate-400">Cuando la batalla esté activa y lleguen puntos reales de TikTok, los oponentes aparecerán aquí arriba en barras con sus puntajes exactos.</div>
+              <div class="text-xs text-slate-400">Cuando inicie o se actualice la batalla en TikTok, aquí arriba saldrán los anfitriones con sus barras de puntos reales y abajo el top de usuarios que lanzaron.</div>
             </div>
           `;
         } else {
-          const colors = ['#00f2ea', '#ff2d55', '#fbbf24', '#a855f7'];
+          const palette = [
+            { bg: 'linear-gradient(90deg,#00f2ea,#0ea5e9)', text: '#00f2ea', border: 'rgba(0,242,234,0.35)' },
+            { bg: 'linear-gradient(90deg,#fe2c55,#ec4899)', text: '#ff5277', border: 'rgba(254,44,85,0.35)' },
+            { bg: 'linear-gradient(90deg,#f59e0b,#fbbf24)', text: '#fbbf24', border: 'rgba(245,158,11,0.35)' },
+            { bg: 'linear-gradient(90deg,#a855f7,#6366f1)', text: '#c084fc', border: 'rgba(168,85,247,0.35)' }
+          ];
           const ranked = [...players].sort((a, b) => Number(b.score || 0) - Number(a.score || 0));
           const tot = Math.max(1, ranked.reduce((s, p) => s + Number(p.score || 0), 0));
           const leaderScore = Number(ranked[0]?.score || 0);
 
           board.innerHTML = `
-            <div class="space-y-3">
-              <div class="flex items-center justify-between text-xs">
-                <span class="font-extrabold text-white">🥇 Líder: ${esc(ranked[0].name)} (${formatShortNum(leaderScore)} pts)</span>
-                <span class="text-slate-400">${ranked.length} oponentes</span>
+            <div class="space-y-4">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <div class="flex items-center gap-2">
+                  <span class="px-2.5 py-1 rounded-lg bg-amber-500/20 text-amber-300 text-xs font-extrabold">👑 #1 ${esc(ranked[0].name)}</span>
+                  <span class="font-display text-sm font-extrabold text-white">${leaderScore.toLocaleString('es-ES')} pts</span>
+                </div>
+                <span class="text-xs text-slate-400 font-semibold">${ranked.length} anfitriones en batalla</span>
               </div>
-              <!-- Barra combinada estilo TikTok LIVE -->
-              <div class="w-full h-6 rounded-full bg-slate-800 overflow-hidden flex border border-white/15 shadow-inner">
-                ${ranked.map((p, i) => {
-                  const pct = Math.max(5, Math.round((Number(p.score || 0) / tot) * 100));
-                  return `<div class="h-full flex items-center justify-center text-[10px] font-extrabold text-slate-950 transition-all duration-300 overflow-hidden px-1" style="width:${pct}%; background:${colors[i % colors.length]}">${pct >= 14 ? formatShortNum(p.score) : ''}</div>`;
-                }).join('')}
+
+              <div class="space-y-1.5">
+                <div class="w-full h-8 rounded-full bg-slate-900 overflow-hidden flex border border-white/15 shadow-lg">
+                  ${ranked.map((p, i) => {
+                    const score = Number(p.score || 0);
+                    const pct = Math.max(8, Math.round((score / tot) * 100));
+                    const pal = palette[i % palette.length];
+                    return `<div class="h-full flex items-center justify-center px-2 text-xs font-extrabold text-slate-950 transition-all duration-300 truncate" style="width:${pct}%; background:${pal.bg}">#${i + 1} · ${formatShortNum(score)}</div>`;
+                  }).join('')}
+                </div>
+                <div class="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-300 px-1">
+                  ${ranked.map((p, i) => `<span class="font-bold truncate" style="color:${palette[i % palette.length].text}">#${i + 1} ${esc(p.name)}</span>`).join('')}
+                </div>
               </div>
-              <!-- Barra individual por oponente -->
-              <div class="space-y-2.5 pt-1">
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 ${ranked.map((p, i) => {
                   const score = Number(p.score || 0);
                   const pct = Math.round((score / tot) * 100);
                   const diff = leaderScore - score;
-                  const medal = i === 0 ? '🥇 1º' : (i === 1 ? '🥈 2º' : (i === 2 ? '🥉 3º' : `${i + 1}º`));
+                  const pal = palette[i % palette.length];
+                  const medal = i === 0 ? '🥇' : (i === 1 ? '🥈' : (i === 2 ? '🥉' : `#${i + 1}`));
                   return `
-                    <div class="p-3 rounded-xl bg-card border border-white/10 space-y-1.5">
+                    <div class="p-3.5 rounded-xl bg-card space-y-2 shadow" style="border:1px solid ${pal.border}">
                       <div class="flex items-center justify-between gap-2">
-                        <span class="text-xs font-extrabold text-white truncate">${medal} ${esc(p.name)}</span>
+                        <div class="min-w-0">
+                          <div class="text-xs sm:text-sm font-extrabold text-white truncate">${medal} ${esc(p.name)}</div>
+                          <div class="text-[11px] text-slate-400">${i === 0 ? 'Liderando la batalla' : `Faltan ${(diff + 1).toLocaleString('es-ES')} pts para el 1º`}</div>
+                        </div>
                         <div class="text-right shrink-0">
-                          <span class="font-display text-base font-extrabold" style="color:${colors[i % colors.length]}">${score.toLocaleString('es-ES')}</span>
-                          <span class="text-[10px] text-slate-400 ml-1">pts (${pct}%)</span>
+                          <div class="font-display text-lg font-extrabold leading-tight" style="color:${pal.text}">${score.toLocaleString('es-ES')}</div>
+                          <div class="text-[10px] text-slate-400">${pct}% del total</div>
                         </div>
                       </div>
-                      <div class="w-full h-2 rounded-full bg-slate-800 overflow-hidden">
-                        <div class="h-full rounded-full transition-all duration-300" style="width:${Math.max(2, pct)}%; background:${colors[i % colors.length]}"></div>
-                      </div>
-                      <div class="text-[11px] text-slate-400 flex items-center justify-between">
-                        <span>${i === 0 ? 'En primer lugar' : `A ${diff.toLocaleString('es-ES')} pts del 1º`}</span>
-                        <span>${(p.contributors && p.contributors.length) ? `Top apoyo: ${esc(p.contributors[0].user)} (${Number(p.contributors[0].points || 0).toLocaleString('es-ES')})` : ''}</span>
+                      <div class="w-full h-2.5 rounded-full bg-slate-900 overflow-hidden">
+                        <div class="h-full rounded-full transition-all duration-300" style="width:${Math.max(3, pct)}%; background:${pal.bg}"></div>
                       </div>
                     </div>
                   `;
@@ -1473,53 +1508,54 @@
           `;
         }
 
-        // Top de usuarios y cantidad que lanzaron en esta partida (combinado de TikTok + regalos en vivo)
+        const maxUserPts = Math.max(1, Number(matchTopUsers[0]?.coins || 1));
         const topUsersHtml = matchTopUsers.length
-          ? matchTopUsers.map((u, idx) => `
-              <div class="flex items-center justify-between text-xs py-1.5 px-2.5 rounded-lg bg-card border border-white/5">
-                <div class="min-w-0">
-                  <span class="font-bold text-amber-300 mr-1.5">#${idx + 1}</span>
-                  <span class="font-bold text-white truncate">${esc(u.user)}</span>
-                  <span class="text-[10px] text-slate-400 ml-1.5">(${u.giftsCount} regalos)</span>
+          ? matchTopUsers.map((u, idx) => {
+              const pts = Number(u.coins || 0);
+              const pct = Math.max(6, Math.round((pts / maxUserPts) * 100));
+              const badge = idx === 0 ? '🥇' : (idx === 1 ? '🥈' : (idx === 2 ? '🥉' : `#${idx + 1}`));
+              return `
+                <div class="p-2.5 rounded-xl bg-card border border-white/10 space-y-1.5">
+                  <div class="flex items-center justify-between gap-2 text-xs">
+                    <div class="min-w-0 flex items-center gap-1.5">
+                      <span class="font-extrabold text-amber-300">${badge}</span>
+                      <span class="font-bold text-white truncate">${esc(u.user)}</span>
+                      ${u.giftsCount ? `<span class="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-slate-300">${u.giftsCount} reg.</span>` : ''}
+                    </div>
+                    <span class="font-display font-extrabold text-cyanNeon shrink-0">${pts.toLocaleString('es-ES')} 🪙</span>
+                  </div>
+                  <div class="w-full h-1.5 rounded-full bg-slate-900 overflow-hidden">
+                    <div class="h-full rounded-full" style="width:${pct}%; background:linear-gradient(90deg,#00f2ea,#fe2c55)"></div>
+                  </div>
                 </div>
-                <span class="font-extrabold text-cyanNeon shrink-0 ml-2">${Number(u.coins || 0).toLocaleString('es-ES')} 🪙</span>
-              </div>
-            `).join('')
-          : '<div class="text-xs text-slate-500 py-2">Aún no se registran donadores en esta partida.</div>';
+              `;
+            }).join('')
+          : '<div class="text-xs text-slate-500 py-3 text-center">Aún no se registran donadores en esta batalla.</div>';
 
         const throwsHtml = throws.length
           ? throws.map((t) => `
-              <div class="flex items-center justify-between text-xs py-1.5 px-2.5 rounded-lg bg-card border border-white/5">
-                <span class="truncate"><b class="text-white">${esc(t.user)}</b> lanzó <span class="text-pinkNeon">${esc(t.giftName)} ×${t.repeatCount}</span></span>
-                <span class="font-bold text-amber-300 shrink-0 ml-2">+${Number(t.total || 0).toLocaleString('es-ES')} 🪙 · <span class="text-slate-500">${esc(t.time || '')}</span></span>
+              <div class="flex items-center justify-between text-xs py-2 px-3 rounded-xl bg-card border border-white/5">
+                <span class="truncate"><b class="text-white">${esc(t.user)}</b> lanzó <span class="text-pinkNeon font-semibold">${esc(t.giftName)} ×${t.repeatCount}</span></span>
+                <span class="font-bold text-amber-300 shrink-0 ml-2">+${Number(t.total || 0).toLocaleString('es-ES')} 🪙 <span class="text-[10px] text-slate-500 ml-1">${esc(t.time || '')}</span></span>
               </div>
             `).join('')
-          : '<div class="text-xs text-slate-500 py-2">Esperando regalos en tiempo real...</div>';
-
-        // Also show official per-opponent top contributors if TikTok sent them
-        const perHostHtml = players.filter((p) => p.contributors && p.contributors.length).map((p) => `
-          <div class="p-3.5 rounded-xl bg-bg border border-white/10 space-y-2">
-            <div class="text-xs font-extrabold text-white">⚔️ Top contribuyentes de ${esc(p.name)}</div>
-            ${p.contributors.map((c, idx) => `<div class="flex items-center justify-between text-xs py-1 border-b border-white/5 last:border-0"><span class="text-slate-200 truncate">${idx + 1}. ${esc(c.user)}</span><span class="font-bold text-amber-300">${Number(c.points || 0).toLocaleString('es-ES')} pts</span></div>`).join('')}
-          </div>
-        `).join('');
+          : '<div class="text-xs text-slate-500 py-3 text-center">Esperando lanzamientos en tiempo real...</div>';
 
         contribBox.innerHTML = `
-          <div class="p-3.5 rounded-xl bg-bg border border-white/10 space-y-2">
+          <div class="p-4 rounded-2xl bg-bg/90 border border-amber-400/20 space-y-3">
             <div class="flex items-center justify-between">
-              <span class="text-xs font-extrabold text-amber-300">🏆 Top Usuarios en esta Partida</span>
-              <span class="text-[11px] text-slate-400">${matchTopUsers.length} usuarios</span>
+              <span class="text-xs font-extrabold text-amber-300 uppercase tracking-wider">🏆 Top Usuarios en la Batalla</span>
+              <span class="text-[11px] px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-200 font-bold">${matchTopUsers.length} donadores</span>
             </div>
-            <div class="max-h-56 overflow-y-auto space-y-1.5">${topUsersHtml}</div>
+            <div class="max-h-72 overflow-y-auto space-y-2 pr-1">${topUsersHtml}</div>
           </div>
-          <div class="p-3.5 rounded-xl bg-bg border border-white/10 space-y-2">
+          <div class="p-4 rounded-2xl bg-bg/90 border border-cyanNeon/20 space-y-3">
             <div class="flex items-center justify-between">
-              <span class="text-xs font-extrabold text-cyanNeon">🎁 Últimos lanzamientos (tiempo real)</span>
-              <span class="text-[11px] text-slate-400">${throws.length} envíos</span>
+              <span class="text-xs font-extrabold text-cyanNeon uppercase tracking-wider">🎁 Quién lanzó en tiempo real</span>
+              <span class="text-[11px] px-2 py-0.5 rounded-full bg-cyanNeon/15 text-cyanNeon font-bold">${throws.length} envíos</span>
             </div>
-            <div class="max-h-56 overflow-y-auto space-y-1.5">${throwsHtml}</div>
+            <div class="max-h-72 overflow-y-auto space-y-1.5 pr-1">${throwsHtml}</div>
           </div>
-          ${perHostHtml}
         `;
       }
 
@@ -1551,13 +1587,9 @@
           state.diamonds = Number(s.coins ?? s.diamonds ?? 0);
           state.shares = Number(s.shares || 0);
           state.subs = Number(s.subs || 0);
-          state.topLikes = Array.isArray(syncData.topLikes) ? syncData.topLikes : [];
-          state.topDiamonds = Array.isArray(syncData.topCoins) ? syncData.topCoins : (Array.isArray(syncData.topDiamonds) ? syncData.topDiamonds : []);
-          if (state.activity.some((a) => a.user === '@sofia_live' || a.user === '@carlos_pe')) {
-            state.activity = [];
-            state.chats = [];
-            state.memberJoins = [];
-          }
+          if (Array.isArray(syncData.topLikes)) state.topLikes = syncData.topLikes;
+          if (Array.isArray(syncData.topCoins)) state.topDiamonds = syncData.topCoins;
+          if (Array.isArray(syncData.activeViewers)) state.activeViewers = syncData.activeViewers;
           renderCountersAndFeeds();
         },
         onBattleUpdate(battleData) {
@@ -1584,11 +1616,14 @@
           const total = Math.max(1, Number(d.coins || gObj.coins || 1)) * repeatCount;
           state.activity.unshift({ kind: 'gift', user, text: `envió ${gObj.name} ×${repeatCount} ${gObj.emoji || '🎁'} (+${total.toLocaleString('es-ES')} 🪙)` });
           const matched = state.actions.find((a) => a.enabled && a.type === 'gift' && (a.giftName.toLowerCase() === gObj.name.toLowerCase() || a.giftName === 'Cualquier regalo') && repeatCount >= a.minCount);
-          if (matched) runAction(matched, user, repeatCount);
-          else {
-            playSound(total >= 500 ? 'fanfare' : 'coin', null);
+          if (matched) {
+            runAction(matched, user, repeatCount);
+          } else {
+            if (state.giftDefaultSfx) playSound(total >= 500 ? 'fanfare' : 'coin', null);
             queueAlert({ screen: total >= 1000 ? 'screen2' : 'screen1', badgeLabel: 'GIFT ALERT', emoji: gObj.emoji || '🎁', img: gObj.img || '', title: `¡${user} envió ${repeatCount}x ${gObj.name}! (+${total.toLocaleString('es-ES')} 🪙)`, duration: total >= 1000 ? 6 : 4 });
-            if (total >= state.ttsMinCoins) enqueueTts((document.getElementById('tplTtsGift').value || '{nickname} envió {repeatCount} {giftName}').replace('{nickname}', user.replace('@', '')).replace('{repeatCount}', String(repeatCount)).replace('{giftName}', gObj.name), user);
+            if (state.ttsReadGift && total >= state.ttsMinCoins) {
+              enqueueTts((document.getElementById('tplTtsGift').value || '{nickname} envió {repeatCount} {giftName}').replace('{nickname}', user.replace('@', '')).replace('{repeatCount}', String(repeatCount)).replace('{giftName}', gObj.name), user);
+            }
           }
           renderCountersAndFeeds();
         },
@@ -1609,6 +1644,7 @@
           state.activity.unshift({ kind: 'follow', user, text: 'empezó a seguirte ⭐' });
           const matched = state.actions.find((a) => a.enabled && a.type === 'follow');
           if (matched) runAction(matched, user, 1);
+          else if (state.ttsReadFollow) enqueueTts(`${user.replace('@', '')} empezó a seguirte`, user);
           renderCountersAndFeeds();
         },
         onShare(d) {
@@ -1616,12 +1652,15 @@
           if (d && Number(d.totalShares) > 0) state.shares = Number(d.totalShares);
           else state.shares += 1;
           state.activity.unshift({ kind: 'follow', user, text: 'compartió el LIVE 🔁' });
+          if (state.ttsReadShare) enqueueTts(`${user.replace('@', '')} compartió el directo`, user);
           renderCountersAndFeeds();
         },
         onJoin(d) {
           const user = (d && d.user) || '@user';
           state.memberJoins.unshift({ user, time: 'Ahora' });
+          if (state.memberJoins.length > 50) state.memberJoins.pop();
           state.activity.unshift({ kind: 'join', user, text: 'entró al LIVE 👋' });
+          if (state.ttsReadJoin) enqueueTts(`${user.replace('@', '')} entró al directo`, user);
           renderCountersAndFeeds();
         },
         onSub(d) {
@@ -1630,6 +1669,7 @@
           state.activity.unshift({ kind: 'sub', user, text: 'se acaba de SUSCRIBIR 👑' });
           const matched = state.actions.find((a) => a.enabled && a.type === 'sub');
           if (matched) runAction(matched, user, 1);
+          else if (state.ttsReadSub) enqueueTts(`¡Gracias ${user.replace('@', '')} por suscribirte!`, user);
           renderCountersAndFeeds();
         },
         onViewers(d) {
@@ -1651,7 +1691,7 @@
       };
 
       // ---------- TIMERS ----------
-      // Real battle scores update directly from TikTok LIVE events
+      // Real battle updates directly from TikTok LIVE events
 
       // ---------- LISTENERS ----------
       document.getElementById('btnOpenDrawer').addEventListener('click', openDrawer);
@@ -1803,6 +1843,47 @@
       document.getElementById('ttsMinCoins').addEventListener('input', (e) => { state.ttsMinCoins = Math.max(0, Number(e.target.value) || 0); });
       document.getElementById('chkUniqueVoice').addEventListener('change', (e) => { state.ttsUniqueVoice = e.target.checked; });
       document.getElementById('chkStripEmojis').addEventListener('change', (e) => { state.stripEmojis = e.target.checked; });
+      function saveTtsPrefs() {
+        try {
+          localStorage.setItem('tikpulse_tts_prefs_v1', JSON.stringify({
+            ttsReadChat: state.ttsReadChat,
+            ttsReadGift: state.ttsReadGift,
+            giftDefaultSfx: state.giftDefaultSfx,
+            ttsReadFollow: state.ttsReadFollow,
+            ttsReadSub: state.ttsReadSub,
+            ttsReadShare: state.ttsReadShare,
+            ttsReadJoin: state.ttsReadJoin,
+            ttsUniqueVoice: state.ttsUniqueVoice,
+            stripEmojis: state.stripEmojis,
+            ttsCommandPrefix: state.ttsCommandPrefix
+          }));
+        } catch (_) {}
+      }
+      (function loadTtsPrefs() {
+        try {
+          const p = JSON.parse(localStorage.getItem('tikpulse_tts_prefs_v1') || 'null');
+          if (!p) return;
+          Object.assign(state, p);
+          const map = {
+            chkTtsReadChat: 'ttsReadChat', chkTtsReadGift: 'ttsReadGift', chkGiftDefaultSfx: 'giftDefaultSfx',
+            chkTtsReadFollow: 'ttsReadFollow', chkTtsReadSub: 'ttsReadSub', chkTtsReadShare: 'ttsReadShare',
+            chkTtsReadJoin: 'ttsReadJoin', chkUniqueVoice: 'ttsUniqueVoice', chkStripEmojis: 'stripEmojis'
+          };
+          Object.entries(map).forEach(([id, key]) => { const el = document.getElementById(id); if (el) el.checked = Boolean(state[key]); });
+          const prefEl = document.getElementById('ttsCommandPrefix');
+          if (prefEl) prefEl.value = state.ttsCommandPrefix || '';
+        } catch (_) {}
+      })();
+      [
+        ['chkTtsReadChat', 'ttsReadChat'], ['chkTtsReadGift', 'ttsReadGift'], ['chkGiftDefaultSfx', 'giftDefaultSfx'],
+        ['chkTtsReadFollow', 'ttsReadFollow'], ['chkTtsReadSub', 'ttsReadSub'], ['chkTtsReadShare', 'ttsReadShare'],
+        ['chkTtsReadJoin', 'ttsReadJoin']
+      ].forEach(([id, key]) => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('change', (e) => { state[key] = e.target.checked; saveTtsPrefs(); });
+      });
+      const prefInp = document.getElementById('ttsCommandPrefix');
+      if (prefInp) prefInp.addEventListener('input', (e) => { state.ttsCommandPrefix = e.target.value; saveTtsPrefs(); });
       document.getElementById('ttsBlockedWords').addEventListener('input', (e) => { state.blockedWords = e.target.value; });
       document.getElementById('rngVol').addEventListener('input', (e) => { state.ttsVolume = Number(e.target.value) / 100; document.getElementById('lblVol').textContent = `${e.target.value}%`; });
       document.getElementById('rngRate').addEventListener('input', (e) => { state.ttsRate = Number(e.target.value); document.getElementById('lblRate').textContent = `${state.ttsRate.toFixed(2)}x`; });
@@ -1824,7 +1905,7 @@
       document.getElementById('botCmdList').addEventListener('click', (e) => { const b = e.target.closest('[data-bot-rm]'); if (b) { state.botCommands.splice(Number(b.getAttribute('data-bot-rm')), 1); renderBotCmds(); } });
       document.getElementById('botCmdForm').addEventListener('submit', (e) => { e.preventDefault(); state.botCommands.push({ trigger: document.getElementById('botTrigInp').value.trim(), reply: document.getElementById('botRepInp').value.trim() }); document.getElementById('botTrigInp').value = ''; document.getElementById('botRepInp').value = ''; renderBotCmds(); });
 
-      // Battle PK (100% real-time from TikTok LIVE — no manual fake controls)
+      // Battle PK (100% real-time from TikTok LIVE)
       // Viewers & Overlay
       document.getElementById('btnSimJoin').addEventListener('click', () => { const u = sampleUsers[Math.floor(Math.random() * sampleUsers.length)]; state.viewers += 1; state.memberJoins.unshift({ user: u, time: 'Ahora' }); state.activity.unshift({ kind: 'join', user: u, text: 'entró al LIVE 👋' }); renderCountersAndFeeds(); });
       document.querySelectorAll('[data-copy-ov]').forEach((b) => { b.addEventListener('click', () => { const k = b.getAttribute('data-copy-ov'); copyStr(document.getElementById(k === 'likes' ? 'urlOverlayLikes' : 'urlOverlayMaster').value); }); });
@@ -1899,6 +1980,11 @@
         if (stored) return stored;
         try { return new URL(ovField.value).searchParams.get('token') || 'tp_default'; } catch (_) { return 'tp_default'; }
       }
+
+      window.__tikpulseEmitOverlay = function (payload) {
+        const secret = secretInput ? secretInput.value.trim() : (sessionStorage.getItem('tikpulse_secret') || '');
+        socket.emit('overlay:emit', { token: getToken(), secret, payload });
+      };
 
       function tryResume() {
         const token = getToken();
