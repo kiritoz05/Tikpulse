@@ -434,20 +434,60 @@
             </div>
           </div>
 
-          <!-- SELECTOR DE MOTOR DE VOZ (6 MOTORES) -->
+          <!-- SELECTOR DE MOTOR DE VOZ (6 MOTORES · TWITCH / KICK / TIKTOK) -->
           <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
-            <button type="button" data-tts-engine="browser" class="tts-engine-btn subtab-btn active p-3 rounded-xl bg-bg border border-white/10 text-left"><div class="text-xs font-extrabold text-cyanNeon">⚡ Voz Rápida (0 ms)</div><div class="text-[10px] text-emerald-300 mt-0.5 font-semibold">GRATIS · Sin retraso</div></button>
-            <button type="button" data-tts-engine="google" class="tts-engine-btn subtab-btn p-3 rounded-xl bg-bg border border-white/10 text-left"><div class="text-xs font-extrabold text-white">🌐 Google TTS</div><div class="text-[10px] text-emerald-300 mt-0.5 font-semibold">GRATIS · 16 acentos</div></button>
-            <button type="button" data-tts-engine="streamelements" class="tts-engine-btn subtab-btn p-3 rounded-xl bg-bg border border-white/10 text-left"><div class="text-xs font-extrabold text-white">🗣️ StreamElements</div><div class="text-[10px] text-emerald-300 mt-0.5 font-semibold">GRATIS · 14 voces</div></button>
-            <button type="button" data-tts-engine="edge" class="tts-engine-btn subtab-btn p-3 rounded-xl bg-bg border border-white/10 text-left"><div class="text-xs font-extrabold text-white">🎙️ Edge Neural</div><div class="text-[10px] text-emerald-300 mt-0.5 font-semibold">GRATIS · 20 voces IA</div></button>
+            <button type="button" data-tts-engine="google" class="tts-engine-btn subtab-btn active p-3 rounded-xl bg-bg border border-white/10 text-left"><div class="text-xs font-extrabold text-cyanNeon">🌐 Google + Efectos</div><div class="text-[10px] text-emerald-300 mt-0.5 font-semibold">100% Estable · 16 acentos</div></button>
+            <button type="button" data-tts-engine="tiktok" class="tts-engine-btn subtab-btn p-3 rounded-xl bg-bg border border-white/10 text-left"><div class="text-xs font-extrabold text-white">🎭 TikTok Viral</div><div class="text-[10px] text-pink-300 mt-0.5 font-semibold">Ghostface, Stitch, Rocket...</div></button>
+            <button type="button" data-tts-engine="streamelements" class="tts-engine-btn subtab-btn p-3 rounded-xl bg-bg border border-white/10 text-left"><div class="text-xs font-extrabold text-white">🗣️ Twitch / Kick Bot</div><div class="text-[10px] text-amber-300 mt-0.5 font-semibold">Polly: Mia, Brian, Conchita</div></button>
+            <button type="button" data-tts-engine="browser" class="tts-engine-btn subtab-btn p-3 rounded-xl bg-bg border border-white/10 text-left"><div class="text-xs font-extrabold text-white">⚡ Voz Celular (0 ms)</div><div class="text-[10px] text-emerald-300 mt-0.5 font-semibold">Instantánea sin retraso</div></button>
             <button type="button" data-tts-engine="fish" class="tts-engine-btn subtab-btn p-3 rounded-xl bg-bg border border-white/10 text-left"><div class="text-xs font-extrabold text-white">🐟 Fish Audio IA</div><div class="text-[10px] text-cyanNeon mt-0.5">Voz clonada · s2.1</div></button>
             <button type="button" data-tts-engine="elevenlabs" class="tts-engine-btn subtab-btn p-3 rounded-xl bg-bg border border-white/10 text-left"><div class="text-xs font-extrabold text-white">✨ ElevenLabs IA</div><div class="text-[10px] text-slate-400 mt-0.5">API Key / Clonada</div></button>
           </div>
 
           <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
             <div class="lg:col-span-7 space-y-3.5">
+              <!-- MODULADOR DE VOZ GRACIOSA (FUNCIONA EN GOOGLE, TIKTOK, TWITCH/KICK Y FISH!) -->
+              <div class="bg-gradient-to-r from-pinkNeon/10 to-amber-500/10 border border-pinkNeon/35 rounded-xl p-3.5 space-y-2">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-extrabold text-pink-200">🎭 Efecto de Voz Graciosa (Estilo Twitch / Kick)</span>
+                  <span class="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold">Funciona siempre</span>
+                </div>
+                <select id="ttsFunnyEffect" class="w-full bg-bg border border-white/15 rounded-xl px-3 py-2 text-xs text-white font-semibold">
+                  <option value="normal">🎙️ Normal (sin efecto)</option>
+                  <option value="chipmunk">🐿️ Ardilla / Alvin (súper aguda)</option>
+                  <option value="minion">👶 Minion / Bebé (chistosa)</option>
+                  <option value="demon">👹 Demonio / Villano (ultra grave)</option>
+                  <option value="loquendo">🤖 Loquendo / Grave clásico</option>
+                  <option value="turbo">⚡ Turbo / Hiperactivo</option>
+                  <option value="random">🎲 Aleatorio gracioso (cada usuario distinto)</option>
+                </select>
+              </div>
+
+              <!-- TIKTOK VIRAL TTS -->
+              <div id="boxTikTokTts" class="hidden bg-pinkNeon/10 border border-pinkNeon/35 rounded-xl p-3.5 space-y-2">
+                <div class="text-xs font-bold text-pink-200">🎭 Voces Virales de TikTok (Ghostface, Stitch, Rocket, Español)</div>
+                <select id="tiktokVoiceSelect" class="w-full bg-bg border border-white/15 rounded-xl px-3 py-2 text-xs text-white">
+                  <optgroup label="🇪🇸 / 🇲🇽 Español TikTok">
+                    <option value="es_mx_002">🇲🇽 Mexicano Gracioso (es_mx_002)</option>
+                    <option value="es_002">🇪🇸 Español Masculino (es_002)</option>
+                  </optgroup>
+                  <optgroup label="🎭 Personajes Graciosos (Twitch / TikTok)">
+                    <option value="en_us_ghostface">👻 Ghostface / Scream</option>
+                    <option value="en_us_stitch">👾 Stitch</option>
+                    <option value="en_us_rocket">🦝 Rocket</option>
+                    <option value="en_us_c3po">🤖 C-3PO Robot</option>
+                    <option value="en_us_chewbacca">🐻 Chewbacca</option>
+                    <option value="en_us_stormtrooper">🪖 Stormtrooper</option>
+                    <option value="en_us_001">👩 Chica TikTok Viral</option>
+                    <option value="en_male_funny">😂 Voz Graciosa (Funny)</option>
+                    <option value="en_male_narration">🎬 Narrador Épico</option>
+                    <option value="br_005">🇧🇷 Brasileño TikTok</option>
+                  </optgroup>
+                </select>
+              </div>
+
               <!-- VOZ RÁPIDA NAVEGADOR (0 MS) -->
-              <div id="boxBrowserVoiceWrap" class="bg-emerald-500/10 border border-emerald-400/35 rounded-xl p-3.5 space-y-2">
+              <div id="boxBrowserVoiceWrap" class="hidden bg-emerald-500/10 border border-emerald-400/35 rounded-xl p-3.5 space-y-2">
                 <div class="flex items-center justify-between"><span class="text-xs font-bold text-emerald-300">⚡ Voz instantánea del dispositivo (0 ms de retraso)</span><span class="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-200 font-bold">Más rápida</span></div>
                 <select id="browserVoiceSelect" class="w-full bg-bg border border-white/15 rounded-xl px-3 py-2 text-xs text-white"><option value="">Automática (Español)</option></select>
               </div>
@@ -476,7 +516,7 @@
               </div>
 
               <!-- GOOGLE TTS -->
-              <div id="boxGoogleTts" class="hidden bg-cyanNeon/10 border border-cyanNeon/30 rounded-xl p-3.5 space-y-2">
+              <div id="boxGoogleTts" class="bg-cyanNeon/10 border border-cyanNeon/30 rounded-xl p-3.5 space-y-2">
                 <div class="text-xs font-bold text-cyanNeon">🌐 Google TTS · 16 Acentos Gratis</div>
                 <select id="googleAccentSelect" class="w-full bg-bg border border-white/15 rounded-xl px-3 py-2 text-xs text-white">
                   <option value="es-PE">Español (Perú)</option><option value="es-US">Español (Latinoamérica / US)</option><option value="es-MX">Español (México)</option><option value="es-CO">Español (Colombia)</option><option value="es-AR">Español (Argentina)</option><option value="es-CL">Español (Chile)</option><option value="es-ES">Español (España)</option><option value="pt-BR">Portugués (Brasil)</option><option value="en-US">English (US)</option><option value="en-GB">English (UK)</option><option value="fr-FR">Français</option><option value="de-DE">Deutsch</option><option value="it-IT">Italiano</option><option value="ja-JP">日本語</option><option value="ko-KR">한국어</option><option value="ru-RU">Русский</option>
@@ -586,6 +626,34 @@
             </div>
             <span class="text-[11px] text-slate-400">Datos 100% reales del LIVE</span>
           </div>
+          <!-- MODO MULTI-SALA 2 vs 2 (4 ANFITRIONES INDIVIDUALES EN TIEMPO REAL) -->
+          <details id="multiBattleBox" class="rounded-2xl bg-bg/90 border border-cyanNeon/30 p-3.5">
+            <summary class="flex items-center justify-between gap-2 cursor-pointer select-none text-xs font-extrabold text-cyanNeon">
+              <span>👥 Modo Multi-Sala 2 vs 2 (4 puntos individuales exactos)</span>
+              <span class="text-[10px] px-2 py-0.5 rounded bg-cyanNeon/15 text-cyanNeon">Abrir / Cerrar</span>
+            </summary>
+            <div class="mt-3 space-y-3">
+              <p class="text-[11px] text-slate-400">Escribe los <strong class="text-white">@usuarios</strong> de los 4 anfitriones (2 de tu equipo + 2 rivales). TikPulse se conecta a las 4 salas a la vez para mostrar los puntos individuales reales de cada uno.</p>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div class="space-y-2 p-2.5 rounded-xl bg-cyanNeon/5 border border-cyanNeon/25">
+                  <div class="text-[11px] font-extrabold text-cyanNeon">🔵 Equipo 1 (Tu equipo)</div>
+                  <input id="multiHost1" type="text" placeholder="@anfitrion_1 (Tu LIVE)" class="w-full bg-card border border-white/10 rounded-lg px-3 py-2 text-xs text-white" />
+                  <input id="multiHost2" type="text" placeholder="@anfitrion_2 (Aliado)" class="w-full bg-card border border-white/10 rounded-lg px-3 py-2 text-xs text-white" />
+                </div>
+                <div class="space-y-2 p-2.5 rounded-xl bg-pinkNeon/5 border border-pinkNeon/25">
+                  <div class="text-[11px] font-extrabold text-pink-300">🔴 Equipo 2 (Rivales)</div>
+                  <input id="multiHost3" type="text" placeholder="@rival_1" class="w-full bg-card border border-white/10 rounded-lg px-3 py-2 text-xs text-white" />
+                  <input id="multiHost4" type="text" placeholder="@rival_2" class="w-full bg-card border border-white/10 rounded-lg px-3 py-2 text-xs text-white" />
+                </div>
+              </div>
+              <div class="flex flex-wrap items-center gap-2">
+                <button id="btnMultiConnect" type="button" class="tp-btn-primary px-4 py-2 rounded-xl text-xs">🔗 Conectar Salas 2 vs 2</button>
+                <button id="btnMultiReset" type="button" class="px-3.5 py-2 rounded-xl bg-amber-500/20 border border-amber-400/40 text-amber-200 text-xs font-bold">🔄 Nueva Ronda (0 pts)</button>
+                <button id="btnMultiStop" type="button" class="px-3.5 py-2 rounded-xl bg-white/10 text-slate-300 text-xs font-bold">⏹️ Desconectar Multi-Sala</button>
+              </div>
+            </div>
+          </details>
+
           <div id="pkBoardRender" class="bg-bg/90 rounded-2xl p-4 sm:p-5 border border-white/10 space-y-4">
             <div class="text-center py-6 space-y-1.5">
               <div class="text-sm font-extrabold text-cyanNeon">⚔️ Esperando Batalla PK real en TikTok LIVE</div>
@@ -838,7 +906,9 @@
         pendingAudioName: '',
         actions: loadSavedActions(),
         ttsEnabled: true,
-        ttsEngine: 'browser',
+        ttsEngine: 'google',
+        ttsFunnyEffect: 'normal',
+        tiktokVoice: 'es_mx_002',
         ttsChatMode: 'full',
         ttsGiftThanksTpl: '¡Muchas gracias {usuario} por {cantidad} {regalo}!',
         edgeVoice: 'es-PE-CamilaNeural',
@@ -1001,7 +1071,24 @@
         if (el) el.textContent = msg;
       }
 
-      function playAudioBlob(blob) {
+      function getFunnyPlaybackParams(userKey) {
+        let fx = state.ttsFunnyEffect || 'normal';
+        if (fx === 'random') {
+          const modes = ['normal', 'chipmunk', 'minion', 'demon', 'loquendo', 'turbo'];
+          const s = String(userKey || Math.random());
+          let h = 0;
+          for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % modes.length;
+          fx = modes[Math.abs(h) % modes.length];
+        }
+        if (fx === 'chipmunk') return { rate: 1.48, preservesPitch: false };
+        if (fx === 'minion') return { rate: 1.30, preservesPitch: false };
+        if (fx === 'demon') return { rate: 0.72, preservesPitch: false };
+        if (fx === 'loquendo') return { rate: 0.88, preservesPitch: false };
+        if (fx === 'turbo') return { rate: 1.42, preservesPitch: true };
+        return { rate: Math.min(2, Math.max(0.5, state.ttsRate || 1.05)), preservesPitch: true };
+      }
+
+      function playAudioBlob(blob, userKey = '') {
         const url = URL.createObjectURL(blob);
         return new Promise((resolve) => {
           let settled = false;
@@ -1019,7 +1106,13 @@
           globalTtsAudio.pause();
           globalTtsAudio.src = url;
           globalTtsAudio.volume = state.ttsVolume;
-          globalTtsAudio.playbackRate = Math.min(2, Math.max(0.5, state.ttsRate || 1));
+          const fp = getFunnyPlaybackParams(userKey);
+          try {
+            globalTtsAudio.preservesPitch = fp.preservesPitch;
+            globalTtsAudio.mozPreservesPitch = fp.preservesPitch;
+            globalTtsAudio.webkitPreservesPitch = fp.preservesPitch;
+          } catch (_) {}
+          globalTtsAudio.playbackRate = fp.rate;
           const guard = setTimeout(() => { try { globalTtsAudio.pause(); } catch (_) {} finish(true); }, 18000);
           globalTtsAudio.onended = () => finish(true);
           globalTtsAudio.onerror = () => finish(false);
@@ -1035,7 +1128,7 @@
         });
       }
 
-      async function playEdgeTts(text) {
+      async function playEdgeTts(text, userKey = '') {
         try {
           const res = await fetch('/api/tts/edge', {
             method: 'POST',
@@ -1043,27 +1136,42 @@
             body: JSON.stringify({ text, voice: state.edgeVoice || 'es-PE-CamilaNeural', rate: state.ttsRate || 1.05 })
           });
           if (!res.ok) throw new Error('Edge ' + res.status);
-          return await playAudioBlob(await res.blob());
+          return await playAudioBlob(await res.blob(), userKey);
         } catch (_) {
           return false;
         }
       }
 
-      async function playStreamElementsTts(text) {
+      async function playTikTokTts(text, userKey = '') {
         try {
-          const res = await fetch('/api/tts/streamelements', {
+          const res = await fetch('/api/tts/tiktok', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text, voice: state.seVoice || 'Mia' })
+            body: JSON.stringify({ text, voice: state.tiktokVoice || 'es_mx_002' })
           });
-          if (!res.ok) throw new Error('SE ' + res.status);
-          return await playAudioBlob(await res.blob());
+          if (!res.ok) throw new Error('TK ' + res.status);
+          return await playAudioBlob(await res.blob(), userKey);
         } catch (_) {
           return false;
         }
       }
 
-      async function playGoogleTts(text) {
+      async function playStreamElementsTts(text, userKey = '') {
+        for (const ep of ['/api/tts/streamlabs', '/api/tts/streamelements']) {
+          try {
+            const res = await fetch(ep, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ text, voice: state.seVoice || 'Mia' })
+            });
+            if (!res.ok) continue;
+            return await playAudioBlob(await res.blob(), userKey);
+          } catch (_) {}
+        }
+        return false;
+      }
+
+      async function playGoogleTts(text, userKey = '') {
         try {
           const res = await fetch('/api/tts/google', {
             method: 'POST',
@@ -1071,13 +1179,13 @@
             body: JSON.stringify({ text, lang: state.googleAccent || 'es-PE' })
           });
           if (!res.ok) throw new Error('Google ' + res.status);
-          return await playAudioBlob(await res.blob());
+          return await playAudioBlob(await res.blob(), userKey);
         } catch (_) {
           return false;
         }
       }
 
-      async function playFishAudio(text) {
+      async function playFishAudio(text, userKey = '') {
         try {
           const res = await fetch('/api/tts/fish', {
             method: 'POST',
@@ -1093,14 +1201,14 @@
             const errObj = await res.json().catch(() => ({}));
             throw new Error(errObj.error || ('Fish ' + res.status));
           }
-          return await playAudioBlob(await res.blob());
+          return await playAudioBlob(await res.blob(), userKey);
         } catch (err) {
           toast(err?.message || 'Fish Audio no disponible; usando voz gratuita', 'pink');
           return false;
         }
       }
 
-      async function playElevenLabs(text) {
+      async function playElevenLabs(text, userKey = '') {
         const key = state.elApiKey.trim();
         const vid = (state.elCustomVoiceId.trim() || state.elVoiceId);
         try {
@@ -1119,7 +1227,7 @@
             });
           }
           if (!res.ok) throw new Error('EL ' + res.status);
-          return await playAudioBlob(await res.blob());
+          return await playAudioBlob(await res.blob(), userKey);
         } catch (_) {
           toast('ElevenLabs no disponible; usando voz gratuita', 'pink');
           return false;
@@ -1203,29 +1311,35 @@
         const done = () => { state.ttsQueue.shift(); state.ttsSpeaking = false; pumpTts(); };
         if (state.ttsEngine === 'edge') {
           setTtsDiag('🔊 Leyendo con Edge Neural...');
-          if (await playEdgeTts(item.text)) return done();
+          if (await playEdgeTts(item.text, item.userKey)) return done();
           setTtsDiag('🌐 Respaldo automático: Google TTS...');
-          if (await playGoogleTts(item.text)) return done();
+          if (await playGoogleTts(item.text, item.userKey)) return done();
+        }
+        if (state.ttsEngine === 'tiktok') {
+          setTtsDiag('🎭 Leyendo con TikTok Viral...');
+          if (await playTikTokTts(item.text, item.userKey)) return done();
+          setTtsDiag('🌐 Respaldo con efecto: Google TTS...');
+          if (await playGoogleTts(item.text, item.userKey)) return done();
         }
         if (state.ttsEngine === 'streamelements') {
-          setTtsDiag('🗣️ Leyendo con StreamElements...');
-          if (await playStreamElementsTts(item.text)) return done();
-          setTtsDiag('🌐 Respaldo automático: Google TTS...');
-          if (await playGoogleTts(item.text)) return done();
+          setTtsDiag('🗣️ Leyendo con Twitch / Kick Polly...');
+          if (await playStreamElementsTts(item.text, item.userKey)) return done();
+          setTtsDiag('🌐 Respaldo con efecto: Google TTS...');
+          if (await playGoogleTts(item.text, item.userKey)) return done();
         }
         if (state.ttsEngine === 'google') {
           setTtsDiag('🌐 Leyendo con Google TTS...');
-          if (await playGoogleTts(item.text)) return done();
+          if (await playGoogleTts(item.text, item.userKey)) return done();
         }
         if (state.ttsEngine === 'fish') {
           setTtsDiag('🐟 Leyendo con Fish Audio...');
-          if (await playFishAudio(item.text)) return done();
-          if (await playGoogleTts(item.text)) return done();
+          if (await playFishAudio(item.text, item.userKey)) return done();
+          if (await playGoogleTts(item.text, item.userKey)) return done();
         }
         if (state.ttsEngine === 'elevenlabs') {
           setTtsDiag('✨ Leyendo con ElevenLabs...');
-          if (await playElevenLabs(item.text)) return done();
-          if (await playGoogleTts(item.text)) return done();
+          if (await playElevenLabs(item.text, item.userKey)) return done();
+          if (await playGoogleTts(item.text, item.userKey)) return done();
         }
         setTtsDiag('🔊 Leyendo con voz del navegador...');
         if ('speechSynthesis' in window) {
@@ -1836,12 +1950,15 @@
           });
 
           const maxScore = Math.max(1, ...hosts.map((h) => Number(h.score || 0)));
+          const isMulti = Boolean(battleData?.multiMode);
           const myHost = hosts[0];
           const myScore = Number(myHost?.score || 0);
           const rivals = hosts.slice(1);
           const topRival = rivals.length ? [...rivals].sort((a, b) => Number(b.score || 0) - Number(a.score || 0))[0] : null;
           const topRivalScore = Number(topRival?.score || 0);
-          const diffVsRival = myScore - topRivalScore;
+          const diffVsRival = isMulti
+            ? (Number(battleData.team1Total || 0) - Number(battleData.team2Total || 0))
+            : (myScore - topRivalScore);
           const absDiff = Math.abs(diffVsRival);
           const modeLabel = battleData.mode || (hosts.length === 2 ? '1 vs 1' : `${hosts.length} anfitriones`);
 
@@ -1862,8 +1979,8 @@
                 ${hosts.map((h, i) => {
                   const sc = Number(h.score || 0);
                   const pct = Math.max(3, Math.round((sc / maxScore) * 100));
-                  const pal = palette[i % palette.length];
-                  const medal = i === 0 ? '🥇' : (i === 1 ? '🥈' : (i === 2 ? '🥉' : `#${i + 1}`));
+                  const pal = isMulti ? (h.team === 1 ? palette[0] : palette[1]) : palette[i % palette.length];
+                  const medal = isMulti ? (h.connected ? '🟢' : '🟡') : (i === 0 ? '🥇' : (i === 1 ? '🥈' : (i === 2 ? '🥉' : `#${i + 1}`)));
                   const editBtn = h.isPlaceholder
                     ? `<button type="button" data-rename-host="${esc(h.id)}" title="Escribir nombre del rival" class="text-[11px] px-1.5 py-0.5 rounded bg-white/10 hover:bg-white/20 text-slate-300 shrink-0">✏️</button>`
                     : '';
@@ -2241,6 +2358,7 @@
           state.ttsEngine = b.getAttribute('data-tts-engine');
           document.querySelectorAll('[data-tts-engine]').forEach((x) => x.classList.toggle('active', x === b));
           document.getElementById('boxEdgeTts')?.classList.toggle('hidden', state.ttsEngine !== 'edge');
+          document.getElementById('boxTikTokTts')?.classList.toggle('hidden', state.ttsEngine !== 'tiktok');
           document.getElementById('boxStreamElements')?.classList.toggle('hidden', state.ttsEngine !== 'streamelements');
           document.getElementById('boxGoogleTts')?.classList.toggle('hidden', state.ttsEngine !== 'google');
           document.getElementById('boxFishAudio')?.classList.toggle('hidden', state.ttsEngine !== 'fish');
@@ -2254,15 +2372,16 @@
         document.querySelectorAll('[data-tts-engine]').forEach((x) => x.classList.toggle('active', x.getAttribute('data-tts-engine') === state.ttsEngine));
         document.getElementById('boxBrowserVoiceWrap')?.classList.toggle('hidden', state.ttsEngine !== 'browser');
         document.getElementById('boxEdgeTts')?.classList.toggle('hidden', state.ttsEngine !== 'edge');
-        document.getElementById('boxStreamElements')?.classList.toggle('hidden', state.ttsEngine !== 'streamelements');
+        document.getElementById('boxTikTokTts')?.classList.toggle('hidden', state.ttsEngine !== 'tiktok');
+          document.getElementById('boxStreamElements')?.classList.toggle('hidden', state.ttsEngine !== 'streamelements');
         document.getElementById('boxGoogleTts')?.classList.toggle('hidden', state.ttsEngine !== 'google');
         document.getElementById('boxFishAudio')?.classList.toggle('hidden', state.ttsEngine !== 'fish');
         document.getElementById('boxElevenLabs')?.classList.toggle('hidden', state.ttsEngine !== 'elevenlabs');
       }
       try {
         const savedEng = localStorage.getItem('tikpulse_tts_engine');
-        applyTtsEngineUi(savedEng || 'browser');
-      } catch (_) { applyTtsEngineUi('browser'); }
+        applyTtsEngineUi(savedEng || 'google');
+      } catch (_) { applyTtsEngineUi('google'); }
       const chatModeSel = document.getElementById('ttsChatMode');
       if (chatModeSel) {
         chatModeSel.addEventListener('change', (e) => {
@@ -2286,6 +2405,28 @@
         } catch (_) {}
       }
       document.getElementById('googleAccentSelect').addEventListener('change', (e) => { state.googleAccent = e.target.value; });
+      const fxSel = document.getElementById('ttsFunnyEffect');
+      if (fxSel) {
+        fxSel.addEventListener('change', (e) => {
+          state.ttsFunnyEffect = e.target.value;
+          try { localStorage.setItem('tikpulse_tts_fx', state.ttsFunnyEffect); } catch (_) {}
+        });
+        try {
+          const savedFx = localStorage.getItem('tikpulse_tts_fx');
+          if (savedFx) { state.ttsFunnyEffect = savedFx; fxSel.value = savedFx; }
+        } catch (_) {}
+      }
+      const tkSel = document.getElementById('tiktokVoiceSelect');
+      if (tkSel) {
+        tkSel.addEventListener('change', (e) => {
+          state.tiktokVoice = e.target.value;
+          try { localStorage.setItem('tikpulse_tk_voice', state.tiktokVoice); } catch (_) {}
+        });
+        try {
+          const savedTk = localStorage.getItem('tikpulse_tk_voice');
+          if (savedTk) { state.tiktokVoice = savedTk; tkSel.value = savedTk; }
+        } catch (_) {}
+      }
       const seSel = document.getElementById('seVoiceSelect');
       if (seSel) {
         seSel.addEventListener('change', (e) => {
@@ -2667,7 +2808,48 @@
       socket.on('tiktok:sub', (d) => window.__tikpulseLive && window.__tikpulseLive.onSub(d));
       socket.on('tiktok:viewers', (d) => window.__tikpulseLive && window.__tikpulseLive.onViewers(d));
       socket.on('tiktok:gifts_catalog', (list) => window.__tikpulseApplyLiveGifts && window.__tikpulseApplyLiveGifts(list));
-      socket.on('tiktok:battle_update', (battleData) => window.__tikpulseLive && window.__tikpulseLive.onBattleUpdate(battleData));
+      let multiBattleActive = false;
+      socket.on('tiktok:battle_update', (battleData) => {
+        if (multiBattleActive) return;
+        if (window.__tikpulseLive) window.__tikpulseLive.onBattleUpdate(battleData);
+      });
+      socket.on('battle:multi_update', (battleData) => {
+        multiBattleActive = Boolean(battleData && battleData.active && battleData.multiMode);
+        if (window.__tikpulseLive) window.__tikpulseLive.onBattleUpdate(battleData);
+      });
+
+      const multiIds = ['multiHost1', 'multiHost2', 'multiHost3', 'multiHost4'];
+      try {
+        const savedMulti = JSON.parse(localStorage.getItem('tikpulse_multi_hosts') || '[]');
+        multiIds.forEach((id, i) => {
+          const el = document.getElementById(id);
+          if (el && savedMulti[i]) el.value = savedMulti[i];
+        });
+      } catch (_) {}
+
+      document.getElementById('btnMultiConnect')?.addEventListener('click', () => {
+        const users = multiIds.map((id) => (document.getElementById(id)?.value || '').replace(/^@/, '').trim());
+        try { localStorage.setItem('tikpulse_multi_hosts', JSON.stringify(users)); } catch (_) {}
+        const valid = users.filter(Boolean);
+        if (valid.length < 2) {
+          showBanner('Escribe al menos 2 @usuarios en Modo Multi-Sala 2 vs 2.', false);
+          return;
+        }
+        const token = getToken();
+        const secret = secretInput ? secretInput.value.trim() : '';
+        showBanner(`Conectando Multi-Sala (${valid.length} anfitriones)...`, true);
+        socket.emit('battle:multi_connect', { token, users, secret });
+      });
+
+      document.getElementById('btnMultiReset')?.addEventListener('click', () => {
+        socket.emit('battle:multi_reset_scores', { token: getToken() });
+      });
+
+      document.getElementById('btnMultiStop')?.addEventListener('click', () => {
+        multiBattleActive = false;
+        socket.emit('battle:multi_disconnect', { token: getToken() });
+        showBanner('Multi-Sala 2 vs 2 desconectado.', false);
+      });
     })();
   </script>
 </body>
