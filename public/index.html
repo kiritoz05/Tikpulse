@@ -243,7 +243,6 @@
         <span class="text-[9px] px-1.5 py-0.5 rounded bg-pinkNeon/20 text-pink-300 font-bold">LIVE</span>
       </button>
       <button type="button" data-tab="ranking" class="nav-item w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:bg-white/5 transition"><span>🏆</span> Ranking</button>
-      <button type="button" data-tab="liga" class="nav-item w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:bg-white/5 transition"><span class="flex items-center gap-2.5"><span>💎</span> Liga y Diario</span><span class="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold">A1–D5</span></button>
       <button type="button" data-tab="chat" class="nav-item w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:bg-white/5 transition"><span>💬</span> Chat y Bot</button>
       <button type="button" data-tab="espectadores" class="nav-item w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:bg-white/5 transition">
         <span class="flex items-center gap-2.5"><span>👁️</span> Espectadores</span>
@@ -594,34 +593,6 @@
             </div>
             <span class="text-[11px] text-slate-400">Datos 100% reales del LIVE</span>
           </div>
-          <!-- MODO MULTI-SALA 2 vs 2 (4 ANFITRIONES INDIVIDUALES EN TIEMPO REAL) -->
-          <details id="multiBattleBox" class="rounded-2xl bg-bg/90 border border-cyanNeon/30 p-3.5">
-            <summary class="flex items-center justify-between gap-2 cursor-pointer select-none text-xs font-extrabold text-cyanNeon">
-              <span>👥 Modo Multi-Sala 2 vs 2 (4 puntos individuales exactos)</span>
-              <span class="text-[10px] px-2 py-0.5 rounded bg-cyanNeon/15 text-cyanNeon">Abrir / Cerrar</span>
-            </summary>
-            <div class="mt-3 space-y-3">
-              <p class="text-[11px] text-slate-400">Escribe los <strong class="text-white">@usuarios</strong> de los 4 anfitriones (2 de tu equipo + 2 rivales). TikPulse se conecta a las 4 salas a la vez para mostrar los puntos individuales reales de cada uno.</p>
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                <div class="space-y-2 p-2.5 rounded-xl bg-cyanNeon/5 border border-cyanNeon/25">
-                  <div class="text-[11px] font-extrabold text-cyanNeon">🔵 Equipo 1 (Tu equipo)</div>
-                  <input id="multiHost1" type="text" placeholder="@anfitrion_1 (Tu LIVE)" class="w-full bg-card border border-white/10 rounded-lg px-3 py-2 text-xs text-white" />
-                  <input id="multiHost2" type="text" placeholder="@anfitrion_2 (Aliado)" class="w-full bg-card border border-white/10 rounded-lg px-3 py-2 text-xs text-white" />
-                </div>
-                <div class="space-y-2 p-2.5 rounded-xl bg-pinkNeon/5 border border-pinkNeon/25">
-                  <div class="text-[11px] font-extrabold text-pink-300">🔴 Equipo 2 (Rivales)</div>
-                  <input id="multiHost3" type="text" placeholder="@rival_1" class="w-full bg-card border border-white/10 rounded-lg px-3 py-2 text-xs text-white" />
-                  <input id="multiHost4" type="text" placeholder="@rival_2" class="w-full bg-card border border-white/10 rounded-lg px-3 py-2 text-xs text-white" />
-                </div>
-              </div>
-              <div class="flex flex-wrap items-center gap-2">
-                <button id="btnMultiConnect" type="button" class="tp-btn-primary px-4 py-2 rounded-xl text-xs">🔗 Conectar Salas 2 vs 2</button>
-                <button id="btnMultiReset" type="button" class="px-3.5 py-2 rounded-xl bg-amber-500/20 border border-amber-400/40 text-amber-200 text-xs font-bold">🔄 Nueva Ronda (0 pts)</button>
-                <button id="btnMultiStop" type="button" class="px-3.5 py-2 rounded-xl bg-white/10 text-slate-300 text-xs font-bold">⏹️ Desconectar Multi-Sala</button>
-              </div>
-            </div>
-          </details>
-
           <div id="pkBoardRender" class="bg-bg/90 rounded-2xl p-4 sm:p-5 border border-white/10 space-y-4">
             <div class="text-center py-6 space-y-1.5">
               <div class="text-sm font-extrabold text-cyanNeon">⚔️ Esperando Batalla PK real en TikTok LIVE</div>
@@ -642,87 +613,6 @@
           <div class="tp-card rounded-2xl p-5">
             <div class="flex items-center justify-between mb-4"><h2 class="font-display text-sm font-bold text-pinkNeon">❤️ Top 10 Tap Tap (Likes)</h2><span id="rankTotalLikes" class="text-xs font-bold text-slate-300">0 ❤️</span></div>
             <div id="rankLikesList" class="space-y-2.5"></div>
-          </div>
-        </div>
-      </section>
-
-      <!-- TAB 5B: 💎 LIGA Y RANKING DIARIO (DATOS REALES DE TIKTOK) -->
-      <section id="tab-liga" class="tab-panel hidden space-y-4">
-        <div class="tp-card rounded-2xl p-4 sm:p-5 space-y-4 border border-amber-400/30">
-          <div class="flex flex-wrap items-center justify-between gap-2.5">
-            <div>
-              <h2 class="font-display text-base sm:text-lg font-extrabold text-amber-300">💎 Liga TikTok LIVE &amp; Ranking Diario</h2>
-              <p class="text-xs text-slate-400">Monedas reales de hoy conectadas a TikTok LIVE, puesto en vivo y metas de fragmentos (A1–D5).</p>
-            </div>
-            <div class="flex items-center gap-2">
-              <span id="liveRankBadge" class="hidden text-xs px-3 py-1 rounded-full bg-amber-500/20 border border-amber-400/40 text-amber-200 font-extrabold">🏅 Puesto #--</span>
-              <button id="btnResetDailyCoins" type="button" class="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-xs font-bold text-slate-200">🔄 Reiniciar día</button>
-            </div>
-          </div>
-
-          <!-- RESUMEN MONEDAS HOY + MONEDAS ESTE LIVE -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            <div class="rounded-xl bg-bg/95 border border-amber-400/35 p-4">
-              <div class="text-[11px] font-bold text-slate-400 uppercase">Ranking Diario (Hoy)</div>
-              <div id="dailyCoinsTotal" class="font-display text-2xl sm:text-3xl font-extrabold text-amber-300 mt-1">0 <span class="text-sm">🪙</span></div>
-              <div class="text-[10px] text-slate-400 mt-1">Total acumulado en tus LIVEs de hoy</div>
-            </div>
-            <div class="rounded-xl bg-bg/95 border border-cyanNeon/30 p-4">
-              <div class="text-[11px] font-bold text-slate-400 uppercase">Este LIVE ahora</div>
-              <div id="ligaCurrentLiveCoins" class="font-display text-2xl sm:text-3xl font-extrabold text-cyanNeon mt-1">0 <span class="text-sm">🪙</span></div>
-              <div class="text-[10px] text-slate-400 mt-1">Monedas reales de la sala conectada</div>
-            </div>
-            <div class="rounded-xl bg-bg/95 border border-white/10 p-4">
-              <label class="block text-[11px] font-bold text-slate-400 uppercase mb-1.5">Tu Liga TikTok (18 niveles)</label>
-              <select id="leagueTierSelect" class="w-full bg-card border border-white/15 rounded-lg px-2.5 py-2 text-sm font-extrabold text-cyanNeon">
-                <option value="A1">🏆 Liga A1 (Élite)</option><option value="A2">🏆 Liga A2</option><option value="A3">🏆 Liga A3</option>
-                <option value="B1">💎 Liga B1</option><option value="B2">💎 Liga B2</option><option value="B3">💎 Liga B3</option><option value="B4">💎 Liga B4</option><option value="B5">💎 Liga B5</option>
-                <option value="C1" selected>⚡ Liga C1</option><option value="C2">⚡ Liga C2</option><option value="C3">⚡ Liga C3</option><option value="C4">⚡ Liga C4</option><option value="C5">⚡ Liga C5</option>
-                <option value="D1">🌱 Liga D1</option><option value="D2">🌱 Liga D2</option><option value="D3">🌱 Liga D3</option><option value="D4">🌱 Liga D4</option><option value="D5">🌱 Liga D5</option>
-              </select>
-            </div>
-            <div class="rounded-xl bg-bg/95 border border-white/10 p-4 space-y-2">
-              <div class="text-[11px] font-bold text-slate-400 uppercase">Metas de tu grupo hoy</div>
-              <div class="grid grid-cols-2 gap-2">
-                <div><label class="block text-[10px] text-emerald-300 mb-0.5">Mantener</label><input id="leagueKeepGoal" type="number" min="0" value="3000" class="w-full bg-card border border-white/15 rounded-lg px-2 py-1 text-xs font-bold text-emerald-300" /></div>
-                <div><label class="block text-[10px] text-amber-300 mb-0.5">+1 Frag.</label><input id="leagueWinGoal" type="number" min="1" value="10000" class="w-full bg-card border border-white/15 rounded-lg px-2 py-1 text-xs font-bold text-amber-300" /></div>
-              </div>
-            </div>
-          </div>
-
-          <!-- BARRAS DE FRAGMENTOS EN TIEMPO REAL -->
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div class="rounded-2xl bg-bg/95 border border-emerald-400/35 p-4 space-y-2.5">
-              <div class="flex items-center justify-between"><span class="text-xs font-extrabold text-emerald-300">🛡️ No perder fragmento</span><span id="leagueKeepPct" class="text-xs font-extrabold text-emerald-200">0%</span></div>
-              <div id="leagueKeepText" class="font-display text-xl font-extrabold text-white">Faltan 3.000 🪙</div>
-              <div class="w-full h-3 rounded-full bg-slate-900 overflow-hidden"><div id="leagueKeepBar" class="h-full rounded-full transition-all duration-300" style="width:0%; background:linear-gradient(90deg,#10b981,#00f2ea)"></div></div>
-              <div class="text-[11px] text-slate-400">Zona segura para no bajar de liga.</div>
-            </div>
-
-            <div class="rounded-2xl bg-bg/95 border border-amber-400/35 p-4 space-y-2.5">
-              <div class="flex items-center justify-between"><span class="text-xs font-extrabold text-amber-300">⬆️ Ganar +1 fragmento</span><span id="leagueWinPct" class="text-xs font-extrabold text-amber-200">0%</span></div>
-              <div id="leagueWinText" class="font-display text-xl font-extrabold text-white">Faltan 10.000 🪙</div>
-              <div class="w-full h-3 rounded-full bg-slate-900 overflow-hidden"><div id="leagueWinBar" class="h-full rounded-full transition-all duration-300" style="width:0%; background:linear-gradient(90deg,#f59e0b,#fe2c55)"></div></div>
-              <div class="text-[11px] text-slate-400">4 fragmentos te ascienden a la siguiente liga.</div>
-            </div>
-
-            <div class="rounded-2xl bg-bg/95 border border-pinkNeon/35 p-4 space-y-2.5">
-              <div class="flex items-center justify-between"><span class="text-xs font-extrabold text-pink-300">🔥 Ganar +2 fragmentos</span><span id="leagueWin2Pct" class="text-xs font-extrabold text-pink-200">0%</span></div>
-              <div id="leagueWin2Text" class="font-display text-xl font-extrabold text-white">Faltan 20.000 🪙</div>
-              <div class="w-full h-3 rounded-full bg-slate-900 overflow-hidden"><div id="leagueWin2Bar" class="h-full rounded-full transition-all duration-300" style="width:0%; background:linear-gradient(90deg,#ec4899,#a855f7)"></div></div>
-              <div class="text-[11px] text-slate-400">Zona Top del grupo diario (2× meta de +1).</div>
-            </div>
-          </div>
-
-          <!-- FEED EN VIVO DE EVENTOS DE RANKING / LIGA DESDE TIKTOK -->
-          <div class="rounded-2xl bg-bg/90 border border-white/10 p-4 space-y-2.5">
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-extrabold text-cyanNeon uppercase tracking-wider">📡 Señales de Ranking / Liga recibidas desde TikTok LIVE</span>
-              <span class="text-[11px] text-slate-400">RANK_UPDATE · HOURLY_RANK · RANK_TEXT</span>
-            </div>
-            <div id="tiktokRankFeedList" class="space-y-1.5 max-h-48 overflow-y-auto text-xs">
-              <div class="text-slate-500 italic">Conecta tu LIVE para recibir en tiempo real los puestos y avisos oficiales de Ranking y Liga de TikTok.</div>
-            </div>
           </div>
         </div>
       </section>
@@ -903,7 +793,6 @@
         voz: '🔊 TTS Chat & Voz',
         batalla: '⚔️ Batalla PK',
         ranking: '🏆 Ranking',
-        liga: '💎 Liga y Diario',
         chat: '💬 Chat y Bot',
         espectadores: '👁️ Espectadores',
         overlay: '🎬 Overlays',
@@ -1349,128 +1238,6 @@
             if (!res.ok) throw new Error(d.error || 'Error subiendo audio');
             toast(`🎵 "${file.name}" agregado a tu biblioteca`);
             
-      const LEAGUE_DEFAULTS = {
-        A1: [150000, 400000], A2: [90000, 220000], A3: [55000, 140000],
-        B1: [35000, 85000], B2: [22000, 55000], B3: [15000, 38000], B4: [10000, 26000], B5: [7000, 18000],
-        C1: [3000, 10000], C2: [2000, 7000], C3: [1200, 4500], C4: [800, 3000], C5: [500, 2000],
-        D1: [300, 1200], D2: [200, 800], D3: [100, 500], D4: [50, 300], D5: [20, 150]
-      };
-      function todayDateStr() {
-        const d = new Date();
-        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-      }
-      function saveDailyCoinsLocal(val) {
-        try { localStorage.setItem('tikpulse_daily_coins', JSON.stringify({ date: todayDateStr(), coins: Number(val || 0) })); } catch (_) {}
-      }
-      function loadDailyCoinsLocal() {
-        try {
-          const obj = JSON.parse(localStorage.getItem('tikpulse_daily_coins') || 'null');
-          if (obj && obj.date === todayDateStr()) return Number(obj.coins || 0);
-        } catch (_) {}
-        return 0;
-      }
-      state.dailyCoins = loadDailyCoinsLocal();
-
-      function renderLeagueAndDaily() {
-        const totalToday = Math.max(Number(state.dailyCoins || 0), Number(state.diamonds || 0));
-        const dailyEl = document.getElementById('dailyCoinsTotal');
-        if (dailyEl) dailyEl.innerHTML = `${totalToday.toLocaleString('es-ES')} <span class="text-sm">🪙</span>`;
-
-        const rkBadge = document.getElementById('liveRankBadge');
-        if (rkBadge) {
-          if (state.rankInfo && Number(state.rankInfo.ownerRank) > 0) {
-            rkBadge.textContent = `🏅 Puesto #${state.rankInfo.ownerRank}`;
-            rkBadge.classList.remove('hidden');
-          } else {
-            rkBadge.classList.add('hidden');
-          }
-        }
-
-        const keepGoal = Math.max(1, Number(document.getElementById('leagueKeepGoal')?.value || 3000));
-        const winGoal = Math.max(1, Number(document.getElementById('leagueWinGoal')?.value || 10000));
-
-        const keepRem = Math.max(0, keepGoal - totalToday);
-        const keepPct = Math.min(100, Math.round((totalToday / keepGoal) * 100));
-        const kTxt = document.getElementById('leagueKeepText');
-        const kPct = document.getElementById('leagueKeepPct');
-        const kBar = document.getElementById('leagueKeepBar');
-        if (kTxt) kTxt.textContent = keepRem === 0 ? '✅ ¡Fragmento asegurado!' : `Faltan ${keepRem.toLocaleString('es-ES')} 🪙`;
-        if (kPct) kPct.textContent = `${keepPct}%`;
-        if (kBar) kBar.style.width = `${keepPct}%`;
-
-        const winRem = Math.max(0, winGoal - totalToday);
-        const winPct = Math.min(100, Math.round((totalToday / winGoal) * 100));
-        const wTxt = document.getElementById('leagueWinText');
-        const wPct = document.getElementById('leagueWinPct');
-        const wBar = document.getElementById('leagueWinBar');
-        if (wTxt) wTxt.textContent = winRem === 0 ? '🏆 ¡+1 Fragmento ganado!' : `Faltan ${winRem.toLocaleString('es-ES')} 🪙`;
-        if (wPct) wPct.textContent = `${winPct}%`;
-        if (wBar) wBar.style.width = `${winPct}%`;
-
-        const liveCoinsEl = document.getElementById('ligaCurrentLiveCoins');
-        if (liveCoinsEl) liveCoinsEl.innerHTML = `${Number(state.diamonds || 0).toLocaleString('es-ES')} <span class="text-sm">🪙</span>`;
-
-        const win2Goal = Math.max(2, winGoal * 2);
-        const win2Rem = Math.max(0, win2Goal - totalToday);
-        const win2Pct = Math.min(100, Math.round((totalToday / win2Goal) * 100));
-        const w2Txt = document.getElementById('leagueWin2Text');
-        const w2Pct = document.getElementById('leagueWin2Pct');
-        const w2Bar = document.getElementById('leagueWin2Bar');
-        if (w2Txt) w2Txt.textContent = win2Rem === 0 ? '👑 ¡+2 Fragmentos ganados!' : `Faltan ${win2Rem.toLocaleString('es-ES')} 🪙`;
-        if (w2Pct) w2Pct.textContent = `${win2Pct}%`;
-        if (w2Bar) w2Bar.style.width = `${win2Pct}%`;
-
-        const feedEl = document.getElementById('tiktokRankFeedList');
-        if (feedEl && state.rankInfo && Array.isArray(state.rankInfo.updates) && state.rankInfo.updates.length) {
-          feedEl.innerHTML = '';
-          state.rankInfo.updates.forEach((u) => {
-            const row = document.createElement('div');
-            row.className = 'flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-card border border-white/10';
-            row.innerHTML = `<span class="font-bold text-white truncate">🏅 ${esc(u.label || `Puesto #${u.ownerRank}`)}</span><span class="text-[10px] text-slate-400 shrink-0">${esc(u.time || '')}</span>`;
-            feedEl.appendChild(row);
-          });
-        }
-      }
-
-      (function initLeagueControls() {
-        const sel = document.getElementById('leagueTierSelect');
-        const keepInp = document.getElementById('leagueKeepGoal');
-        const winInp = document.getElementById('leagueWinGoal');
-        const resetBtn = document.getElementById('btnResetDailyCoins');
-        try {
-          const saved = JSON.parse(localStorage.getItem('tikpulse_league_cfg') || 'null');
-          if (saved) {
-            if (sel && saved.tier) sel.value = saved.tier;
-            if (keepInp && saved.keep) keepInp.value = saved.keep;
-            if (winInp && saved.win) winInp.value = saved.win;
-          }
-        } catch (_) {}
-        const saveCfg = () => {
-          try {
-            localStorage.setItem('tikpulse_league_cfg', JSON.stringify({
-              tier: sel?.value || 'C1',
-              keep: Number(keepInp?.value || 3000),
-              win: Number(winInp?.value || 10000)
-            }));
-          } catch (_) {}
-          renderLeagueAndDaily();
-        };
-        sel?.addEventListener('change', () => {
-          const def = LEAGUE_DEFAULTS[sel.value];
-          if (def && keepInp && winInp) { keepInp.value = def[0]; winInp.value = def[1]; }
-          saveCfg();
-        });
-        keepInp?.addEventListener('input', saveCfg);
-        winInp?.addEventListener('input', saveCfg);
-        resetBtn?.addEventListener('click', () => {
-          state.dailyCoins = 0;
-          saveDailyCoinsLocal(0);
-          renderLeagueAndDaily();
-          toast('Ranking diario reiniciado a 0 🪙');
-        });
-      })();
-
-      renderLeagueAndDaily();
       refreshSoundLibrary();
       
       async function loadServerTtsVoices() {
@@ -1818,7 +1585,6 @@
 
         document.getElementById('rankTotalDiamonds').textContent = `${state.diamonds.toLocaleString('es-ES')} 🪙`;
         document.getElementById('rankTotalLikes').textContent = `${state.likes.toLocaleString('es-ES')} ❤️`;
-        if (typeof renderLeagueAndDaily === 'function') renderLeagueAndDaily();
         renderRankList('rankDiamondsList', state.topDiamonds, '🪙', '#F59E0B', 10);
         renderRankList('rankLikesList', state.topLikes, '❤️', '#FE2C55', 10);
         renderRankList('overlayTop6List', state.topLikes, '❤️', '#00F2EA', 6);
@@ -2350,10 +2116,6 @@
           state.diamonds = Math.max(state.diamonds, Number(s.coins ?? s.diamonds ?? 0));
           state.shares = Math.max(state.shares, Number(s.shares || 0));
           state.subs = Math.max(state.subs, Number(s.subs || 0));
-          if (typeof syncData.dailyCoins === 'number') {
-            state.dailyCoins = Math.max(state.dailyCoins, syncData.dailyCoins, state.diamonds);
-            saveDailyCoinsLocal(state.dailyCoins);
-          }
           if (syncData.rankInfo && (Number(syncData.rankInfo.ownerRank) > 0 || (Array.isArray(syncData.rankInfo.updates) && syncData.rankInfo.updates.length))) {
             state.rankInfo = syncData.rankInfo;
           }
@@ -3031,48 +2793,7 @@
       socket.on('tiktok:sub', (d) => window.__tikpulseLive && window.__tikpulseLive.onSub(d));
       socket.on('tiktok:viewers', (d) => window.__tikpulseLive && window.__tikpulseLive.onViewers(d));
       socket.on('tiktok:gifts_catalog', (list) => window.__tikpulseApplyLiveGifts && window.__tikpulseApplyLiveGifts(list));
-      let multiBattleActive = false;
-      socket.on('tiktok:battle_update', (battleData) => {
-        if (multiBattleActive) return;
-        if (window.__tikpulseLive) window.__tikpulseLive.onBattleUpdate(battleData);
-      });
-      socket.on('battle:multi_update', (battleData) => {
-        multiBattleActive = Boolean(battleData && battleData.active && battleData.multiMode);
-        if (window.__tikpulseLive) window.__tikpulseLive.onBattleUpdate(battleData);
-      });
-
-      const multiIds = ['multiHost1', 'multiHost2', 'multiHost3', 'multiHost4'];
-      try {
-        const savedMulti = JSON.parse(localStorage.getItem('tikpulse_multi_hosts') || '[]');
-        multiIds.forEach((id, i) => {
-          const el = document.getElementById(id);
-          if (el && savedMulti[i]) el.value = savedMulti[i];
-        });
-      } catch (_) {}
-
-      document.getElementById('btnMultiConnect')?.addEventListener('click', () => {
-        const users = multiIds.map((id) => (document.getElementById(id)?.value || '').replace(/^@/, '').trim());
-        try { localStorage.setItem('tikpulse_multi_hosts', JSON.stringify(users)); } catch (_) {}
-        const valid = users.filter(Boolean);
-        if (valid.length < 2) {
-          showBanner('Escribe al menos 2 @usuarios en Modo Multi-Sala 2 vs 2.', false);
-          return;
-        }
-        const token = getToken();
-        const secret = secretInput ? secretInput.value.trim() : '';
-        showBanner(`Conectando Multi-Sala (${valid.length} anfitriones)...`, true);
-        socket.emit('battle:multi_connect', { token, users, secret });
-      });
-
-      document.getElementById('btnMultiReset')?.addEventListener('click', () => {
-        socket.emit('battle:multi_reset_scores', { token: getToken() });
-      });
-
-      document.getElementById('btnMultiStop')?.addEventListener('click', () => {
-        multiBattleActive = false;
-        socket.emit('battle:multi_disconnect', { token: getToken() });
-        showBanner('Multi-Sala 2 vs 2 desconectado.', false);
-      });
+      socket.on('tiktok:battle_update', (battleData) => window.__tikpulseLive && window.__tikpulseLive.onBattleUpdate(battleData));
     })();
   </script>
 </body>
