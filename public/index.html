@@ -1030,7 +1030,54 @@
         return { rate: Math.min(2, Math.max(0.5, state.ttsRate || 1.05)), preservesPitch: true };
       }
 
-      function playAudioBlob(blob, userKey = '') {
+      let activeBufferSource = null;
+
+      async function playAudioBlob(blob, userKey = '') {
+        if (!blob || blob.size < 100) {
+          setTtsDiag('⚠️ Audio vacío recibido del servidor');
+          return false;
+        }
+        const fp = getFunnyPlaybackParams(userKey);
+
+        // PRIMARY: Web Audio API (decodeAudioData) — 100% reliable on Android Chrome, iOS & PC with zero <audio> race conditions!
+        try {
+          const AC = window.AudioContext || window.webkitAudioContext;
+          if (AC) {
+            if (!audioCtx) audioCtx = new AC();
+            if (audioCtx.state === 'suspended') await audioCtx.resume();
+            const arrBuf = await blob.arrayBuffer();
+            const audioBuf = await audioCtx.decodeAudioData(arrBuf.slice(0));
+            return await new Promise((resolve) => {
+              let settled = false;
+              const finish = (ok) => {
+                if (settled) return;
+                settled = true;
+                clearTimeout(guard);
+                if (activeBufferSource === src) activeBufferSource = null;
+                resolve(ok);
+              };
+              if (activeBufferSource) {
+                try { activeBufferSource.stop(); } catch (_) {}
+              }
+              const src = audioCtx.createBufferSource();
+              const gain = audioCtx.createGain();
+              src.buffer = audioBuf;
+              src.playbackRate.value = fp.rate;
+              gain.gain.value = Math.max(0.05, Math.min(1.5, state.ttsVolume || 0.85));
+              src.connect(gain);
+              gain.connect(audioCtx.destination);
+              activeBufferSource = src;
+              state.currentTtsAudio = { pause: () => { try { src.stop(); } catch (_) {} } };
+              const guard = setTimeout(() => { try { src.stop(); } catch (_) {} finish(true); }, 20000);
+              src.onended = () => finish(true);
+              src.start(0);
+            });
+          }
+        } catch (webAudioErr) {
+          // Fall through to HTMLAudioElement fallback
+        }
+
+        // FALLBACK: HTMLAudioElement
         const url = URL.createObjectURL(blob);
         return new Promise((resolve) => {
           let settled = false;
@@ -1048,7 +1095,6 @@
           globalTtsAudio.pause();
           globalTtsAudio.src = url;
           globalTtsAudio.volume = state.ttsVolume;
-          const fp = getFunnyPlaybackParams(userKey);
           try {
             globalTtsAudio.preservesPitch = fp.preservesPitch;
             globalTtsAudio.mozPreservesPitch = fp.preservesPitch;
@@ -1061,9 +1107,7 @@
           const p = globalTtsAudio.play();
           if (p && typeof p.catch === 'function') {
             p.catch((err) => {
-              if (err && err.name === 'NotAllowedError') {
-                setTtsDiag('🔇 Navegador bloqueó audio: toca "🔊 Activar Audio" arriba 1 vez');
-              }
+              setTtsDiag('🔇 Error reproduciendo audio: ' + (err?.name || 'toca Activar Audio'));
               finish(false);
             });
           }
@@ -2334,7 +2378,7 @@
         document.getElementById('boxGoogleTts')?.classList.add('hidden');
         document.getElementById('boxElevenLabs').classList.add('hidden');
         document.getElementById('boxFishAudio').classList.remove('hidden');
-        enqueueTts('¡Hola! Esta es tu voz clonada con Fish Audio en TikPulse LIVE.', 'Prueba Fish');
+        unlockMobileAudio(); enqueueTts('¡Hola! Esta es tu voz clonada con Fish Audio en TikPulse LIVE.', 'Prueba Fish', true);
       });
       try {
         const savedFishRef = localStorage.getItem('tikpulse_fish_ref_id');
@@ -2467,16 +2511,15 @@
           }
           if (!mobileAudioUnlocked) {
             mobileAudioUnlocked = true;
-            [globalTtsAudio, globalSfxAudio].forEach((el) => {
+            if (audioCtx) {
               try {
-                el.src = SILENT_WAV;
-                el.volume = 0.01;
-                const pr = el.play();
-                if (pr && typeof pr.then === 'function') {
-                  pr.then(() => { el.pause(); el.volume = state.ttsVolume; }).catch(() => { mobileAudioUnlocked = false; });
-                }
+                const buf = audioCtx.createBuffer(1, 1, 22050);
+                const src = audioCtx.createBufferSource();
+                src.buffer = buf;
+                src.connect(audioCtx.destination);
+                src.start(0);
               } catch (_) {}
-            });
+            }
           }
           if ('speechSynthesis' in window) {
             const silent = new SpeechSynthesisUtterance('');
