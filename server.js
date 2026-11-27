@@ -69,6 +69,115 @@ app.get('/api/config', (_req, res) => res.json({
 let ttsVoicesConfig = { fishVoices: [], elevenLabsVoices: [] };
 try { ttsVoicesConfig = require('./tts-voices'); } catch (_) {}
 
+
+async function synthesizeGoogleMp3(text, lang = 'es-PE') {
+  const cleanLang = String(lang || 'es-PE').replace(/[^a-zA-Z-]/g, '') || 'es-PE';
+  const url = `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=${encodeURIComponent(cleanLang)}&q=${encodeURIComponent(text)}`;
+  const up = await fetch(url, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+      Referer: 'https://translate.google.com/'
+    },
+    signal: AbortSignal.timeout(5000)
+  });
+  if (!up.ok) throw new Error('Google TTS ' + up.status);
+  return Buffer.from(await up.arrayBuffer());
+}
+
+app.get('/api/tts/speak', async (req, res) => {
+  const ip = req.ip || req.socket.remoteAddress || 'unknown';
+  if (!allowRequest(ip, 60)) return res.status(429).send('Rate limit');
+  const text = String(req.query.text || '').trim().slice(0, 240);
+  const engine = String(req.query.engine || 'google').trim().toLowerCase();
+  const voice = String(req.query.voice || '').trim();
+  const model = String(req.query.model || 's2.1-pro-free').trim();
+  if (!text) return res.status(400).send('Texto vacío');
+
+  let audioBuf = null;
+  let usedEngine = engine;
+  let errNote = '';
+
+  try {
+    if (engine === 'fish' && process.env.FISH_API_KEY) {
+      const allowedModels = new Set(['s2.1-pro-free', 's2.1-pro', 's2-pro']);
+      const fishModel = allowedModels.has(model) ? model : 's2.1-pro-free';
+      const refId = voice.replace(/[^a-zA-Z0-9_-]/g, '');
+      const payload = { text, format: 'mp3', latency: 'balanced', normalize: true };
+      if (refId) payload.reference_id = refId;
+      const up = await fetch('https://api.fish.audio/v1/tts', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${process.env.FISH_API_KEY.trim()}`,
+          'Content-Type': 'application/json',
+          model: fishModel
+        },
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(7000)
+      });
+      if (up.ok) audioBuf = Buffer.from(await up.arrayBuffer());
+      else errNote = `Fish ${up.status}`;
+    } else if (engine === 'elevenlabs' && process.env.ELEVENLABS_API_KEY) {
+      const vid = (voice || 'EXAVITQu4vr4xnSDxMaL').replace(/[^a-zA-Z0-9]/g, '');
+      const up = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${vid}`, {
+        method: 'POST',
+        headers: {
+          'xi-api-key': process.env.ELEVENLABS_API_KEY.trim(),
+          'Content-Type': 'application/json',
+          Accept: 'audio/mpeg'
+        },
+        body: JSON.stringify({ text, model_id: 'eleven_multilingual_v2' }),
+        signal: AbortSignal.timeout(7000)
+      });
+      if (up.ok) audioBuf = Buffer.from(await up.arrayBuffer());
+      else errNote = `ElevenLabs ${up.status}`;
+    } else if (engine === 'streamelements') {
+      const seVoice = (voice || 'Mia').replace(/[^a-zA-Z]/g, '') || 'Mia';
+      try {
+        const sl = await fetch('https://streamlabs.com/polly/speak', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0', Referer: 'https://streamlabs.com/' },
+          body: JSON.stringify({ voice: seVoice, text }),
+          signal: AbortSignal.timeout(4500)
+        });
+        if (sl.ok) {
+          const j = await sl.json().catch(() => null);
+          if (j?.speak_url) {
+            const a = await fetch(j.speak_url, { signal: AbortSignal.timeout(4500) });
+            if (a.ok) audioBuf = Buffer.from(await a.arrayBuffer());
+          }
+        }
+      } catch (_) {}
+      if (!audioBuf) {
+        const se = await fetch(`https://api.streamelements.com/kappa/v2/speech?voice=${encodeURIComponent(seVoice)}&text=${encodeURIComponent(text)}`, {
+          headers: { 'User-Agent': 'Mozilla/5.0' },
+          signal: AbortSignal.timeout(4500)
+        });
+        if (se.ok) audioBuf = Buffer.from(await se.arrayBuffer());
+        else errNote = `SE ${se.status}`;
+      }
+    }
+  } catch (e) {
+    errNote = e?.message || 'Timeout';
+  }
+
+  // Guaranteed fallback to Google TTS MP3 so <audio src="/api/tts/speak?..."> ALWAYS returns playable MP3!
+  if (!audioBuf || audioBuf.length < 100) {
+    try {
+      const lang = engine === 'google' ? (voice || 'es-PE') : 'es-PE';
+      audioBuf = await synthesizeGoogleMp3(text, lang);
+      usedEngine = engine === 'google' ? 'google' : `google-fallback(${errNote || 'no-key'})`;
+    } catch (_) {
+      return res.status(502).send('TTS no disponible');
+    }
+  }
+
+  res.setHeader('Content-Type', 'audio/mpeg');
+  res.setHeader('Content-Length', String(audioBuf.length));
+  res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('X-TTS-Used', usedEngine);
+  res.send(audioBuf);
+});
+
 app.get('/api/tts/voices', (_req, res) => {
   res.json({
     hasFishKey: Boolean(process.env.FISH_API_KEY),
@@ -602,7 +711,7 @@ function serializeBattle(rs) {
       if (p.score > 0) existing.score = Number(p.score);
       if (p.name && !p.name.startsWith('Rival') && !p.name.startsWith('Anfitrión #')) existing.name = p.name;
       if (p.isOwner) existing.isOwner = true;
-    } else if (/^\d{5,}$/.test(p.id) || mergedById.size === 0) {
+    } else if (/^\d{5,}$/.test(p.id) || mergedById.size === 0 || rawPlayers.length > mergedById.size) {
       mergedById.set(p.id, { ...p });
     }
   });
@@ -631,7 +740,7 @@ function serializeBattle(rs) {
 
   const players = orderedHosts;
   const individualHosts = orderedHosts;
-  const mode = orderedHosts.length === 4 ? '2 vs 2' : (orderedHosts.length === 2 ? '1 vs 1' : (orderedHosts.length > 2 ? `Grupal (${orderedHosts.length})` : ''));
+  const mode = orderedHosts.length === 3 ? '3 Individuales' : (orderedHosts.length === 4 ? '4 Individuales / 2 vs 2' : (orderedHosts.length === 2 ? '1 vs 1' : (orderedHosts.length > 2 ? `Grupal (${orderedHosts.length})` : '')));
 
   return {
     active: rs.battle.active,
@@ -821,7 +930,17 @@ function parseBattleStart(rs, d) {
   const newBattleId = safeId(d?.battleId || d?.battleSetting?.battleId || '');
   const hostMap = {};
   const anchors = d?.anchorInfo || d?.anchors;
-  if (Array.isArray(anchors)) {
+  if (anchors instanceof Map) {
+    let idx = 0;
+    for (const [k, info] of anchors.entries()) {
+      const hid = safeId(info?.user?.userId || info?.userId || info?.anchorId || k);
+      if (hid) {
+        rememberUser(rs, info?.user || info, hid);
+        hostMap[hid] = { id: hid, name: resolveHostName(rs, hid, info?.user || info, idx), score: 0, contributors: [] };
+      }
+      idx++;
+    }
+  } else if (Array.isArray(anchors)) {
     anchors.forEach((info, idx) => {
       const hid = safeId(info?.user?.userId || info?.userId || info?.anchorId);
       if (!hid) return;
@@ -846,7 +965,7 @@ function parseBattleStart(rs, d) {
       };
     });
   }
-  if (!Object.keys(hostMap).length && Array.isArray(d?.battleUsers)) {
+  if (Array.isArray(d?.battleUsers)) {
     d.battleUsers.forEach((u, idx) => {
       const hid = safeId(u?.userId || u?.id);
       if (!hid) return;
