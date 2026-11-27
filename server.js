@@ -593,7 +593,20 @@ function serializeBattle(rs) {
     });
 
   // Choose the richer host list (individualHosts if >= 2, otherwise rawPlayers)
-  const unified = rawIndiv.length >= 3 ? rawIndiv : (rawIndiv.length === 2 && rawIndiv.some((h) => h.score > 0) ? rawIndiv : (rawPlayers.length ? rawPlayers : rawIndiv));
+  const mergedById = new Map();
+  rawIndiv.forEach((h) => mergedById.set(h.id, { ...h }));
+  rawPlayers.forEach((p) => {
+    const existing = mergedById.get(p.id);
+    if (existing) {
+      existing.score = Math.max(Number(existing.score || 0), Number(p.score || 0));
+      if (p.score > 0) existing.score = Number(p.score);
+      if (p.name && !p.name.startsWith('Rival') && !p.name.startsWith('Anfitrión #')) existing.name = p.name;
+      if (p.isOwner) existing.isOwner = true;
+    } else if (/^\d{5,}$/.test(p.id) || mergedById.size === 0) {
+      mergedById.set(p.id, { ...p });
+    }
+  });
+  const unified = mergedById.size ? Array.from(mergedById.values()) : rawPlayers;
 
   // FIXED ORDER: Connected streamer (isOwner) ALWAYS index 0, rivals keep stable insertion order (never jump/swap!)
   const orderedHosts = [
@@ -884,12 +897,16 @@ function parseBattleArmies(rs, d) {
   if (incomingBattleId) rs.battle.battleId = incomingBattleId;
 
   let rawEntries = [];
-  if (Array.isArray(d?.battleItems) && d.battleItems.length) {
+  if (d?.battleItems instanceof Map && d.battleItems.size) {
+    rawEntries = Array.from(d.battleItems.entries()).map(([k, it], i) => [safeId(it?.hostUserId || it?.userId || k) || `slot_${i}`, it]);
+  } else if (Array.isArray(d?.battleItems) && d.battleItems.length) {
     rawEntries = d.battleItems.map((it, i) => [safeId(it?.hostUserId || it?.userId || it?.anchorId || it?.id) || `slot_${i}`, it]);
   } else if (d?.battleItems && typeof d.battleItems === 'object' && Object.keys(d.battleItems).length) {
     rawEntries = Object.entries(d.battleItems).map(([k, it], i) => [safeId(it?.hostUserId || it?.userId || k) || `slot_${i}`, it]);
   } else if (Array.isArray(d?.battleArmies) && d.battleArmies.length) {
     rawEntries = d.battleArmies.map((it, i) => [safeId(it?.hostUserId || it?.userId) || `slot_${i}`, it]);
+  } else if (d?.armies instanceof Map && d.armies.size) {
+    rawEntries = Array.from(d.armies.entries()).map(([k, it], i) => [safeId(it?.hostUserId || it?.userId || k) || `slot_${i}`, it]);
   } else if (d?.armies && typeof d.armies === 'object' && Object.keys(d.armies).length) {
     rawEntries = Object.entries(d.armies).map(([k, it], i) => [safeId(it?.hostUserId || it?.userId || k) || `slot_${i}`, it]);
   }
@@ -975,23 +992,37 @@ function parseBattleArmies(rs, d) {
     }
   });
 
-  // Replace hostMap with ONLY the current live snapshot (never keep phantom 0-pt duplicates!)
-  rs.battle.hostMap = nextHostMap;
-  rs.battle.players = Object.values(nextHostMap);
-
-  // If LINK_MIC_ARMIES carries 3+ individual hosts directly, sync them into individualHosts too!
-  const snapList = Object.values(nextHostMap);
-  if (snapList.length >= 3) {
-    snapList.forEach((h) => {
-      const prev = rs.battle.individualHosts.get(h.id);
-      rs.battle.individualHosts.set(h.id, {
-        id: h.id,
-        name: (!h.name.startsWith('Anfitrión #')) ? h.name : (prev?.name || h.name),
-        score: Number(h.score || 0),
-        rank: prev?.rank || 0
-      });
+  // Merge into hostMap for the CURRENT battleId (preserving 3rd/4th hosts who still have 0 pts, without phantom slot_* duplicates!)
+  const hasRealNumericIds = Object.keys(nextHostMap).some((k) => /^\d{5,}$/.test(k));
+  const mergedMap = {};
+  if (hasRealNumericIds) {
+    Object.entries(rs.battle.hostMap || {}).forEach(([k, v]) => {
+      if (/^\d{5,}$/.test(k)) mergedMap[k] = v;
     });
   }
+  Object.entries(nextHostMap).forEach(([k, v]) => {
+    const prev = mergedMap[k];
+    mergedMap[k] = {
+      id: k,
+      name: (!v.name.startsWith('Anfitrión #')) ? v.name : (prev?.name || v.name),
+      score: Number(v.score || 0),
+      contributors: v.contributors?.length ? v.contributors : (prev?.contributors || [])
+    };
+  });
+  rs.battle.hostMap = mergedMap;
+  rs.battle.players = Object.values(mergedMap);
+
+  // ALWAYS sync live LINK_MIC_ARMIES scores into individualHosts by real userId so scores NEVER freeze!
+  Object.values(mergedMap).forEach((h) => {
+    if (!/^\d{5,}$/.test(h.id)) return;
+    const prev = rs.battle.individualHosts.get(h.id);
+    rs.battle.individualHosts.set(h.id, {
+      id: h.id,
+      name: (!h.name.startsWith('Anfitrión #')) ? h.name : (prev?.name || h.name),
+      score: Number(h.score || 0),
+      rank: prev?.rank || 0
+    });
+  });
   return { updated: true, hasUnknownHost };
 }
 
