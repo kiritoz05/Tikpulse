@@ -97,7 +97,10 @@ app.post('/api/tts/elevenlabs', async (req, res) => {
       headers: { 'xi-api-key': apiKey, 'Content-Type': 'application/json', Accept: 'audio/mpeg' },
       body: JSON.stringify({ text, model_id: 'eleven_multilingual_v2' })
     });
-    if (!upstream.ok) return res.status(upstream.status).json({ error: 'Error en ElevenLabs' });
+    if (!upstream.ok) {
+      const errTxt = await upstream.text().catch(() => '');
+      return res.status(upstream.status).json({ error: `ElevenLabs (${upstream.status}): ${errTxt.slice(0, 120)}` });
+    }
     const buf = Buffer.from(await upstream.arrayBuffer());
     res.setHeader('Content-Type', 'audio/mpeg');
     res.send(buf);
@@ -617,6 +620,8 @@ function serializeBattle(rs) {
     active: rs.battle.active,
     status: rs.battle.status,
     battleId: rs.battle.battleId || '',
+    hasEulerKey: Boolean(process.env.EULER_API_KEY),
+    autoCoHostsCount: rs.autoCoHostConns ? rs.autoCoHostConns.size : 0,
     mode,
     players,
     individualHosts,
