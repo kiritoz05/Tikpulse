@@ -438,7 +438,7 @@
           <!-- SELECTOR DE MOTOR DE VOZ (4 MOTORES ESTABLES) -->
           <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
             <button type="button" data-tts-engine="google" class="tts-engine-btn subtab-btn active p-3 rounded-xl bg-bg border border-white/10 text-left"><div class="text-xs font-extrabold text-cyanNeon">🌐 Google + Efectos</div><div class="text-[10px] text-emerald-300 mt-0.5 font-semibold">GRATIS · 16 acentos</div></button>
-            <button type="button" data-tts-engine="streamelements" class="tts-engine-btn subtab-btn p-3 rounded-xl bg-bg border border-white/10 text-left"><div class="text-xs font-extrabold text-white">🗣️ Twitch / Kick Bot</div><div class="text-[10px] text-amber-300 mt-0.5 font-semibold">GRATIS · 14 voces</div></button>
+            <button type="button" data-tts-engine="streamelements" class="tts-engine-btn subtab-btn p-3 rounded-xl bg-bg border border-white/10 text-left"><div class="text-xs font-extrabold text-white">🗣️ StreamElements</div><div class="text-[10px] text-amber-300 mt-0.5 font-semibold">GRATIS · Polly 14 voces</div></button>
             <button type="button" data-tts-engine="fish" class="tts-engine-btn subtab-btn p-3 rounded-xl bg-bg border border-white/10 text-left"><div class="text-xs font-extrabold text-white">🐟 Fish Audio IA</div><div class="text-[10px] text-cyanNeon mt-0.5">Voces tts-voices.js</div></button>
             <button type="button" data-tts-engine="elevenlabs" class="tts-engine-btn subtab-btn p-3 rounded-xl bg-bg border border-white/10 text-left"><div class="text-xs font-extrabold text-white">✨ ElevenLabs IA</div><div class="text-[10px] text-pink-300 mt-0.5">Voces tts-voices.js</div></button>
           </div>
@@ -591,7 +591,7 @@
               <h2 class="font-display text-base sm:text-lg font-extrabold text-white">⚔️ Batalla TikTok en Tiempo Real</h2>
               <span id="pkStatusBadge" class="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-slate-700 text-slate-300">⏳ ESPERANDO BATALLA</span>
             </div>
-            <span class="text-[11px] text-slate-400">Datos 100% reales del LIVE</span>
+            <span id="pkEulerInfo" class="text-[11px] text-slate-400">Datos 100% reales del LIVE</span>
           </div>
           <div id="pkBoardRender" class="bg-bg/90 rounded-2xl p-4 sm:p-5 border border-white/10 space-y-4">
             <div class="text-center py-6 space-y-1.5">
@@ -1145,7 +1145,9 @@
           }
           return await playAudioBlob(await res.blob(), userKey);
         } catch (err) {
-          toast(err?.message || 'Fish Audio no disponible; usando voz gratuita', 'pink');
+          const fmsg = err?.message || 'Fish Audio no disponible';
+          setTtsDiag('❌ ' + fmsg + ' → respaldo Google TTS');
+          toast(fmsg, 'pink');
           return false;
         }
       }
@@ -1168,10 +1170,15 @@
               body: JSON.stringify({ text, voiceId: vid })
             });
           }
-          if (!res.ok) throw new Error('EL ' + res.status);
+          if (!res.ok) {
+            const errObj = await res.json().catch(() => ({}));
+            throw new Error(errObj.error || ('ElevenLabs ' + res.status));
+          }
           return await playAudioBlob(await res.blob(), userKey);
-        } catch (_) {
-          toast('ElevenLabs no disponible; usando voz gratuita', 'pink');
+        } catch (err) {
+          const msg = err?.message || 'ElevenLabs no disponible';
+          setTtsDiag('❌ ' + msg + ' → respaldo Google TTS');
+          toast(msg, 'pink');
           return false;
         }
       }
@@ -2726,6 +2733,10 @@
       }
 
       fetch('/api/config').then((r) => r.json()).then((cfg) => {
+        const pkInfo = document.getElementById('pkEulerInfo');
+        if (pkInfo && cfg && cfg.hasEulerKey) {
+          pkInfo.innerHTML = '<span class="text-emerald-300 font-bold">🔑 Euler API activa</span> · Datos reales del LIVE';
+        }
         if (cfg && cfg.requiresSecret && btn && btn.parentElement) {
           secretInput = document.createElement('input');
           secretInput.type = 'password';
