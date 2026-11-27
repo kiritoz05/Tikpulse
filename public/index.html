@@ -543,9 +543,9 @@
                 </div>
 
                 <div class="grid grid-cols-3 gap-2 pt-1">
-                  <div><label class="block text-[11px] text-slate-400 mb-1">Cooldown (s)</label><input id="ttsCooldownSec" type="number" min="0" max="60" value="2" class="w-full bg-card border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-cyanNeon font-bold" /></div>
-                  <div><label class="block text-[11px] text-slate-400 mb-1">Mín. monedas</label><input id="ttsMinCoins" type="number" min="0" value="1" class="w-full bg-card border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-amber-300 font-bold" /></div>
-                  <div><label class="block text-[11px] text-slate-400 mb-1">Bloqueadas</label><input id="ttsBlockedWords" type="text" value="spam,http" class="w-full bg-card border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white" /></div>
+                  <div><label class="block text-[11px] text-slate-400 mb-1">Cooldown (s)</label><input id="ttsCooldownSec" type="number" min="0" max="60" value="0" class="w-full bg-card border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-cyanNeon font-bold" /></div>
+                  <div><label class="block text-[11px] text-slate-400 mb-1">Mín. monedas</label><input id="ttsMinCoins" type="number" min="0" value="0" class="w-full bg-card border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-amber-300 font-bold" /></div>
+                  <div><label class="block text-[11px] text-slate-400 mb-1">Bloqueadas</label><input id="ttsBlockedWords" type="text" value="" class="w-full bg-card border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white" /></div>
                 </div>
               </div>
 
@@ -575,7 +575,8 @@
               </div>
               <div class="bg-bg/90 rounded-xl p-4 border border-white/10 space-y-2">
                 <div class="flex items-center justify-between"><span class="text-xs font-bold text-white">Cola en vivo (máx. 4 sin retraso)</span><span id="ttsQueueBadge" class="text-[11px] text-cyanNeon font-bold">0 en cola</span></div>
-                <div id="ttsDiagLine" class="text-[11px] text-emerald-300 font-semibold">Listo · Toca "🔊 Activar Audio" 1 vez al entrar.</div>
+                <audio id="ttsNativePlayer" controls playsinline class="w-full h-9 rounded-lg"></audio>
+                <div id="ttsDiagLine" class="text-[11px] text-emerald-300 font-semibold">Listo · Toca "▶ Probar Voz Ahora" para activar el sonido.</div>
                 <div id="ttsQueueBox" class="space-y-1.5 max-h-52 overflow-y-auto text-xs"></div>
               </div>
             </div>
@@ -866,9 +867,9 @@
         ttsVolume: 0.85,
         ttsRate: 1.05,
         ttsPitch: 1.0,
-        ttsCooldownSec: 4,
+        ttsCooldownSec: 0,
         ttsMaxChars: 140,
-        ttsMinCoins: 1,
+        ttsMinCoins: 0,
         ttsUniqueVoice: true,
         ttsReadChat: true,
         ttsReadGift: true,
@@ -881,7 +882,7 @@
         ttsLastUserTs: {},
         browserVoiceUri: '',
         stripEmojis: true,
-        blockedWords: 'spam,groseria,http',
+        blockedWords: '',
         ttsQueue: [],
         ttsSpeaking: false,
         chatbotEnabled: true,
@@ -1227,56 +1228,86 @@
         }
       }
 
+      function buildSpeakUrl(text) {
+        const eng = state.ttsEngine || 'google';
+        let voice = state.googleAccent || 'es-PE';
+        let model = '';
+        if (eng === 'streamelements') voice = state.seVoice || 'Mia';
+        else if (eng === 'fish') {
+          voice = (state.fishRefId.trim() || state.fishVoiceId || '');
+          model = state.fishModel || 's2.1-pro-free';
+        } else if (eng === 'elevenlabs') {
+          voice = (state.elCustomVoiceId.trim() || state.elVoiceId || 'EXAVITQu4vr4xnSDxMaL');
+        }
+        const params = new URLSearchParams({
+          engine: eng,
+          voice,
+          model,
+          text: String(text || '').slice(0, 220),
+          t: String(Date.now())
+        });
+        return '/api/tts/speak?' + params.toString();
+      }
+
+      function playDirectStream(text, userKey = '') {
+        const player = document.getElementById('ttsNativePlayer') || globalTtsAudio;
+        const url = buildSpeakUrl(text);
+        const fp = getFunnyPlaybackParams(userKey);
+        return new Promise((resolve) => {
+          let settled = false;
+          const finish = (ok) => {
+            if (settled) return;
+            settled = true;
+            clearTimeout(guard);
+            player.onended = null;
+            player.onerror = null;
+            resolve(ok);
+          };
+          state.currentTtsAudio = player;
+          try { player.pause(); } catch (_) {}
+          player.src = url;
+          player.volume = Math.max(0.05, Math.min(1, state.ttsVolume || 0.85));
+          try {
+            player.preservesPitch = fp.preservesPitch;
+            player.mozPreservesPitch = fp.preservesPitch;
+            player.webkitPreservesPitch = fp.preservesPitch;
+          } catch (_) {}
+          player.playbackRate = fp.rate;
+          const guard = setTimeout(() => { try { player.pause(); } catch (_) {} finish(true); }, 18000);
+          player.onended = () => { setTtsDiag('✅ Audio leído'); finish(true); };
+          player.onerror = () => { setTtsDiag('⚠️ Error cargando audio del servidor'); finish(false); };
+          const p = player.play();
+          if (p && typeof p.then === 'function') {
+            p.then(() => {
+              setTtsDiag(`🔊 Reproduciendo (${state.ttsEngine})...`);
+            }).catch((err) => {
+              if (err && err.name === 'NotAllowedError') {
+                setTtsDiag('🔇 Toca ▶ en el reproductor de arriba para activar el sonido');
+              } else {
+                setTtsDiag('⚠️ ' + (err?.message || 'Error al reproducir'));
+              }
+              finish(false);
+            });
+          }
+        });
+      }
+
       async function pumpTts() {
         if (!state.ttsEnabled || state.ttsSpeaking || !state.ttsQueue.length) { renderTtsQueue(); return; }
         const item = state.ttsQueue[0];
         state.ttsSpeaking = true;
         renderTtsQueue();
         const done = () => { state.ttsQueue.shift(); state.ttsSpeaking = false; pumpTts(); };
-        if (state.ttsEngine === 'edge') {
-          setTtsDiag('🔊 Leyendo con Edge Neural...');
-          if (await playEdgeTts(item.text, item.userKey)) return done();
-          setTtsDiag('🌐 Respaldo automático: Google TTS...');
-          if (await playGoogleTts(item.text, item.userKey)) return done();
-        }
-        if (state.ttsEngine === 'tiktok') {
-          setTtsDiag('🎭 Leyendo con TikTok Viral...');
-          if (await playTikTokTts(item.text, item.userKey)) return done();
-          setTtsDiag('🌐 Respaldo con efecto: Google TTS...');
-          if (await playGoogleTts(item.text, item.userKey)) return done();
-        }
-        if (state.ttsEngine === 'streamelements') {
-          setTtsDiag('🗣️ Leyendo con Twitch / Kick Polly...');
-          if (await playStreamElementsTts(item.text, item.userKey)) return done();
-          setTtsDiag('🌐 Respaldo con efecto: Google TTS...');
-          if (await playGoogleTts(item.text, item.userKey)) return done();
-        }
-        if (state.ttsEngine === 'google') {
-          setTtsDiag('🌐 Leyendo con Google TTS...');
-          if (await playGoogleTts(item.text, item.userKey)) return done();
-        }
-        if (state.ttsEngine === 'fish') {
-          setTtsDiag('🐟 Leyendo con Fish Audio...');
-          if (await playFishAudio(item.text, item.userKey)) return done();
-          if (await playGoogleTts(item.text, item.userKey)) return done();
-        }
-        if (state.ttsEngine === 'elevenlabs') {
-          setTtsDiag('✨ Leyendo con ElevenLabs...');
-          if (await playElevenLabs(item.text, item.userKey)) return done();
-          if (await playGoogleTts(item.text, item.userKey)) return done();
-        }
-        setTtsDiag('🔊 Leyendo con voz del navegador...');
+        if (await playDirectStream(item.text, item.userKey)) return done();
+        // Browser speechSynthesis fallback only if server stream failed completely
         if ('speechSynthesis' in window) {
           const u = new SpeechSynthesisUtterance(item.text);
-          const v = pickVoiceForUser(item.userKey || item.user);
-          if (v) u.voice = v;
-          u.lang = v?.lang || 'es-ES';
+          u.lang = 'es-ES';
           u.volume = state.ttsVolume;
           u.rate = state.ttsRate;
-          u.pitch = state.ttsPitch;
           let finished = false;
           const fin = () => { if (!finished) { finished = true; clearTimeout(t); done(); } };
-          const t = setTimeout(fin, 15000);
+          const t = setTimeout(fin, 12000);
           u.onend = fin;
           u.onerror = fin;
           window.speechSynthesis.speak(u);
