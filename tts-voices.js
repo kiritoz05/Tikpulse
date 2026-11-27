@@ -11,7 +11,7 @@ module.exports = {
     { name: '🐟 Voz por defecto Fish Audio (s2.1)', id: '' },
     // Agrega aquí tus voces clonadas o de la comunidad de https://fish.audio/
     // Ejemplo:
-    // { name: '🎙️ Mi Voz Clonada', id: 'PEGA_AQUI_TU_REFERENCE_ID' },
+    // { name: '🎙️ Mi Voz Clonada', id: '41c45c4e58954f2a8a7d37df62bc913c' },
     // { name: '😂 Voz Graciosa', id: '933563129e564b19a115bedd57b7406a' }
   ],
 
