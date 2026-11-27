@@ -601,11 +601,15 @@ function serializeBattle(rs) {
     ...unified.filter((h) => !h.isOwner)
   ];
 
-  // Clean fallback labels: never say "Anfitrión #1" for a rival
+  // Clean & stabilize labels: slot 0 is ALWAYS connected streamer; in 2-entry view lock rival name so 2v2 teammate gifts don't flicker names!
   let rivalCounter = 1;
   orderedHosts.forEach((h, idx) => {
     if (idx === 0 && h.isOwner && ownerName) {
       h.name = ownerName;
+    } else if (orderedHosts.length === 2 && idx === 1) {
+      const isGoodName = h.name && !h.name.startsWith('Anfitrión #') && !h.name.startsWith('Rival');
+      if (isGoodName && !rs.battle.lockedRivalName) rs.battle.lockedRivalName = h.name;
+      h.name = rs.battle.lockedRivalName || (isGoodName ? h.name : 'Rival en batalla');
     } else if (!h.name || h.name.startsWith('Anfitrión #') || h.name.startsWith('Rival #')) {
       h.name = orderedHosts.length === 2 ? 'Rival en batalla' : `Rival #${rivalCounter}`;
       rivalCounter += 1;
@@ -846,11 +850,13 @@ function parseBattleStart(rs, d) {
   Object.values(hostMap).forEach((h) => {
     indiv.set(h.id, { id: h.id, name: h.name, score: 0, rank: 0 });
   });
+  stopAutoCoHostListeners(rs);
   rs.battle = {
     active: true,
     status: 1,
     battleId: newBattleId,
     mode: '',
+    lockedRivalName: '',
     hostMap,
     players: Object.values(hostMap),
     individualHosts: indiv,
@@ -867,12 +873,10 @@ function parseBattleArmies(rs, d) {
 
   // If a new battle started, reset stale gifters & hosts cleanly
   if (incomingBattleId && rs.battle.battleId && incomingBattleId !== rs.battle.battleId) {
+    stopAutoCoHostListeners(rs);
     rs.battle.hostMap = {};
-    if (rs.battle.individualHosts) {
-      for (const [k, h] of rs.battle.individualHosts.entries()) {
-        rs.battle.individualHosts.set(k, { ...h, score: 0 });
-      }
-    }
+    rs.battle.individualHosts = new Map();
+    rs.battle.lockedRivalName = '';
     rs.battle.fanTicketBaselines = new Map();
     rs.battle.matchGifters = new Map();
     rs.battle.throws = [];
